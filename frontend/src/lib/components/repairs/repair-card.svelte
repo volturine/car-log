@@ -1,13 +1,27 @@
 <script lang="ts">
-	import { useRepairs } from "$lib/hooks/repairs.svelte.js";
-	import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "$lib/components/ui/card";
-	import { Badge } from "$lib/components/ui/badge";
-	import { Button } from "$lib/components/ui/button";
-	import RepairForm from "./repair-form.svelte";
-	import { EditIcon, Trash2Icon, CalendarIcon, DollarSignIcon, PackageIcon, ClockIcon, ExternalLinkIcon } from "@lucide/svelte";
-	import { toast } from "svelte-sonner";
-	import { fly } from "svelte/transition";
-	import type { Repair } from "$lib/types.js";
+	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardDescription,
+		CardContent
+	} from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Button } from '$lib/components/ui/button';
+	import RepairForm from './repair-form.svelte';
+	import {
+		EditIcon,
+		Trash2Icon,
+		CalendarIcon,
+		DollarSignIcon,
+		PackageIcon,
+		ClockIcon,
+		ExternalLinkIcon
+	} from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
+	import { fly } from 'svelte/transition';
+	import type { Repair } from '$lib/types.js';
 
 	let { repair }: Props = $props();
 
@@ -16,20 +30,24 @@
 	let showPhotos = $state(false);
 
 	const handleDelete = () => {
-		if (confirm("Are you sure you want to delete this repair?")) {
+		if (confirm('Are you sure you want to delete this repair?')) {
 			repairs.deleteRepair(repair.id);
-			toast.success("Repair deleted successfully");
+			toast.success('Repair deleted successfully');
 		}
 	};
 
 	const statusColors = {
-		pending: "secondary",
-		"in-progress": "default",
-		completed: "outline",
+		pending: 'secondary',
+		'in-progress': 'default',
+		completed: 'outline'
 	} as const;
 
 	const formatDate = (date: Date) => {
-		return new Date(date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+		return new Date(date).toLocaleDateString('en-US', {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
+		});
 	};
 
 	const hourlyRate = $derived(repair.laborHours > 0 ? repair.laborCost / repair.laborHours : 0);
@@ -42,7 +60,12 @@
 <Card>
 	{#if showEditForm}
 		<div transition:fly={{ y: -20, duration: 300 }}>
-			<RepairForm carId={repair.carId} {repair} onCancel={() => (showEditForm = false)} onSuccess={() => (showEditForm = false)} />
+			<RepairForm
+				carId={repair.carId}
+				{repair}
+				onCancel={() => (showEditForm = false)}
+				onSuccess={() => (showEditForm = false)}
+			/>
 		</div>
 	{:else}
 		<CardHeader>
@@ -67,14 +90,25 @@
 		<CardContent class="flex flex-col gap-4">
 			{#if repair.photos.length > 0}
 				<div>
-					<button type="button" onclick={() => (showPhotos = !showPhotos)} class="text-sm font-medium mb-2 hover:underline">
-						{showPhotos ? "Hide" : "Show"} Photos ({repair.photos.length})
+					<button
+						type="button"
+						onclick={() => (showPhotos = !showPhotos)}
+						class="text-sm font-medium mb-2 hover:underline"
+					>
+						{showPhotos ? 'Hide' : 'Show'} Photos ({repair.photos.length})
 					</button>
 					{#if showPhotos}
-						<div class="grid grid-cols-2 md:grid-cols-4 gap-2" transition:fly={{ y: -10, duration: 200 }}>
+						<div
+							class="grid grid-cols-2 md:grid-cols-4 gap-2"
+							transition:fly={{ y: -10, duration: 200 }}
+						>
 							{#each repair.photos as photo, index (index)}
 								<div class="aspect-square rounded-lg overflow-hidden border">
-									<img src={photo} alt="Repair photo {index + 1}" class="w-full h-full object-cover" />
+									<img
+										src={photo}
+										alt="Repair photo {index + 1}"
+										class="w-full h-full object-cover"
+									/>
 								</div>
 							{/each}
 						</div>
@@ -103,7 +137,12 @@
 								<div class="flex items-center justify-between text-xs text-muted-foreground">
 									<span>{part.quantity} × ${part.unitCost.toFixed(2)}</span>
 									{#if part.sourceUrl}
-										<a href={part.sourceUrl} target="_blank" rel="noopener noreferrer" class="flex items-center gap-1 text-primary hover:underline">
+										<a
+											href={part.sourceUrl}
+											target="_blank"
+											rel="noopener noreferrer"
+											class="flex items-center gap-1 text-primary hover:underline"
+										>
 											<ExternalLinkIcon class="size-3" />
 											Source
 										</a>

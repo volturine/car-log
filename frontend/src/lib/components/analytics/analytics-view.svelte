@@ -1,15 +1,21 @@
 <script lang="ts">
-	import { useRepairs } from "$lib/hooks/repairs.svelte.js";
-	import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "$lib/components/ui/card";
-	import { Badge } from "$lib/components/ui/badge";
-	import { TrendingUpIcon, DollarSignIcon, WrenchIcon, CarIcon } from "@lucide/svelte";
+	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardDescription,
+		CardContent
+	} from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
+	import { TrendingUpIcon, DollarSignIcon, WrenchIcon, CarIcon } from '@lucide/svelte';
 
 	const repairs = useRepairs();
 
 	const totalRepairs = $derived(repairs.repairs.length);
 	const totalRevenue = $derived(repairs.repairs.reduce((sum, r) => sum + r.totalCost, 0));
 	const averageRepairCost = $derived(totalRepairs > 0 ? totalRevenue / totalRepairs : 0);
-	const completedRepairs = $derived(repairs.repairs.filter((r) => r.status === "completed").length);
+	const completedRepairs = $derived(repairs.repairs.filter((r) => r.status === 'completed').length);
 </script>
 
 <div class="p-6 space-y-6">
@@ -79,7 +85,9 @@
 						<div class="flex items-center justify-between">
 							<div>
 								<CardTitle class="text-xl">{brand.brand}</CardTitle>
-								<CardDescription>{brand.totalRepairs} repairs • ${brand.totalCost.toFixed(2)} total</CardDescription>
+								<CardDescription
+									>{brand.totalRepairs} repairs • ${brand.totalCost.toFixed(2)} total</CardDescription
+								>
 							</div>
 							<Badge variant="secondary">${brand.averageCost.toFixed(2)} avg</Badge>
 						</div>

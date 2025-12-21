@@ -17,22 +17,15 @@
 	let { car, onCancel, onSuccess }: Props = $props();
 
 	const repairs = useRepairs();
-
-	const createFormState = (currentCar?: Car) => ({
-		brand: currentCar?.brand || '',
-		model: currentCar?.model || '',
-		year: currentCar?.year || new Date().getFullYear(),
-		vin: currentCar?.vin || '',
-		licensePlate: currentCar?.licensePlate || '',
-		ownerName: currentCar?.ownerName || '',
-		ownerPhone: currentCar?.ownerPhone || '',
-		color: currentCar?.color || ''
-	});
-
-	let formData = $state(createFormState());
-
-	$effect(() => {
-		formData = createFormState(car);
+	let formData = $derived({
+		brand: car?.brand || '',
+		model: car?.model || '',
+		year: car?.year || new Date().getFullYear(),
+		vin: car?.vin || '',
+		licensePlate: car?.licensePlate || '',
+		ownerName: car?.ownerName || '',
+		ownerPhone: car?.ownerPhone || '',
+		color: car?.color || ''
 	});
 
 	const handleSubmit = (e: Event) => {

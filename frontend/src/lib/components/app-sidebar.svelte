@@ -1,7 +1,19 @@
 <script lang="ts">
-	import { useRepairs } from "$lib/hooks/repairs.svelte.js";
-	import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "$lib/components/ui/sidebar";
-	import { CarIcon, BarChart3Icon, WrenchIcon, CalendarIcon } from "@lucide/svelte";
+	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import {
+		Sidebar,
+		SidebarContent,
+		SidebarFooter,
+		SidebarHeader,
+		SidebarRail,
+		SidebarGroup,
+		SidebarGroupLabel,
+		SidebarGroupContent,
+		SidebarMenu,
+		SidebarMenuItem,
+		SidebarMenuButton
+	} from '$lib/components/ui/sidebar';
+	import { CarIcon, BarChart3Icon, WrenchIcon, CalendarIcon } from '@lucide/svelte';
 
 	const repairs = useRepairs();
 </script>
@@ -20,19 +32,28 @@
 			<SidebarGroupContent>
 				<SidebarMenu>
 					<SidebarMenuItem>
-						<SidebarMenuButton isActive={repairs.currentView === "cars"} onclick={() => repairs.goToCars()}>
+						<SidebarMenuButton
+							isActive={repairs.currentView === 'cars'}
+							onclick={() => repairs.goToCars()}
+						>
 							<CarIcon />
 							<span>Cars</span>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 					<SidebarMenuItem>
-						<SidebarMenuButton isActive={repairs.currentView === "calendar"} onclick={() => repairs.goToCalendar()}>
+						<SidebarMenuButton
+							isActive={repairs.currentView === 'calendar'}
+							onclick={() => repairs.goToCalendar()}
+						>
 							<CalendarIcon />
 							<span>Calendar</span>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 					<SidebarMenuItem>
-						<SidebarMenuButton isActive={repairs.currentView === "analytics"} onclick={() => repairs.goToAnalytics()}>
+						<SidebarMenuButton
+							isActive={repairs.currentView === 'analytics'}
+							onclick={() => repairs.goToAnalytics()}
+						>
 							<BarChart3Icon />
 							<span>Analytics</span>
 						</SidebarMenuButton>

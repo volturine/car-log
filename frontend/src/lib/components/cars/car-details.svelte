@@ -1,15 +1,21 @@
 <script lang="ts">
-	import { useRepairs } from "$lib/hooks/repairs.svelte.js";
-	import { Button } from "$lib/components/ui/button";
-	import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "$lib/components/ui/card";
-	import { Badge } from "$lib/components/ui/badge";
-	import { Separator } from "$lib/components/ui/separator";
-	import CarForm from "./car-form.svelte";
-	import RepairForm from "../repairs/repair-form.svelte";
-	import RepairCard from "../repairs/repair-card.svelte";
-	import { ArrowLeftIcon, PlusIcon, EditIcon, Trash2Icon } from "@lucide/svelte";
-	import { toast } from "svelte-sonner";
-	import { fly } from "svelte/transition";
+	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import { Button } from '$lib/components/ui/button';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardDescription,
+		CardContent
+	} from '$lib/components/ui/card';
+	import { Badge } from '$lib/components/ui/badge';
+	import { Separator } from '$lib/components/ui/separator';
+	import CarForm from './car-form.svelte';
+	import RepairForm from '../repairs/repair-form.svelte';
+	import RepairCard from '../repairs/repair-card.svelte';
+	import { ArrowLeftIcon, PlusIcon, EditIcon, Trash2Icon } from '@lucide/svelte';
+	import { toast } from 'svelte-sonner';
+	import { fly } from 'svelte/transition';
 
 	const repairs = useRepairs();
 	let showEditForm = $state(false);
@@ -17,9 +23,13 @@
 
 	const handleDelete = () => {
 		if (!repairs.selectedCar) return;
-		if (confirm(`Are you sure you want to delete ${repairs.selectedCar.brand} ${repairs.selectedCar.model}? This will also delete all associated repairs.`)) {
+		if (
+			confirm(
+				`Are you sure you want to delete ${repairs.selectedCar.brand} ${repairs.selectedCar.model}? This will also delete all associated repairs.`
+			)
+		) {
 			repairs.deleteCar(repairs.selectedCar.id);
-			toast.success("Car deleted successfully");
+			toast.success('Car deleted successfully');
 		}
 	};
 
@@ -34,7 +44,9 @@
 			</Button>
 			<div class="flex-1">
 				<h1 class="text-3xl font-bold">{repairs.selectedCar.brand} {repairs.selectedCar.model}</h1>
-				<p class="text-muted-foreground">{repairs.selectedCar.year} • {repairs.selectedCar.licensePlate}</p>
+				<p class="text-muted-foreground">
+					{repairs.selectedCar.year} • {repairs.selectedCar.licensePlate}
+				</p>
 			</div>
 			<Button variant="outline" size="icon" onclick={() => (showEditForm = !showEditForm)}>
 				<EditIcon />
@@ -46,7 +58,11 @@
 
 		{#if showEditForm}
 			<div transition:fly={{ y: -20, duration: 300 }}>
-				<CarForm car={repairs.selectedCar} onCancel={() => (showEditForm = false)} onSuccess={() => (showEditForm = false)} />
+				<CarForm
+					car={repairs.selectedCar}
+					onCancel={() => (showEditForm = false)}
+					onSuccess={() => (showEditForm = false)}
+				/>
 			</div>
 		{/if}
 
@@ -92,7 +108,11 @@
 
 		{#if showAddRepair}
 			<div transition:fly={{ y: -20, duration: 300 }}>
-				<RepairForm carId={repairs.selectedCar.id} onCancel={() => (showAddRepair = false)} onSuccess={() => (showAddRepair = false)} />
+				<RepairForm
+					carId={repairs.selectedCar.id}
+					onCancel={() => (showAddRepair = false)}
+					onSuccess={() => (showAddRepair = false)}
+				/>
 			</div>
 		{/if}
 

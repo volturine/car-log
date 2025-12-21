@@ -1,21 +1,32 @@
 <script lang="ts">
-	import { useRepairs } from "$lib/hooks/repairs.svelte.js";
-	import { Button } from "$lib/components/ui/button";
-	import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "$lib/components/ui/card";
-	import { Badge } from "$lib/components/ui/badge";
-	import { Input } from "$lib/components/ui/input";
-	import CarForm from "./car-form.svelte";
-	import { PlusIcon, SearchIcon, CarIcon } from "@lucide/svelte";
-	import { fly } from "svelte/transition";
+	import { Badge } from '$lib/components/ui/badge';
+	import { Button } from '$lib/components/ui/button';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
+	import { Input } from '$lib/components/ui/input';
+	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import { CarIcon, PlusIcon, SearchIcon } from '@lucide/svelte';
+	import { fly } from 'svelte/transition';
+	import CarForm from './car-form.svelte';
 
 	const repairs = useRepairs();
 	let showAddForm = $state(false);
-	let searchQuery = $state("");
+	let searchQuery = $state('');
 
 	const filteredCars = $derived(
 		repairs.cars.filter((car) => {
 			const query = searchQuery.toLowerCase();
-			return car.brand.toLowerCase().includes(query) || car.model.toLowerCase().includes(query) || car.licensePlate.toLowerCase().includes(query) || car.ownerName.toLowerCase().includes(query);
+			return (
+				car.brand.toLowerCase().includes(query) ||
+				car.model.toLowerCase().includes(query) ||
+				car.licensePlate.toLowerCase().includes(query) ||
+				car.ownerName.toLowerCase().includes(query)
+			);
 		})
 	);
 
@@ -38,7 +49,11 @@
 
 	<div class="relative">
 		<SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-		<Input bind:value={searchQuery} placeholder="Search by brand, model, plate, or owner..." class="pl-9" />
+		<Input
+			bind:value={searchQuery}
+			placeholder="Search by brand, model, plate, or owner..."
+			class="pl-9"
+		/>
 	</div>
 
 	{#if showAddForm}
@@ -52,7 +67,7 @@
 			<CardContent class="flex flex-col items-center justify-center py-12">
 				<CarIcon class="size-12 text-muted-foreground mb-4" />
 				<p class="text-muted-foreground text-center">
-					{searchQuery ? "No cars found matching your search" : "No cars added yet"}
+					{searchQuery ? 'No cars found matching your search' : 'No cars added yet'}
 				</p>
 				{#if !searchQuery && !showAddForm}
 					<Button variant="outline" class="mt-4" onclick={() => (showAddForm = true)}>
@@ -66,7 +81,10 @@
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredCars as car (car.id)}
 				<div transition:fly={{ y: 20, duration: 300 }}>
-					<Card class="hover:shadow-lg-lg-lg hover:shadow-lg-lg-primary/10 transition-all duration-200 cursor-pointer" onclick={() => repairs.selectCar(car.id)}>
+					<Card
+						class="hover:shadow-lg-lg-lg hover:shadow-lg-lg-primary/10 transition-all duration-200 cursor-pointer"
+						onclick={() => repairs.selectCar(car.id)}
+					>
 						<CardHeader>
 							<div class="flex items-start justify-between">
 								<div class="flex-1">
