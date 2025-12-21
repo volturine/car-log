@@ -1,21 +1,11 @@
 <script lang="ts">
-	import { createSelectContext } from './select-context';
+	import { Select as SelectPrimitive } from "bits-ui";
 
 	let {
-		value = $bindable(''),
-		children,
-		class: className = '',
-		type = 'single',
-		...rest
-	} = $props();
-
-	const ctx = createSelectContext(value);
-
-	$effect(() => {
-		ctx.setValue(value);
-	});
+		open = $bindable(false),
+		value = $bindable(),
+		...restProps
+	}: SelectPrimitive.RootProps = $props();
 </script>
 
-<div class={`relative inline-flex flex-col gap-2 ${className}`} {...rest}>
-	{@render children?.({ value: ctx.value, setValue: ctx.setValue, type })}
-</div>
+<SelectPrimitive.Root bind:open bind:value={value as never} {...restProps} />

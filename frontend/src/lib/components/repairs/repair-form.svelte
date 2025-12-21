@@ -20,40 +20,30 @@
 	let { carId, repair, onCancel, onSuccess }: Props = $props();
 
 	const repairs = useRepairs();
-	let formData = $state({
-		title: '',
-		description: '',
-		status: 'pending' as RepairStatus,
-		laborCost: 0,
-		laborHours: 0,
-		startDate: new Date().toISOString().split('T')[0],
-		completedDate: ''
+
+	const createFormState = (currentRepair?: Repair) => ({
+		title: currentRepair?.title || '',
+		description: currentRepair?.description || '',
+		status: currentRepair?.status || ('pending' as RepairStatus),
+		laborCost: currentRepair?.laborCost || 0,
+		laborHours: currentRepair?.laborHours || 0,
+		startDate: currentRepair?.startDate
+			? new Date(currentRepair.startDate).toISOString().split('T')[0]
+			: new Date().toISOString().split('T')[0],
+		completedDate: currentRepair?.completedDate
+			? new Date(currentRepair.completedDate).toISOString().split('T')[0]
+			: ''
 	});
 
+	let formData = $state(createFormState());
 	let parts = $state<RepairPart[]>([]);
 	let photos = $state<string[]>([]);
 	let newPart = $state({ name: '', description: '', quantity: 1, unitCost: 0, sourceUrl: '' });
-	let lastRepairId: string | null = null;
 
 	$effect(() => {
-		const currentId = repair?.id ?? null;
-		if (currentId === lastRepairId) return;
-		lastRepairId = currentId;
-		formData = {
-			title: repair?.title ?? '',
-			description: repair?.description ?? '',
-			status: repair?.status ?? 'pending',
-			laborCost: repair?.laborCost ?? 0,
-			laborHours: repair?.laborHours ?? 0,
-			startDate: repair?.startDate
-				? new Date(repair.startDate).toISOString().split('T')[0]
-				: new Date().toISOString().split('T')[0],
-			completedDate: repair?.completedDate
-				? new Date(repair.completedDate).toISOString().split('T')[0]
-				: ''
-		};
-		parts = repair?.parts ?? [];
-		photos = repair?.photos ?? [];
+		formData = createFormState(repair);
+		parts = repair?.parts ? [...repair.parts] : [];
+		photos = repair?.photos ? [...repair.photos] : [];
 	});
 
 	const addPart = () => {

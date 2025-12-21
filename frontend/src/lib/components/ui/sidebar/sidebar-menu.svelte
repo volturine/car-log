@@ -1,7 +1,21 @@
 <script lang="ts">
-	let { class: className = '', children, ...rest } = $props();
+	import { cn, type WithElementRef } from "$lib/utils.js";
+	import type { HTMLAttributes } from "svelte/elements";
+
+	let {
+		ref = $bindable(null),
+		class: className,
+		children,
+		...restProps
+	}: WithElementRef<HTMLAttributes<HTMLUListElement>, HTMLUListElement> = $props();
 </script>
 
-<nav class={`space-y-1 ${className}`} {...rest}>
+<ul
+	bind:this={ref}
+	data-slot="sidebar-menu"
+	data-sidebar="menu"
+	class={cn("flex w-full min-w-0 flex-col gap-1", className)}
+	{...restProps}
+>
 	{@render children?.()}
-</nav>
+</ul>

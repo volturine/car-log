@@ -17,32 +17,22 @@
 	let { car, onCancel, onSuccess }: Props = $props();
 
 	const repairs = useRepairs();
-	let formData = $state({
-		brand: '',
-		model: '',
-		year: new Date().getFullYear(),
-		vin: '',
-		licensePlate: '',
-		ownerName: '',
-		ownerPhone: '',
-		color: ''
+
+	const createFormState = (currentCar?: Car) => ({
+		brand: currentCar?.brand || '',
+		model: currentCar?.model || '',
+		year: currentCar?.year || new Date().getFullYear(),
+		vin: currentCar?.vin || '',
+		licensePlate: currentCar?.licensePlate || '',
+		ownerName: currentCar?.ownerName || '',
+		ownerPhone: currentCar?.ownerPhone || '',
+		color: currentCar?.color || ''
 	});
 
-	let lastCarId: string | null = null;
+	let formData = $state(createFormState());
+
 	$effect(() => {
-		const currentId = car?.id ?? null;
-		if (currentId === lastCarId) return;
-		lastCarId = currentId;
-		formData = {
-			brand: car?.brand ?? '',
-			model: car?.model ?? '',
-			year: car?.year ?? new Date().getFullYear(),
-			vin: car?.vin ?? '',
-			licensePlate: car?.licensePlate ?? '',
-			ownerName: car?.ownerName ?? '',
-			ownerPhone: car?.ownerPhone ?? '',
-			color: car?.color ?? ''
-		};
+		formData = createFormState(car);
 	});
 
 	const handleSubmit = (e: Event) => {

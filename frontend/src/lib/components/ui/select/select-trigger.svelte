@@ -1,27 +1,29 @@
 <script lang="ts">
-	import { useSelectContext } from './select-context';
+	import { Select as SelectPrimitive } from "bits-ui";
+	import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
+	import { cn, type WithoutChild } from "$lib/utils.js";
 
-	const ctx = useSelectContext();
-	let { children, class: className = '', ...rest } = $props();
+	let {
+		ref = $bindable(null),
+		class: className,
+		children,
+		size = "default",
+		...restProps
+	}: WithoutChild<SelectPrimitive.TriggerProps> & {
+		size?: "sm" | "default";
+	} = $props();
 </script>
 
-<button
-	type="button"
-	class={`inline-flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${className}`}
-	{...rest}
+<SelectPrimitive.Trigger
+	bind:ref
+	data-slot="select-trigger"
+	data-size={size}
+	class={cn(
+		"border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none select-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+		className
+	)}
+	{...restProps}
 >
-	<span class="flex-1 text-left">
-		{@render children?.({ value: ctx.value })}
-	</span>
-	<svg
-		class="size-4 text-muted-foreground"
-		viewBox="0 0 24 24"
-		fill="none"
-		stroke="currentColor"
-		stroke-width="2"
-		stroke-linecap="round"
-		stroke-linejoin="round"
-	>
-		<polyline points="6 9 12 15 18 9"></polyline>
-	</svg>
-</button>
+	{@render children?.()}
+	<ChevronDownIcon class="size-4 opacity-50" />
+</SelectPrimitive.Trigger>

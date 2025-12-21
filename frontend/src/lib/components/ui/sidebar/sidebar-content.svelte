@@ -1,7 +1,24 @@
 <script lang="ts">
-	let { class: className = '', children, ...rest } = $props();
+	import type { HTMLAttributes } from "svelte/elements";
+	import { cn, type WithElementRef } from "$lib/utils.js";
+
+	let {
+		ref = $bindable(null),
+		class: className,
+		children,
+		...restProps
+	}: WithElementRef<HTMLAttributes<HTMLElement>> = $props();
 </script>
 
-<div class={`flex-1 overflow-y-auto px-2 py-3 ${className}`} {...rest}>
+<div
+	bind:this={ref}
+	data-slot="sidebar-content"
+	data-sidebar="content"
+	class={cn(
+		"flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+		className
+	)}
+	{...restProps}
+>
 	{@render children?.()}
 </div>

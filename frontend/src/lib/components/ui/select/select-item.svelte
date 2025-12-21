@@ -1,17 +1,38 @@
 <script lang="ts">
-	import { useSelectContext } from './select-context';
+	import CheckIcon from "@lucide/svelte/icons/check";
+	import { Select as SelectPrimitive } from "bits-ui";
+	import { cn, type WithoutChild } from "$lib/utils.js";
 
-	const ctx = useSelectContext();
-	let { value, children, class: className = '', ...rest } = $props();
-	const isSelected = $derived(ctx.value === value);
+	let {
+		ref = $bindable(null),
+		class: className,
+		value,
+		label,
+		children: childrenProp,
+		...restProps
+	}: WithoutChild<SelectPrimitive.ItemProps> = $props();
 </script>
 
-<button
-	type="button"
-	class={`flex w-full items-center gap-2 rounded-sm px-2 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background ${isSelected ? 'bg-accent text-accent-foreground' : 'text-foreground'} ${className}`}
-	onclick={() => ctx.setValue(value)}
-	aria-pressed={isSelected}
-	{...rest}
+<SelectPrimitive.Item
+	bind:ref
+	{value}
+	data-slot="select-item"
+	class={cn(
+		"data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 ps-2 pe-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+		className
+	)}
+	{...restProps}
 >
-	{@render children?.()}
-</button>
+	{#snippet children({ selected, highlighted })}
+		<span class="absolute end-2 flex size-3.5 items-center justify-center">
+			{#if selected}
+				<CheckIcon class="size-4" />
+			{/if}
+		</span>
+		{#if childrenProp}
+			{@render childrenProp({ selected, highlighted })}
+		{:else}
+			{label || value}
+		{/if}
+	{/snippet}
+</SelectPrimitive.Item>
