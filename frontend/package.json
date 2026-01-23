@@ -50,6 +50,8 @@
 		"better-sqlite3": "^12.6.2",
 		"drizzle-kit": "^0.31.8",
 		"drizzle-orm": "^0.45.1",
+		"neverthrow": "^8.2.0",
+		"runed": "^0.37.1",
 		"shadcn-svelte": "^1.1.0",
 		"svelte-sonner": "^1.0.7",
 		"uuid": "^13.0.0",
