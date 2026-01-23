@@ -5,12 +5,15 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
+	import { USER_ROLE } from '$lib/constants';
 
 	let email = $state('');
 	let password = $state('');
 	let name = $state('');
 	let confirmPassword = $state('');
+	let role = $state<string>(USER_ROLE.CUSTOMER);
 	let loading = $state(false);
 
 	async function handleSignUp() {
@@ -32,12 +35,25 @@
 		loading = true;
 
 		try {
-			const result = await signUp.email({
-				email,
-				password,
-				name,
-				callbackURL: '/'
-			});
+			const result = await signUp.email(
+				{
+					email,
+					password,
+					name,
+					callbackURL: '/'
+				},
+				{
+					onRequest: async (ctx) => {
+						// Add role to the request
+						return {
+							body: {
+								...ctx.body,
+								role
+							}
+						};
+					}
+				}
+			);
 
 			if (result.error) {
 				toast.error(result.error.message || 'Failed to register');
@@ -89,6 +105,33 @@
 						required
 						disabled={loading}
 					/>
+				</div>
+				<div class="space-y-2">
+					<Label for="role">Account Type</Label>
+					<Select
+						onValueChange={(value) => {
+							if (value) role = value;
+						}}
+						disabled={loading}
+					>
+						<SelectTrigger id="role">
+							<SelectValue placeholder="Select account type" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value={USER_ROLE.CUSTOMER}>Customer (Car Owner)</SelectItem>
+							<SelectItem value={USER_ROLE.SHOP_OWNER}>Shop Owner</SelectItem>
+							<SelectItem value={USER_ROLE.MECHANIC}>Mechanic</SelectItem>
+						</SelectContent>
+					</Select>
+					<p class="text-xs text-muted-foreground">
+						{#if role === USER_ROLE.CUSTOMER}
+							Track repairs for your vehicles
+						{:else if role === USER_ROLE.SHOP_OWNER}
+							Manage your repair shop and create repairs for customers
+						{:else if role === USER_ROLE.MECHANIC}
+							Work on repairs and update status
+						{/if}
+					</p>
 				</div>
 				<div class="space-y-2">
 					<Label for="password">Password</Label>

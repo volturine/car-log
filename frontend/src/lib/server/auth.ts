@@ -25,6 +25,23 @@ export const auth = betterAuth({
 			enabled: true,
 			maxAge: 5 * 60 // 5 minutes
 		}
+	},
+	user: {
+		additionalFields: {
+			role: {
+				type: 'string',
+				defaultValue: 'customer',
+				required: false
+			},
+			shopId: {
+				type: 'string',
+				required: false
+			},
+			phone: {
+				type: 'string',
+				required: false
+			}
+		}
 	}
 });
 
