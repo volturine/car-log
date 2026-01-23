@@ -17,6 +17,7 @@
 	let { car, onCancel, onSuccess }: Props = $props();
 
 	const repairs = useRepairs();
+	let isSubmitting = $state(false);
 	let formData = $derived({
 		brand: car?.brand || '',
 		model: car?.model || '',
@@ -28,7 +29,7 @@
 		color: car?.color || ''
 	});
 
-	const handleSubmit = (e: Event) => {
+	const handleSubmit = async (e: Event) => {
 		e.preventDefault();
 
 		if (!formData.brand || !formData.model || !formData.licensePlate || !formData.ownerName) {
@@ -36,15 +37,21 @@
 			return;
 		}
 
-		if (car) {
-			repairs.updateCar(car.id, formData);
-			toast.success('Car updated successfully');
-		} else {
-			repairs.addCar(formData);
-			toast.success('Car added successfully');
-		}
+		if (isSubmitting) return;
+		isSubmitting = true;
 
-		onSuccess?.();
+		try {
+			if (car) {
+				await repairs.updateCar(car.id, formData);
+			} else {
+				await repairs.addCar(formData);
+			}
+			onSuccess?.();
+		} catch (error) {
+			console.error('Failed to submit car:', error);
+		} finally {
+			isSubmitting = false;
+		}
 	};
 
 	type Props = {
@@ -125,9 +132,13 @@
 			</div>
 		</CardContent>
 		<CardFooter class="flex gap-2">
-			<Button type="submit" class="flex-1">{car ? 'Update' : 'Add'} Car</Button>
+			<Button type="submit" class="flex-1" disabled={isSubmitting}>
+				{isSubmitting ? 'Saving...' : car ? 'Update' : 'Add'} Car
+			</Button>
 			{#if onCancel}
-				<Button type="button" variant="outline" class="flex-1" onclick={onCancel}>Cancel</Button>
+				<Button type="button" variant="outline" class="flex-1" onclick={onCancel} disabled={isSubmitting}>
+					Cancel
+				</Button>
 			{/if}
 		</CardFooter>
 	</form>

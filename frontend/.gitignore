@@ -21,3 +21,11 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Database
+sqlite.db
+sqlite.db-journal
+/drizzle
+
+# Uploads
+/uploads

@@ -23,13 +23,18 @@ export interface RepairPart {
 	sourceUrl: string;
 }
 
+export interface Photo {
+	id: string;
+	url: string;
+}
+
 export interface Repair {
 	id: string;
 	carId: string;
 	title: string;
 	description: string;
 	status: RepairStatus;
-	photos: string[];
+	photos?: Photo[];
 	parts: RepairPart[];
 	laborCost: number;
 	laborHours: number;

@@ -9,6 +9,9 @@
 	import CarDetails from '$lib/components/cars/car-details.svelte';
 	import AnalyticsView from '$lib/components/analytics/analytics-view.svelte';
 	import CalendarView from '$lib/components/calendar/calendar-view.svelte';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
 
 	const app = setApp({ isDarkMode: false });
 	const repairsState = setRepairs();
@@ -17,7 +20,7 @@
 <Toaster position="bottom-right" theme={app.isDarkMode ? 'dark' : 'light'} richColors />
 
 <SidebarProvider>
-	<AppSidebar />
+	<AppSidebar user={data.user} />
 	<SidebarInset>
 		<AppTopHeader />
 		<main class="flex-1 overflow-auto">

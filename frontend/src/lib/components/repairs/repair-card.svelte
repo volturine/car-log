@@ -88,7 +88,7 @@
 			</div>
 		</CardHeader>
 		<CardContent class="flex flex-col gap-4">
-			{#if repair.photos.length > 0}
+			{#if repair.photos && repair.photos.length > 0}
 				<div>
 					<button
 						type="button"
@@ -105,7 +105,7 @@
 							{#each repair.photos as photo, index (index)}
 								<div class="aspect-square rounded-lg overflow-hidden border">
 									<img
-										src={photo}
+										src={photo.url}
 										alt="Repair photo {index + 1}"
 										class="w-full h-full object-cover"
 									/>

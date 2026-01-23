@@ -1,93 +1,200 @@
-# mini scrable
+# Car Repair Log - Production Ready
 
+A secure, multi-user car repair tracking application with authentication, database storage, and photo uploads.
 
+## Features
 
-## Getting started
+- **User Authentication**: Better Auth with email/password
+- **Database**: SQLite with Drizzle ORM
+- **Secure Photo Storage**: File-based photo uploads with user isolation
+- **Multi-User Support**: Each user has private access to their own cars and repairs
+- **Full CRUD**: Cars, Repairs, Parts, and Photos
+- **Analytics**: Track repair costs by brand and model
+- **Calendar View**: Visualize repair schedules
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Tech Stack
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- **Frontend**: SvelteKit 5, TypeScript, TailwindCSS
+- **Backend**: SvelteKit Server Routes
+- **Database**: SQLite + Drizzle ORM
+- **Auth**: Better Auth
+- **UI**: shadcn-svelte components
 
-## Add your files
+## Getting Started
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Installation
+
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. The database is already initialized. If you need to reset it:
+```bash
+npx drizzle-kit push
+```
+
+### Running the Application
+
+1. Start the development server:
+```bash
+npm run dev
+```
+
+2. Open your browser to `http://localhost:5173`
+
+3. You'll be redirected to the login page. Create a new account by clicking "Register"
+
+### Testing with Multiple Users
+
+To test the multi-user functionality:
+
+1. **Create First User**:
+   - Go to `/auth/register`
+   - Enter name, email, and password (min 8 characters)
+   - You'll be logged in automatically
+
+2. **Add Cars and Repairs**:
+   - Click "Add New Car" to create vehicles
+   - Select a car to view details
+   - Add repairs with photos, parts, and labor costs
+
+3. **Test with Second User**:
+   - Sign out using the button in the sidebar
+   - Register a new account with a different email
+   - Add different cars and repairs
+   - Verify you cannot see the first user's data
+
+4. **Upload Photos**:
+   - When creating/editing a repair, use the photo upload section
+   - Photos are stored securely in `/uploads/{userId}/{repairId}/`
+   - Each user can only access their own photos
+
+5. **Test Features**:
+   - **Analytics**: View repair statistics by brand/model
+   - **Calendar**: See repairs on a monthly calendar
+   - **Search**: Filter cars by brand, model, or license plate
+
+## Project Structure
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.kripso-world.com/kripso/mini-scrable.git
-git branch -M master
-git push -uf origin master
+frontend/
+├── src/
+│   ├── lib/
+│   │   ├── server/           # Server-side code
+│   │   │   ├── db/           # Database schema and client
+│   │   │   ├── auth.ts       # Better Auth configuration
+│   │   │   └── storage.ts    # Photo upload handling
+│   │   ├── components/       # UI components
+│   │   ├── hooks/            # Svelte state management
+│   │   └── types.ts          # TypeScript types
+│   └── routes/
+│       ├── api/              # API endpoints
+│       │   ├── auth/         # Authentication
+│       │   ├── cars/         # Cars CRUD
+│       │   ├── repairs/      # Repairs CRUD
+│       │   └── photos/       # Photo upload/serve
+│       ├── auth/             # Login/Register pages
+│       └── +page.svelte      # Main app
+├── uploads/                  # Photo storage (gitignored)
+├── sqlite.db                 # SQLite database (gitignored)
+└── drizzle/                  # Database migrations
 ```
 
-## Integrate with your tools
+## Security Features
 
-- [ ] [Set up project integrations](https://gitlab.kripso-world.com/kripso/mini-scrable/-/settings/integrations)
+- **Authentication**: Session-based auth with Better Auth
+- **Authorization**: All API endpoints verify user ownership
+- **Data Isolation**: Users can only access their own data
+- **Secure File Storage**: Photos stored with user/repair ID isolation
+- **SQL Injection Protection**: Drizzle ORM with parameterized queries
+- **XSS Protection**: SvelteKit automatic escaping
 
-## Collaborate with your team
+## API Endpoints
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+All endpoints require authentication:
 
-## Test and Deploy
+- `GET /api/cars` - List user's cars
+- `POST /api/cars` - Create car
+- `PUT /api/cars/[id]` - Update car
+- `DELETE /api/cars/[id]` - Delete car
+- `GET /api/repairs` - List user's repairs
+- `GET /api/repairs?carId={id}` - List repairs for a car
+- `POST /api/repairs` - Create repair
+- `PUT /api/repairs/[id]` - Update repair
+- `DELETE /api/repairs/[id]` - Delete repair
+- `POST /api/photos` - Upload photos (multipart/form-data)
+- `GET /api/photos/[id]` - Serve photo
+- `DELETE /api/photos/[id]` - Delete photo
 
-Use the built-in continuous integration in GitLab.
+## Environment Variables
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Create a `.env` file in the frontend directory:
 
-***
+```env
+BETTER_AUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars
+BETTER_AUTH_URL=http://localhost:5173
+```
 
-# Editing this README
+## Building for Production
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+npm run build
+npm run preview
+```
 
-## Suggestions for a good README
+## Testing Scenarios
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Scenario 1: Basic User Flow
+1. Register new user
+2. Add 2-3 cars
+3. Add repairs to each car
+4. Upload photos to repairs
+5. Add parts with costs
+6. View analytics
+7. Check calendar view
 
-## Name
-Choose a self-explaining name for your project.
+### Scenario 2: Multi-User Isolation
+1. User A: Create account, add car "Toyota Camry"
+2. User A: Add repair with photos
+3. Sign out
+4. User B: Create account, add car "Honda Civic"
+5. User B: Verify cannot see User A's data
+6. User B: Add repair with photos
+7. Verify photos are isolated by user
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+### Scenario 3: Data Persistence
+1. Add cars and repairs
+2. Sign out
+3. Close browser
+4. Reopen and sign in
+5. Verify all data persists
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+## Known Limitations
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- Email verification is disabled (set `requireEmailVerification: true` for production)
+- Photos stored on local filesystem (consider S3 for production)
+- SQLite database (consider PostgreSQL for production scale)
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## Next Steps for Production
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+1. Set up email service for verification
+2. Configure cloud storage (S3, CloudFlare R2) for photos
+3. Migrate to PostgreSQL for better concurrency
+4. Add rate limiting
+5. Set up proper logging and monitoring
+6. Configure HTTPS
+7. Add backup strategy for database and photos
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+MIT

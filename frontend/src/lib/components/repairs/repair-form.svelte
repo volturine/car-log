@@ -34,9 +34,12 @@
 			: ''
 	});
 
-	let parts = $derived<RepairPart[]>(repair?.parts || []);
-	let photos = $derived<string[]>(repair?.photos || []);
+	let parts = $state<RepairPart[]>(repair?.parts || []);
+	let photos = $state<{ url: string; file?: File }[]>(
+		repair?.photos?.map((p: any) => ({ url: p.url || p })) || []
+	);
 	let newPart = $state({ name: '', description: '', quantity: 1, unitCost: 0, sourceUrl: '' });
+	let isSubmitting = $state(false);
 
 	const addPart = () => {
 		if (!newPart.name || newPart.unitCost <= 0) {
@@ -71,7 +74,7 @@
 			const reader = new FileReader();
 			reader.onload = (e) => {
 				const result = e.target?.result as string;
-				photos = [...photos, result];
+				photos = [...photos, { url: result, file }];
 			};
 			reader.readAsDataURL(file);
 		});
@@ -81,7 +84,7 @@
 		photos = photos.filter((_, i) => i !== index);
 	};
 
-	const handleSubmit = (e: Event) => {
+	const handleSubmit = async (e: Event) => {
 		e.preventDefault();
 
 		if (!formData.title || !formData.description) {
@@ -89,28 +92,45 @@
 			return;
 		}
 
-		const repairData = {
-			carId,
-			title: formData.title,
-			description: formData.description,
-			status: formData.status,
-			photos,
-			parts,
-			laborCost: formData.laborCost,
-			laborHours: formData.laborHours,
-			startDate: new Date(formData.startDate),
-			completedDate: formData.completedDate ? new Date(formData.completedDate) : undefined
-		};
+		if (isSubmitting) return;
+		isSubmitting = true;
 
-		if (repair) {
-			repairs.updateRepair(repair.id, repairData);
-			toast.success('Repair updated successfully');
-		} else {
-			repairs.addRepair(repairData);
-			toast.success('Repair added successfully');
+		try {
+			const repairData = {
+				carId,
+				title: formData.title,
+				description: formData.description,
+				status: formData.status,
+				parts,
+				laborCost: formData.laborCost,
+				laborHours: formData.laborHours,
+				startDate: new Date(formData.startDate),
+				completedDate: formData.completedDate ? new Date(formData.completedDate) : undefined
+			};
+
+			let repairId: string;
+			if (repair) {
+				await repairs.updateRepair(repair.id, repairData);
+				repairId = repair.id;
+			} else {
+				repairId = await repairs.addRepair(repairData);
+			}
+
+			// Upload new photos
+			const newPhotos = photos.filter((p) => p.file);
+			if (newPhotos.length > 0 && repairId) {
+				await repairs.uploadPhotos(
+					repairId,
+					newPhotos.map((p) => p.file!)
+				);
+			}
+
+			onSuccess?.();
+		} catch (error) {
+			console.error('Failed to submit repair:', error);
+		} finally {
+			isSubmitting = false;
 		}
-
-		onSuccess?.();
 	};
 
 	const totalPartsCost = $derived(parts.reduce((sum, p) => sum + p.totalCost, 0));
@@ -203,7 +223,7 @@
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 					{#each photos as photo, index (index)}
 						<div class="relative group aspect-square rounded-lg overflow-hidden border">
-							<img src={photo} alt="Repair photo {index + 1}" class="w-full h-full object-cover" />
+							<img src={photo.url} alt="Repair photo {index + 1}" class="w-full h-full object-cover" />
 							<button
 								type="button"
 								onclick={() => removePhoto(index)}
@@ -316,9 +336,13 @@
 			</div>
 		</CardContent>
 		<CardFooter class="flex gap-2">
-			<Button type="submit" class="flex-1">{repair ? 'Update' : 'Add'} Repair</Button>
+			<Button type="submit" class="flex-1" disabled={isSubmitting}>
+				{isSubmitting ? 'Saving...' : repair ? 'Update' : 'Add'} Repair
+			</Button>
 			{#if onCancel}
-				<Button type="button" variant="outline" class="flex-1" onclick={onCancel}>Cancel</Button>
+				<Button type="button" variant="outline" class="flex-1" onclick={onCancel} disabled={isSubmitting}>
+					Cancel
+				</Button>
 			{/if}
 		</CardFooter>
 	</form>

@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import { signOut } from '$lib/auth-client';
+	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button';
 	import {
 		Sidebar,
 		SidebarContent,
@@ -13,9 +16,16 @@
 		SidebarMenuItem,
 		SidebarMenuButton
 	} from '$lib/components/ui/sidebar';
-	import { CarIcon, BarChart3Icon, WrenchIcon, CalendarIcon } from '@lucide/svelte';
+	import { CarIcon, BarChart3Icon, WrenchIcon, CalendarIcon, LogOutIcon } from '@lucide/svelte';
 
 	const repairs = useRepairs();
+
+	let { user }: { user?: { name: string; email: string } } = $props();
+
+	async function handleSignOut() {
+		await signOut();
+		goto('/auth/login');
+	}
 </script>
 
 <Sidebar collapsible="offcanvas">
@@ -64,9 +74,21 @@
 	</SidebarContent>
 
 	<SidebarFooter class="border-t border-sidebar-border p-4">
-		<div class="text-xs text-muted-foreground">
-			<div>{repairs.cars.length} Cars</div>
-			<div>{repairs.repairs.length} Repairs</div>
+		<div class="flex flex-col gap-3">
+			<div class="text-xs text-muted-foreground">
+				<div>{repairs.cars.length} Cars</div>
+				<div>{repairs.repairs.length} Repairs</div>
+			</div>
+			{#if user}
+				<div class="text-xs">
+					<div class="font-medium">{user.name}</div>
+					<div class="text-muted-foreground">{user.email}</div>
+				</div>
+			{/if}
+			<Button variant="outline" size="sm" onclick={handleSignOut} class="w-full">
+				<LogOutIcon class="size-4" />
+				Sign Out
+			</Button>
 		</div>
 	</SidebarFooter>
 

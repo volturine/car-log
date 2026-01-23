@@ -1,5 +1,6 @@
 import { setContext, getContext } from "svelte";
 import type { Car, Repair, RepairPart, BrandStats, ModelStats } from "$lib/types.js";
+import { toast } from "svelte-sonner";
 
 class UseRepairs {
 	cars = $state<Car[]>([]);
@@ -7,28 +8,37 @@ class UseRepairs {
 	selectedCarId = $state<string | null>(null);
 	selectedRepairId = $state<string | null>(null);
 	currentView = $state<"cars" | "car-details" | "analytics" | "calendar">("cars");
+	loading = $state(false);
 
 	constructor() {
-		// Load from localStorage
+		// Load data from API
 		if (typeof window !== "undefined") {
-			const savedCars = localStorage.getItem("cars");
-			const savedRepairs = localStorage.getItem("repairs");
-			if (savedCars) this.cars = JSON.parse(savedCars);
-			if (savedRepairs) this.repairs = JSON.parse(savedRepairs);
+			this.loadData();
 		}
+	}
 
-		// Save to localStorage whenever data changes
-		$effect(() => {
-			if (typeof window !== "undefined") {
-				localStorage.setItem("cars", JSON.stringify(this.cars));
-			}
-		});
+	async loadData() {
+		this.loading = true;
+		try {
+			await Promise.all([this.fetchCars(), this.fetchRepairs()]);
+		} catch (error) {
+			console.error("Failed to load data:", error);
+			toast.error("Failed to load data");
+		} finally {
+			this.loading = false;
+		}
+	}
 
-		$effect(() => {
-			if (typeof window !== "undefined") {
-				localStorage.setItem("repairs", JSON.stringify(this.repairs));
-			}
-		});
+	async fetchCars() {
+		const response = await fetch("/api/cars");
+		if (!response.ok) throw new Error("Failed to fetch cars");
+		this.cars = await response.json();
+	}
+
+	async fetchRepairs() {
+		const response = await fetch("/api/repairs");
+		if (!response.ok) throw new Error("Failed to fetch repairs");
+		this.repairs = await response.json();
 	}
 
 	selectedCar = $derived(this.cars.find(c => c.id === this.selectedCarId));
@@ -83,55 +93,148 @@ class UseRepairs {
 		}).sort((a, b) => b.totalRepairs - a.totalRepairs);
 	});
 
-	addCar = (car: Omit<Car, "id" | "createdAt">) => {
-		const newCar: Car = {
-			...car,
-			id: crypto.randomUUID(),
-			createdAt: new Date(),
-		};
-		this.cars = [...this.cars, newCar];
-		return newCar.id;
-	};
-
-	updateCar = (id: string, updates: Partial<Car>) => {
-		this.cars = this.cars.map(car => (car.id === id ? { ...car, ...updates } : car));
-	};
-
-	deleteCar = (id: string) => {
-		this.cars = this.cars.filter(car => car.id !== id);
-		this.repairs = this.repairs.filter(repair => repair.carId !== id);
-		if (this.selectedCarId === id) {
-			this.selectedCarId = null;
-			this.currentView = "cars";
+	addCar = async (car: Omit<Car, "id" | "createdAt">) => {
+		try {
+			const response = await fetch("/api/cars", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(car),
+			});
+			if (!response.ok) throw new Error("Failed to create car");
+			const newCar = await response.json();
+			this.cars = [...this.cars, newCar];
+			toast.success("Car added successfully");
+			return newCar.id;
+		} catch (error) {
+			console.error("Failed to add car:", error);
+			toast.error("Failed to add car");
+			throw error;
 		}
 	};
 
-	addRepair = (repair: Omit<Repair, "id" | "createdAt" | "totalCost">) => {
-		const partsCost = repair.parts.reduce((sum, p) => sum + p.totalCost, 0);
-		const newRepair: Repair = {
-			...repair,
-			id: crypto.randomUUID(),
-			totalCost: partsCost + repair.laborCost,
-			createdAt: new Date(),
-		};
-		this.repairs = [...this.repairs, newRepair];
-		return newRepair.id;
+	updateCar = async (id: string, updates: Partial<Car>) => {
+		try {
+			const response = await fetch(`/api/cars/${id}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(updates),
+			});
+			if (!response.ok) throw new Error("Failed to update car");
+			const updatedCar = await response.json();
+			this.cars = this.cars.map(car => (car.id === id ? updatedCar : car));
+			toast.success("Car updated successfully");
+		} catch (error) {
+			console.error("Failed to update car:", error);
+			toast.error("Failed to update car");
+			throw error;
+		}
 	};
 
-	updateRepair = (id: string, updates: Partial<Repair>) => {
-		this.repairs = this.repairs.map(repair => {
-			if (repair.id !== id) return repair;
-			const updated = { ...repair, ...updates };
-			const partsCost = updated.parts.reduce((sum, p) => sum + p.totalCost, 0);
-			updated.totalCost = partsCost + updated.laborCost;
-			return updated;
-		});
+	deleteCar = async (id: string) => {
+		try {
+			const response = await fetch(`/api/cars/${id}`, {
+				method: "DELETE",
+			});
+			if (!response.ok) throw new Error("Failed to delete car");
+			this.cars = this.cars.filter(car => car.id !== id);
+			this.repairs = this.repairs.filter(repair => repair.carId !== id);
+			if (this.selectedCarId === id) {
+				this.selectedCarId = null;
+				this.currentView = "cars";
+			}
+			toast.success("Car deleted successfully");
+		} catch (error) {
+			console.error("Failed to delete car:", error);
+			toast.error("Failed to delete car");
+			throw error;
+		}
 	};
 
-	deleteRepair = (id: string) => {
-		this.repairs = this.repairs.filter(repair => repair.id !== id);
-		if (this.selectedRepairId === id) {
-			this.selectedRepairId = null;
+	addRepair = async (repair: Omit<Repair, "id" | "createdAt" | "totalCost">) => {
+		try {
+			const partsCost = repair.parts.reduce((sum, p) => sum + p.totalCost, 0);
+			const repairData = {
+				...repair,
+				totalCost: partsCost + repair.laborCost,
+			};
+
+			const response = await fetch("/api/repairs", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(repairData),
+			});
+			if (!response.ok) throw new Error("Failed to create repair");
+			const newRepair = await response.json();
+			this.repairs = [...this.repairs, newRepair];
+			toast.success("Repair added successfully");
+			return newRepair.id;
+		} catch (error) {
+			console.error("Failed to add repair:", error);
+			toast.error("Failed to add repair");
+			throw error;
+		}
+	};
+
+	updateRepair = async (id: string, updates: Partial<Repair>) => {
+		try {
+			const partsCost = updates.parts?.reduce((sum, p) => sum + p.totalCost, 0) || 0;
+			const repairData = {
+				...updates,
+				totalCost: partsCost + (updates.laborCost || 0),
+			};
+
+			const response = await fetch(`/api/repairs/${id}`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(repairData),
+			});
+			if (!response.ok) throw new Error("Failed to update repair");
+			const updatedRepair = await response.json();
+			this.repairs = this.repairs.map(repair => (repair.id === id ? updatedRepair : repair));
+			toast.success("Repair updated successfully");
+		} catch (error) {
+			console.error("Failed to update repair:", error);
+			toast.error("Failed to update repair");
+			throw error;
+		}
+	};
+
+	deleteRepair = async (id: string) => {
+		try {
+			const response = await fetch(`/api/repairs/${id}`, {
+				method: "DELETE",
+			});
+			if (!response.ok) throw new Error("Failed to delete repair");
+			this.repairs = this.repairs.filter(repair => repair.id !== id);
+			if (this.selectedRepairId === id) {
+				this.selectedRepairId = null;
+			}
+			toast.success("Repair deleted successfully");
+		} catch (error) {
+			console.error("Failed to delete repair:", error);
+			toast.error("Failed to delete repair");
+			throw error;
+		}
+	};
+
+	uploadPhotos = async (repairId: string, files: File[]) => {
+		try {
+			const formData = new FormData();
+			formData.append("repairId", repairId);
+			files.forEach(file => formData.append("files", file));
+
+			const response = await fetch("/api/photos", {
+				method: "POST",
+				body: formData,
+			});
+			if (!response.ok) throw new Error("Failed to upload photos");
+			const uploadedPhotos = await response.json();
+			toast.success(`${uploadedPhotos.length} photo(s) uploaded successfully`);
+			return uploadedPhotos;
+		} catch (error) {
+			console.error("Failed to upload photos:", error);
+			toast.error("Failed to upload photos");
+			throw error;
 		}
 	};
 
