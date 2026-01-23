@@ -5,7 +5,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '$lib/components/ui/select';
+	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
 	import { USER_ROLE } from '$lib/constants';
 
@@ -112,10 +112,19 @@
 						onValueChange={(value) => {
 							if (value) role = value;
 						}}
+						value={role}
 						disabled={loading}
 					>
 						<SelectTrigger id="role">
-							<SelectValue placeholder="Select account type" />
+							{#if role === USER_ROLE.CUSTOMER}
+								Customer (Car Owner)
+							{:else if role === USER_ROLE.SHOP_OWNER}
+								Shop Owner
+							{:else if role === USER_ROLE.MECHANIC}
+								Mechanic
+							{:else}
+								Select account type
+							{/if}
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value={USER_ROLE.CUSTOMER}>Customer (Car Owner)</SelectItem>

@@ -25,30 +25,34 @@
 	);
 
 	const repairs = useRepairs();
-	let formData = $state({
-		title: repair?.title || '',
-		description: repair?.description || '',
-		status: repair?.status || (isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : 'pending' as RepairStatus),
-		shopId: repair?.shopId || '',
-		assignedMechanicId: repair?.assignedMechanicId || '',
-		// Estimate fields
-		estimatedCost: repair?.estimatedCost || 0,
-		estimatedHours: repair?.estimatedHours || 0,
-		estimateNotes: repair?.estimateNotes || '',
-		// Actual fields
-		laborCost: repair?.laborCost || 0,
-		laborHours: repair?.laborHours || 0,
-		startDate: repair?.startDate
-			? new Date(repair.startDate).toISOString().split('T')[0]
-			: new Date().toISOString().split('T')[0],
-		completedDate: repair?.completedDate
-			? new Date(repair.completedDate).toISOString().split('T')[0]
-			: ''
-	});
 
-	let parts = $state<RepairPart[]>(repair?.parts || []);
+	function initFormData() {
+		return {
+			title: repair?.title || '',
+			description: repair?.description || '',
+			status: repair?.status || (isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : 'pending' as RepairStatus),
+			shopId: repair?.shopId || '',
+			assignedMechanicId: repair?.assignedMechanicId || '',
+			// Estimate fields
+			estimatedCost: repair?.estimatedCost || 0,
+			estimatedHours: repair?.estimatedHours || 0,
+			estimateNotes: repair?.estimateNotes || '',
+			// Actual fields
+			laborCost: repair?.laborCost || 0,
+			laborHours: repair?.laborHours || 0,
+			startDate: repair?.startDate
+				? new Date(repair.startDate).toISOString().split('T')[0]
+				: new Date().toISOString().split('T')[0],
+			completedDate: repair?.completedDate
+				? new Date(repair.completedDate).toISOString().split('T')[0]
+				: ''
+		};
+	}
+
+	let formData = $state(initFormData());
+	let parts = $state<RepairPart[]>(repair?.parts ? [...repair.parts] : []);
 	let photos = $state<{ url: string; file?: File }[]>(
-		repair?.photos?.map((p: any) => ({ url: p.url || p })) || []
+		repair?.photos ? repair.photos.map((p: any) => ({ url: p.url || p })) : []
 	);
 	let newPart = $state({ name: '', description: '', quantity: 1, unitCost: 0, sourceUrl: '' });
 	let isSubmitting = $state(false);
