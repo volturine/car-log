@@ -3,27 +3,56 @@
  * Centralizes magic strings and numbers for maintainability
  */
 
+// User Role Constants
+export const USER_ROLE = {
+	CUSTOMER: 'customer',
+	SHOP_OWNER: 'shop_owner',
+	MECHANIC: 'mechanic',
+	ADMIN: 'admin'
+} as const;
+
+export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
+
 // Repair Status Constants
 export const REPAIR_STATUS = {
-	PENDING: 'pending',
-	IN_PROGRESS: 'in-progress',
-	COMPLETED: 'completed'
+	ESTIMATE_PENDING: 'estimate_pending',
+	ESTIMATE_APPROVED: 'estimate_approved',
+	IN_PROGRESS: 'in_progress',
+	COMPLETED: 'completed',
+	PAID: 'paid',
+	// Legacy statuses (for backwards compatibility)
+	PENDING: 'pending'
 } as const;
 
 export type RepairStatus = (typeof REPAIR_STATUS)[keyof typeof REPAIR_STATUS];
 
 // UI Constants for Repair Status
 export const STATUS_COLORS: Record<RepairStatus, string> = {
-	[REPAIR_STATUS.PENDING]: 'secondary',
+	[REPAIR_STATUS.ESTIMATE_PENDING]: 'secondary',
+	[REPAIR_STATUS.ESTIMATE_APPROVED]: 'default',
 	[REPAIR_STATUS.IN_PROGRESS]: 'default',
-	[REPAIR_STATUS.COMPLETED]: 'outline'
+	[REPAIR_STATUS.COMPLETED]: 'outline',
+	[REPAIR_STATUS.PAID]: 'outline',
+	[REPAIR_STATUS.PENDING]: 'secondary'
 };
 
 export const STATUS_LABELS: Record<RepairStatus, string> = {
-	[REPAIR_STATUS.PENDING]: 'Pending',
+	[REPAIR_STATUS.ESTIMATE_PENDING]: 'Estimate Pending',
+	[REPAIR_STATUS.ESTIMATE_APPROVED]: 'Estimate Approved',
 	[REPAIR_STATUS.IN_PROGRESS]: 'In Progress',
-	[REPAIR_STATUS.COMPLETED]: 'Completed'
+	[REPAIR_STATUS.COMPLETED]: 'Completed',
+	[REPAIR_STATUS.PAID]: 'Paid',
+	[REPAIR_STATUS.PENDING]: 'Pending'
 };
+
+// Payment Status Constants
+export const PAYMENT_STATUS = {
+	UNPAID: 'unpaid',
+	PARTIAL: 'partial',
+	PAID: 'paid'
+} as const;
+
+export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
 
 // Rate Limiting Constants
 export const RATE_LIMITS = {

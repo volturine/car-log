@@ -3,7 +3,7 @@
  */
 
 import { error, type NumericRange } from '@sveltejs/kit';
-import { db } from './db';
+import { db, schema } from './db';
 import { eq, and } from 'drizzle-orm';
 import { API_ERRORS } from '$lib/constants';
 import { z } from 'zod';
@@ -16,6 +16,65 @@ export function requireAuth(locals: App.Locals) {
 		throw error(API_ERRORS.UNAUTHORIZED.status, API_ERRORS.UNAUTHORIZED.message);
 	}
 	return locals.user;
+}
+
+/**
+ * Require specific role - throws 403 if user doesn't have required role
+ */
+export function requireRole(locals: App.Locals, allowedRoles: string[]) {
+	const user = requireAuth(locals);
+
+	if (!allowedRoles.includes(user.role || 'customer')) {
+		throw error(API_ERRORS.FORBIDDEN.status, 'Insufficient permissions');
+	}
+
+	return user;
+}
+
+/**
+ * Check if user is shop owner or mechanic
+ */
+export function isShopMember(user: any): boolean {
+	return user.role === 'shop_owner' || user.role === 'mechanic';
+}
+
+/**
+ * Check if user has access to shop
+ */
+export async function verifyShopAccess(shopId: string, userId: string, userRole: string) {
+	// Shop owners have access to their own shop
+	// Mechanics have access if they're assigned to the shop
+	const [shop] = await db
+		.select()
+		.from(schema.shops)
+		.where(eq(schema.shops.id, shopId))
+		.limit(1);
+
+	if (!shop) {
+		throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
+	}
+
+	// Owner has access
+	if (shop.ownerId === userId) {
+		return shop;
+	}
+
+	// Check if mechanic is part of this shop
+	if (userRole === 'mechanic') {
+		const [membership] = await db
+			.select()
+			.from(schema.shopMembers)
+			.where(and(eq(schema.shopMembers.shopId, shopId), eq(schema.shopMembers.userId, userId)))
+			.limit(1);
+
+		if (!membership) {
+			throw error(API_ERRORS.FORBIDDEN.status, 'You do not have access to this shop');
+		}
+	} else {
+		throw error(API_ERRORS.FORBIDDEN.status, 'You do not have access to this shop');
+	}
+
+	return shop;
 }
 
 /**

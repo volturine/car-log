@@ -12,17 +12,48 @@ export const carSchema = z.object({
 	color: z.string().max(50).optional().nullable()
 });
 
+// Shop validation schema
+export const shopSchema = z.object({
+	name: z.string().min(1, 'Shop name is required').max(200),
+	email: z.string().email('Invalid email').optional().nullable(),
+	phone: z.string().max(20).optional().nullable(),
+	address: z.string().max(500).optional().nullable(),
+	city: z.string().max(100).optional().nullable(),
+	state: z.string().max(50).optional().nullable(),
+	zipCode: z.string().max(10).optional().nullable(),
+	businessHours: z.string().optional().nullable(), // JSON string
+	specialties: z.array(z.string()).optional().default([])
+});
+
 // Repair validation schema
 export const repairSchema = z.object({
 	carId: z.string().uuid('Invalid car ID'),
+	shopId: z.string().uuid('Invalid shop ID').optional().nullable(),
+	assignedMechanicId: z.string().uuid('Invalid mechanic ID').optional().nullable(),
 	title: z.string().min(1, 'Title is required').max(200),
 	description: z.string().max(5000).optional().nullable(),
-	status: z.enum(['pending', 'in-progress', 'completed']).default('pending'),
+	status: z
+		.enum([
+			'estimate_pending',
+			'estimate_approved',
+			'in_progress',
+			'completed',
+			'paid',
+			'pending'
+		])
+		.default('estimate_pending'),
+	// Estimate fields
+	estimatedCost: z.number().min(0).max(1000000).default(0),
+	estimatedHours: z.number().min(0).max(10000).default(0),
+	estimateNotes: z.string().max(2000).optional().nullable(),
+	// Actual fields
 	laborCost: z.number().min(0).max(1000000).default(0),
 	laborHours: z.number().min(0).max(10000).default(0),
 	totalCost: z.number().min(0).max(1000000).default(0),
+	// Dates
 	startDate: z.string().datetime().optional().nullable(),
 	completedDate: z.string().datetime().optional().nullable(),
+	// Parts
 	parts: z
 		.array(
 			z.object({
