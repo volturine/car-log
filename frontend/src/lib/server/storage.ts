@@ -19,29 +19,38 @@ export async function saveFile(
 ): Promise<{ filename: string; path: string }> {
 	await ensureUploadDir();
 
+	// Validate userId and repairId to prevent path traversal
+	if (!isValidUUID(userId) || !isValidUUID(repairId)) {
+		throw new Error('Invalid userId or repairId');
+	}
+
 	// Create user directory
 	const userDir = join(UPLOAD_DIR, userId);
 	if (!existsSync(userDir)) {
-		await mkdir(userDir, { recursive: true });
+		await mkdir(userDir, { recursive: true, mode: 0o755 });
 	}
 
 	// Create repair directory
 	const repairDir = join(userDir, repairId);
 	if (!existsSync(repairDir)) {
-		await mkdir(repairDir, { recursive: true });
+		await mkdir(repairDir, { recursive: true, mode: 0o755 });
 	}
 
-	// Generate unique filename
+	// Generate cryptographically secure unique filename
 	const timestamp = Date.now();
-	const random = Math.random().toString(36).substring(2, 15);
-	const ext = file.name.split('.').pop();
-	const filename = `${timestamp}-${random}.${ext}`;
+	const randomBytes = crypto.getRandomValues(new Uint8Array(16));
+	const random = Array.from(randomBytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+	const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+
+	// Sanitize extension to prevent command injection
+	const safeExt = ext.replace(/[^a-z0-9]/gi, '').substring(0, 10);
+	const filename = `${timestamp}-${random}.${safeExt}`;
 	const filePath = join(repairDir, filename);
 
-	// Save file
+	// Save file with restricted permissions
 	const arrayBuffer = await file.arrayBuffer();
 	const buffer = Buffer.from(arrayBuffer);
-	await writeFile(filePath, buffer);
+	await writeFile(filePath, buffer, { mode: 0o644 });
 
 	// Return relative path for storage
 	const relativePath = join(userId, repairId, filename);
@@ -50,6 +59,13 @@ export async function saveFile(
 		filename,
 		path: relativePath
 	};
+}
+
+// UUID validation helper
+function isValidUUID(uuid: string): boolean {
+	const uuidRegex =
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+	return uuidRegex.test(uuid);
 }
 
 // Get full file path
