@@ -200,3 +200,21 @@ export const photos = sqliteTable('photos', {
 		.notNull()
 		.default(sql`CURRENT_TIMESTAMP`)
 });
+
+// Notifications table
+export const notifications = sqliteTable('notifications', {
+	id: text('id').primaryKey(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	type: text('type').notNull(), // estimate_ready, estimate_approved, estimate_rejected, repair_started, repair_completed, payment_received
+	title: text('title').notNull(),
+	message: text('message').notNull(),
+	relatedId: text('related_id'), // repairId or other related entity
+	relatedType: text('related_type'), // repair, shop, etc
+	read: integer('read', { mode: 'boolean' }).notNull().default(false),
+	readAt: integer('read_at', { mode: 'timestamp' }),
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`CURRENT_TIMESTAMP`)
+});
