@@ -16,11 +16,23 @@
 		SidebarMenuItem,
 		SidebarMenuButton
 	} from '$lib/components/ui/sidebar';
-	import { CarIcon, BarChart3Icon, WrenchIcon, CalendarIcon, LogOutIcon } from '@lucide/svelte';
+	import {
+		CarIcon,
+		BarChart3Icon,
+		WrenchIcon,
+		CalendarIcon,
+		LogOutIcon,
+		StoreIcon
+	} from '@lucide/svelte';
+	import { USER_ROLE } from '$lib/constants';
 
 	const repairs = useRepairs();
 
-	let { user }: { user?: { name: string; email: string } } = $props();
+	let { user }: { user?: { name: string; email: string; role?: string } } = $props();
+
+	let isShopUser = $derived(
+		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
+	);
 
 	async function handleSignOut() {
 		await signOut();
@@ -41,6 +53,17 @@
 			<SidebarGroupLabel>Navigation</SidebarGroupLabel>
 			<SidebarGroupContent>
 				<SidebarMenu>
+					{#if isShopUser}
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								isActive={repairs.currentView === 'shop-dashboard'}
+								onclick={() => repairs.goToShopDashboard()}
+							>
+								<StoreIcon />
+								<span>Shop Dashboard</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					{/if}
 					<SidebarMenuItem>
 						<SidebarMenuButton
 							isActive={repairs.currentView === 'cars'}
@@ -83,6 +106,11 @@
 				<div class="text-xs">
 					<div class="font-medium">{user.name}</div>
 					<div class="text-muted-foreground">{user.email}</div>
+					{#if user.role}
+						<div class="text-xs text-primary mt-1 capitalize">
+							{user.role.replace('_', ' ')}
+						</div>
+					{/if}
 				</div>
 			{/if}
 			<Button variant="outline" size="sm" onclick={handleSignOut} class="w-full">

@@ -9,6 +9,7 @@
 	import CarDetails from '$lib/components/cars/car-details.svelte';
 	import AnalyticsView from '$lib/components/analytics/analytics-view.svelte';
 	import CalendarView from '$lib/components/calendar/calendar-view.svelte';
+	import ShopDashboard from '$lib/components/shops/shop-dashboard.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -32,6 +33,8 @@
 				<AnalyticsView />
 			{:else if repairsState.currentView === 'calendar'}
 				<CalendarView />
+			{:else if repairsState.currentView === 'shop-dashboard'}
+				<ShopDashboard />
 			{/if}
 		</main>
 	</SidebarInset>

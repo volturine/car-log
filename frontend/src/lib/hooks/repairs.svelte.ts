@@ -7,7 +7,7 @@ class UseRepairs {
 	repairs = $state<Repair[]>([]);
 	selectedCarId = $state<string | null>(null);
 	selectedRepairId = $state<string | null>(null);
-	currentView = $state<"cars" | "car-details" | "analytics" | "calendar">("cars");
+	currentView = $state<"cars" | "car-details" | "analytics" | "calendar" | "shop-dashboard">("cars");
 	loading = $state(false);
 
 	constructor() {
@@ -255,6 +255,10 @@ class UseRepairs {
 
 	goToCalendar = () => {
 		this.currentView = "calendar";
+	};
+
+	goToShopDashboard = () => {
+		this.currentView = "shop-dashboard";
 	};
 }
 
