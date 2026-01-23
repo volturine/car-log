@@ -3,6 +3,7 @@
 	import { useSidebar } from '$lib/components/ui/sidebar';
 	import { Button } from '$lib/components/ui/button';
 	import { PanelLeftIcon, SunIcon, MoonIcon } from '@lucide/svelte';
+	import NotificationBell from '$lib/components/notifications/notification-bell.svelte';
 
 	const sidebar = useSidebar();
 	const app = useApp();
@@ -15,16 +16,19 @@
 		<PanelLeftIcon />
 	</Button>
 
-	<Button
-		size="icon"
-		variant="outline"
-		class="size-8 rounded-lg"
-		onclick={() => app.darkModeToggle()}
-	>
-		{#if app.isDarkMode}
-			<SunIcon />
-		{:else}
-			<MoonIcon />
-		{/if}
-	</Button>
+	<div class="flex items-center gap-2">
+		<NotificationBell />
+		<Button
+			size="icon"
+			variant="outline"
+			class="size-8 rounded-lg"
+			onclick={() => app.darkModeToggle()}
+		>
+			{#if app.isDarkMode}
+				<SunIcon />
+			{:else}
+				<MoonIcon />
+			{/if}
+		</Button>
+	</div>
 </header>
