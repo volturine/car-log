@@ -15,15 +15,27 @@
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
 	import { PlusIcon, Trash2Icon, ImageIcon, XIcon, ExternalLinkIcon } from '@lucide/svelte';
+	import { REPAIR_STATUS, USER_ROLE } from '$lib/constants';
 	import type { Repair, RepairPart, RepairStatus } from '$lib/types.js';
 
-	let { carId, repair, onCancel, onSuccess }: Props = $props();
+	let { carId, repair, onCancel, onSuccess, user }: Props = $props();
+
+	let isShopUser = $derived(
+		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
+	);
 
 	const repairs = useRepairs();
-	let formData = $derived({
+	let formData = $state({
 		title: repair?.title || '',
 		description: repair?.description || '',
-		status: repair?.status || ('pending' as RepairStatus),
+		status: repair?.status || (isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : 'pending' as RepairStatus),
+		shopId: repair?.shopId || '',
+		assignedMechanicId: repair?.assignedMechanicId || '',
+		// Estimate fields
+		estimatedCost: repair?.estimatedCost || 0,
+		estimatedHours: repair?.estimatedHours || 0,
+		estimateNotes: repair?.estimateNotes || '',
+		// Actual fields
 		laborCost: repair?.laborCost || 0,
 		laborHours: repair?.laborHours || 0,
 		startDate: repair?.startDate
@@ -102,6 +114,14 @@
 				description: formData.description,
 				status: formData.status,
 				parts,
+				// Shop fields
+				shopId: formData.shopId || undefined,
+				assignedMechanicId: formData.assignedMechanicId || undefined,
+				// Estimate fields
+				estimatedCost: formData.estimatedCost,
+				estimatedHours: formData.estimatedHours,
+				estimateNotes: formData.estimateNotes || undefined,
+				// Actual fields
 				laborCost: formData.laborCost,
 				laborHours: formData.laborHours,
 				startDate: new Date(formData.startDate),
@@ -144,6 +164,7 @@
 		repair?: Repair;
 		onCancel?: () => void;
 		onSuccess?: () => void;
+		user?: { role?: string; id?: string };
 	};
 </script>
 
@@ -181,14 +202,64 @@
 					<Select type="single" bind:value={formData.status}>
 						<SelectTrigger id="status">{formData.status}</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="pending">Pending</SelectItem>
-							<SelectItem value="in-progress">In Progress</SelectItem>
-							<SelectItem value="completed">Completed</SelectItem>
+							{#if isShopUser}
+								<SelectItem value={REPAIR_STATUS.ESTIMATE_PENDING}>Estimate Pending</SelectItem>
+								<SelectItem value={REPAIR_STATUS.ESTIMATE_APPROVED}>Estimate Approved</SelectItem>
+								<SelectItem value={REPAIR_STATUS.IN_PROGRESS}>In Progress</SelectItem>
+								<SelectItem value={REPAIR_STATUS.COMPLETED}>Completed</SelectItem>
+								<SelectItem value={REPAIR_STATUS.PAID}>Paid</SelectItem>
+							{:else}
+								<SelectItem value="pending">Pending</SelectItem>
+								<SelectItem value="in_progress">In Progress</SelectItem>
+								<SelectItem value="completed">Completed</SelectItem>
+							{/if}
 						</SelectContent>
 					</Select>
 				</div>
+			</div>
+
+			{#if isShopUser}
+				<!-- Estimate Section for Shops -->
+				<div class="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-4">
+					<h3 class="font-semibold text-sm">Estimate Details</h3>
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="flex flex-col gap-2">
+							<Label for="estimatedCost">Estimated Cost ($)</Label>
+							<Input
+								id="estimatedCost"
+								type="number"
+								bind:value={formData.estimatedCost}
+								min="0"
+								step="0.01"
+							/>
+						</div>
+						<div class="flex flex-col gap-2">
+							<Label for="estimatedHours">Estimated Hours</Label>
+							<Input
+								id="estimatedHours"
+								type="number"
+								bind:value={formData.estimatedHours}
+								min="0"
+								step="0.5"
+							/>
+						</div>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="estimateNotes">Estimate Notes</Label>
+						<Textarea
+							id="estimateNotes"
+							bind:value={formData.estimateNotes}
+							placeholder="Notes about the estimate for the customer..."
+							rows={2}
+						/>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Actual Work Section -->
+			<div class="grid gap-4 md:grid-cols-2">
 				<div class="flex flex-col gap-2">
-					<Label for="laborHours">Labor Hours</Label>
+					<Label for="laborHours">{isShopUser ? 'Actual ' : ''}Labor Hours</Label>
 					<Input
 						id="laborHours"
 						type="number"
@@ -197,25 +268,24 @@
 						step="0.5"
 					/>
 				</div>
-			</div>
-
-			<div class="grid gap-4 md:grid-cols-2">
 				<div class="flex flex-col gap-2">
-					<Label for="laborCost">Labor Cost ($)</Label>
+					<Label for="laborCost">{isShopUser ? 'Actual ' : ''}Labor Cost ($)</Label>
 					<Input id="laborCost" type="number" bind:value={formData.laborCost} min="0" step="0.01" />
 					{#if hourlyRate > 0}
 						<p class="text-xs text-muted-foreground">Hourly rate: ${hourlyRate.toFixed(2)}/hr</p>
 					{/if}
 				</div>
+			</div>
+
+			<div class="grid gap-4 md:grid-cols-2">
 				<div class="flex flex-col gap-2">
 					<Label for="startDate">Start Date</Label>
 					<Input id="startDate" type="date" bind:value={formData.startDate} />
 				</div>
-			</div>
-
-			<div class="flex flex-col gap-2">
-				<Label for="completedDate">Completed Date</Label>
-				<Input id="completedDate" type="date" bind:value={formData.completedDate} />
+				<div class="flex flex-col gap-2">
+					<Label for="completedDate">Completed Date</Label>
+					<Input id="completedDate" type="date" bind:value={formData.completedDate} />
+				</div>
 			</div>
 
 			<div class="flex flex-col gap-4">
