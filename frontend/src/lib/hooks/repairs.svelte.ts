@@ -32,13 +32,15 @@ class UseRepairs {
 	async fetchCars() {
 		const response = await fetch("/api/cars");
 		if (!response.ok) throw new Error("Failed to fetch cars");
-		this.cars = await response.json();
+		const result = await response.json();
+		this.cars = result.data || result; // Handle both wrapped and unwrapped responses
 	}
 
 	async fetchRepairs() {
 		const response = await fetch("/api/repairs");
 		if (!response.ok) throw new Error("Failed to fetch repairs");
-		this.repairs = await response.json();
+		const result = await response.json();
+		this.repairs = result.data || result; // Handle both wrapped and unwrapped responses
 	}
 
 	selectedCar = $derived(this.cars.find(c => c.id === this.selectedCarId));
@@ -101,7 +103,8 @@ class UseRepairs {
 				body: JSON.stringify(car),
 			});
 			if (!response.ok) throw new Error("Failed to create car");
-			const newCar = await response.json();
+			const result = await response.json();
+			const newCar = result.data || result;
 			this.cars = [...this.cars, newCar];
 			toast.success("Car added successfully");
 			return newCar.id;
@@ -120,7 +123,8 @@ class UseRepairs {
 				body: JSON.stringify(updates),
 			});
 			if (!response.ok) throw new Error("Failed to update car");
-			const updatedCar = await response.json();
+			const result = await response.json();
+			const updatedCar = result.data || result;
 			this.cars = this.cars.map(car => (car.id === id ? updatedCar : car));
 			toast.success("Car updated successfully");
 		} catch (error) {
@@ -164,7 +168,8 @@ class UseRepairs {
 				body: JSON.stringify(repairData),
 			});
 			if (!response.ok) throw new Error("Failed to create repair");
-			const newRepair = await response.json();
+			const result = await response.json();
+			const newRepair = result.data || result;
 			this.repairs = [...this.repairs, newRepair];
 			toast.success("Repair added successfully");
 			return newRepair.id;
@@ -189,7 +194,8 @@ class UseRepairs {
 				body: JSON.stringify(repairData),
 			});
 			if (!response.ok) throw new Error("Failed to update repair");
-			const updatedRepair = await response.json();
+			const result = await response.json();
+			const updatedRepair = result.data || result;
 			this.repairs = this.repairs.map(repair => (repair.id === id ? updatedRepair : repair));
 			toast.success("Repair updated successfully");
 		} catch (error) {
@@ -228,8 +234,10 @@ class UseRepairs {
 				body: formData,
 			});
 			if (!response.ok) throw new Error("Failed to upload photos");
-			const uploadedPhotos = await response.json();
-			toast.success(`${uploadedPhotos.length} photo(s) uploaded successfully`);
+			const result = await response.json();
+			const uploadedPhotos = result.data || result;
+			const photoCount = Array.isArray(uploadedPhotos) ? uploadedPhotos.length : 1;
+			toast.success(`${photoCount} photo(s) uploaded successfully`);
 			return uploadedPhotos;
 		} catch (error) {
 			console.error("Failed to upload photos:", error);

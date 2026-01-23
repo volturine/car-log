@@ -5,6 +5,8 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, verifyOwnership, validateBody, successResponse } from '$lib/server/api-utils';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
+import { getFilePath } from '$lib/server/storage';
+import { unlink } from 'fs/promises';
 
 const logger = apiLogger.child('cars');
 
@@ -52,10 +54,47 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 
 	logger.info('Deleting car', { carId: params.id, userId: user.id });
 
-	// Cascade delete will handle repairs and photos
+	// Get all repairs for this car BEFORE deleting
+	const repairs = await db.select().from(schema.repairs).where(eq(schema.repairs.carId, params.id));
+
+	// Get all photos for all repairs BEFORE deleting
+	const allPhotos = [];
+	for (const repair of repairs) {
+		const photos = await db
+			.select()
+			.from(schema.photos)
+			.where(eq(schema.photos.repairId, repair.id));
+		allPhotos.push(...photos);
+	}
+
+	// Delete car from database (cascade will delete repairs, parts, and photos)
 	await db.delete(schema.cars).where(eq(schema.cars.id, params.id));
 
-	logger.info('Car deleted', { carId: params.id, userId: user.id });
+	// Clean up photo files from disk
+	const fileCleanupPromises = allPhotos.map(async (photo) => {
+		const filePath = getFilePath(photo.path);
+		try {
+			await unlink(filePath);
+			logger.debug('Photo file deleted', { photoId: photo.id, path: photo.path });
+		} catch (err) {
+			// Log warning but don't fail the deletion
+			logger.warn('Failed to delete photo file', {
+				photoId: photo.id,
+				path: photo.path,
+				error: (err as Error).message
+			});
+		}
+	});
+
+	// Wait for all file deletions (but don't fail if some fail)
+	await Promise.allSettled(fileCleanupPromises);
+
+	logger.info('Car deleted', {
+		carId: params.id,
+		userId: user.id,
+		repairsDeleted: repairs.length,
+		photosCleaned: allPhotos.length
+	});
 
 	return json(successResponse({ deleted: true }));
 };
