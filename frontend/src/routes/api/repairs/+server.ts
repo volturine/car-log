@@ -1,28 +1,44 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq, and } from 'drizzle-orm';
+import {
+	requireAuth,
+	verifyOwnership,
+	validateBody,
+	successResponse,
+	transaction,
+	formatPhotosForResponse
+} from '$lib/server/api-utils';
+import { repairSchema } from '$lib/server/validation';
+import { apiLogger } from '$lib/server/logger';
+import { generateId } from '$lib/utils/helpers';
+
+const logger = apiLogger.child('repairs');
 
 // GET /api/repairs - List all repairs for the authenticated user
 export const GET: RequestHandler = async ({ locals, url }) => {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
+	const user = requireAuth(locals);
 
 	const carId = url.searchParams.get('carId');
 
-	let query = db.select().from(schema.repairs).where(eq(schema.repairs.userId, locals.user.id));
+	logger.debug('Fetching repairs', { userId: user.id, carId });
+
+	let query = db.select().from(schema.repairs).where(eq(schema.repairs.userId, user.id));
 
 	if (carId) {
+		// Verify car belongs to user first
+		await verifyOwnership(schema.cars, carId, user.id, 'Car');
+
 		query = db
 			.select()
 			.from(schema.repairs)
-			.where(and(eq(schema.repairs.userId, locals.user.id), eq(schema.repairs.carId, carId)));
+			.where(and(eq(schema.repairs.userId, user.id), eq(schema.repairs.carId, carId)));
 	}
 
 	const repairs = await query;
 
-	// Get repair parts for each repair
+	// Get repair parts and photos for each repair
 	const repairsWithParts = await Promise.all(
 		repairs.map(async (repair) => {
 			const parts = await db
@@ -38,69 +54,77 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			return {
 				...repair,
 				parts,
-				photos: photos.map((p) => ({ id: p.id, url: `/api/photos/${p.id}` }))
+				photos: formatPhotosForResponse(photos)
 			};
 		})
 	);
 
-	return json(repairsWithParts);
+	logger.debug('Repairs fetched', { count: repairsWithParts.length, userId: user.id });
+
+	return json(successResponse(repairsWithParts));
 };
 
 // POST /api/repairs - Create a new repair
 export const POST: RequestHandler = async ({ request, locals }) => {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
+	const user = requireAuth(locals);
 
-	const data = await request.json();
+	// Validate request body
+	const validatedData = await validateBody(request, repairSchema);
 
 	// Verify car belongs to user
-	const [car] = await db
-		.select()
-		.from(schema.cars)
-		.where(and(eq(schema.cars.id, data.carId), eq(schema.cars.userId, locals.user.id)))
-		.limit(1);
+	await verifyOwnership(schema.cars, validatedData.carId, user.id, 'Car');
 
-	if (!car) {
-		throw error(404, 'Car not found');
-	}
+	logger.info('Creating repair', { userId: user.id, carId: validatedData.carId });
 
-	const repairId = crypto.randomUUID();
+	// Use transaction to ensure atomicity
+	const result = await transaction(async () => {
+		const repairId = generateId();
 
-	const newRepair = {
-		id: repairId,
-		carId: data.carId,
-		userId: locals.user.id,
-		title: data.title,
-		description: data.description || null,
-		status: data.status || 'pending',
-		laborCost: data.laborCost || 0,
-		laborHours: data.laborHours || 0,
-		totalCost: data.totalCost || 0,
-		startDate: data.startDate ? new Date(data.startDate) : null,
-		completedDate: data.completedDate ? new Date(data.completedDate) : null,
-		createdAt: new Date(),
-		updatedAt: new Date()
-	};
+		const newRepair = {
+			id: repairId,
+			carId: validatedData.carId,
+			userId: user.id,
+			title: validatedData.title,
+			description: validatedData.description || null,
+			status: validatedData.status,
+			laborCost: validatedData.laborCost,
+			laborHours: validatedData.laborHours,
+			totalCost: validatedData.totalCost,
+			startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
+			completedDate: validatedData.completedDate
+				? new Date(validatedData.completedDate)
+				: null,
+			createdAt: new Date(),
+			updatedAt: new Date()
+		};
 
-	await db.insert(schema.repairs).values(newRepair);
+		await db.insert(schema.repairs).values(newRepair);
 
-	// Add parts if provided
-	if (data.parts && Array.isArray(data.parts)) {
-		for (const part of data.parts) {
-			await db.insert(schema.repairParts).values({
-				id: crypto.randomUUID(),
-				repairId,
-				name: part.name,
-				description: part.description || null,
-				quantity: part.quantity || 1,
-				unitCost: part.unitCost || 0,
-				totalCost: part.totalCost || 0,
-				sourceUrl: part.sourceUrl || null,
-				createdAt: new Date()
-			});
+		// Add parts if provided
+		const insertedParts = [];
+		if (validatedData.parts && validatedData.parts.length > 0) {
+			for (const part of validatedData.parts) {
+				const partData = {
+					id: generateId(),
+					repairId,
+					name: part.name,
+					description: part.description || null,
+					quantity: part.quantity,
+					unitCost: part.unitCost,
+					totalCost: part.totalCost,
+					sourceUrl: part.sourceUrl || null,
+					createdAt: new Date()
+				};
+
+				await db.insert(schema.repairParts).values(partData);
+				insertedParts.push(partData);
+			}
 		}
-	}
 
-	return json({ ...newRepair, parts: data.parts || [] }, { status: 201 });
+		return { ...newRepair, parts: insertedParts };
+	});
+
+	logger.info('Repair created', { repairId: result.id, userId: user.id });
+
+	return json(successResponse(result, 201), { status: 201 });
 };

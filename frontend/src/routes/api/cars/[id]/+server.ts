@@ -1,77 +1,61 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { requireAuth, verifyOwnership, validateBody, successResponse } from '$lib/server/api-utils';
+import { carSchema } from '$lib/server/validation';
+import { apiLogger } from '$lib/server/logger';
+
+const logger = apiLogger.child('cars');
 
 // GET /api/cars/[id] - Get a specific car
 export const GET: RequestHandler = async ({ params, locals }) => {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
+	const user = requireAuth(locals);
 
-	const [car] = await db
-		.select()
-		.from(schema.cars)
-		.where(and(eq(schema.cars.id, params.id), eq(schema.cars.userId, locals.user.id)))
-		.limit(1);
+	logger.debug('Fetching car', { carId: params.id, userId: user.id });
 
-	if (!car) {
-		throw error(404, 'Car not found');
-	}
+	const car = await verifyOwnership(schema.cars, params.id, user.id, 'Car');
 
-	return json(car);
+	return json(successResponse(car));
 };
 
 // PUT /api/cars/[id] - Update a car
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
+	const user = requireAuth(locals);
 
-	const data = await request.json();
+	// Verify ownership
+	await verifyOwnership(schema.cars, params.id, user.id, 'Car');
 
-	const [existingCar] = await db
-		.select()
-		.from(schema.cars)
-		.where(and(eq(schema.cars.id, params.id), eq(schema.cars.userId, locals.user.id)))
-		.limit(1);
+	// Validate request body
+	const validatedData = await validateBody(request, carSchema);
 
-	if (!existingCar) {
-		throw error(404, 'Car not found');
-	}
+	logger.info('Updating car', { carId: params.id, userId: user.id });
 
 	const updatedCar = {
-		...data,
-		id: params.id,
-		userId: locals.user.id,
+		...validatedData,
 		updatedAt: new Date()
 	};
 
-	await db
-		.update(schema.cars)
-		.set(updatedCar)
-		.where(eq(schema.cars.id, params.id));
+	await db.update(schema.cars).set(updatedCar).where(eq(schema.cars.id, params.id));
 
-	return json(updatedCar);
+	logger.info('Car updated', { carId: params.id, userId: user.id });
+
+	return json(successResponse({ id: params.id, ...updatedCar }));
 };
 
 // DELETE /api/cars/[id] - Delete a car
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
+	const user = requireAuth(locals);
 
-	const [existingCar] = await db
-		.select()
-		.from(schema.cars)
-		.where(and(eq(schema.cars.id, params.id), eq(schema.cars.userId, locals.user.id)))
-		.limit(1);
+	// Verify ownership
+	await verifyOwnership(schema.cars, params.id, user.id, 'Car');
 
-	if (!existingCar) {
-		throw error(404, 'Car not found');
-	}
+	logger.info('Deleting car', { carId: params.id, userId: user.id });
 
+	// Cascade delete will handle repairs and photos
 	await db.delete(schema.cars).where(eq(schema.cars.id, params.id));
 
-	return json({ success: true });
+	logger.info('Car deleted', { carId: params.id, userId: user.id });
+
+	return json(successResponse({ deleted: true }));
 };
