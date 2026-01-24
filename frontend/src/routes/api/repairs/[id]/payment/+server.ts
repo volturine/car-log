@@ -64,7 +64,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	logger.info('Recording payment', { repairId: params.id, userId: user.id, amount });
 
-	const result = await transaction(async () => {
+	// Update payment in transaction
+	const result = transaction((tx) => {
 		const newAmountPaid = repair.amountPaid + amount;
 		const remainingBalance = repair.totalCost - newAmountPaid;
 
@@ -88,28 +89,11 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			updatedAt: new Date()
 		};
 
-		await db
+		tx
 			.update(schema.repairs)
 			.set(updatedRepair)
-			.where(eq(schema.repairs.id, params.id));
-
-		// Notify shop owner if customer made payment, or vice versa
-		if (repair.shopId && isOwner) {
-			const [shop] = await db
-				.select()
-				.from(schema.shops)
-				.where(eq(schema.shops.id, repair.shopId))
-				.limit(1);
-
-			if (shop) {
-				await notifyPaymentReceived(
-					shop.ownerId,
-					params.id,
-					amount,
-					user.name || 'Customer'
-				);
-			}
-		}
+			.where(eq(schema.repairs.id, params.id))
+			.run();
 
 		logger.info('Payment recorded', {
 			repairId: params.id,
@@ -130,6 +114,24 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			}
 		};
 	});
+
+	// Send notification after transaction (can be async)
+	if (repair.shopId && isOwner) {
+		const [shop] = await db
+			.select()
+			.from(schema.shops)
+			.where(eq(schema.shops.id, repair.shopId))
+			.limit(1);
+
+		if (shop) {
+			await notifyPaymentReceived(
+				shop.ownerId,
+				params.id,
+				amount,
+				user.name || 'Customer'
+			);
+		}
+	}
 
 	return json(successResponse(result, 201), { status: 201 });
 };

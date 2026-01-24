@@ -23,8 +23,8 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 
 	logger.info('Approving estimate', { repairId: params.id, userId: user.id });
 
-	const result = await transaction(async () => {
-		// Update repair status
+	// Update in transaction
+	const result = transaction((tx) => {
 		const updatedRepair = {
 			status: REPAIR_STATUS.ESTIMATE_APPROVED,
 			customerApproved: true,
@@ -32,27 +32,27 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 			updatedAt: new Date()
 		};
 
-		await db
+		tx
 			.update(schema.repairs)
 			.set(updatedRepair)
-			.where(eq(schema.repairs.id, params.id));
-
-		// Get shop info to notify
-		if (repair.shopId) {
-			const [shop] = await db
-				.select()
-				.from(schema.shops)
-				.where(eq(schema.shops.id, repair.shopId))
-				.limit(1);
-
-			if (shop) {
-				// Notify shop owner
-				await notifyEstimateApproved(shop.ownerId, params.id, user.name || 'Customer');
-			}
-		}
+			.where(eq(schema.repairs.id, params.id))
+			.run();
 
 		return { ...repair, ...updatedRepair };
 	});
+
+	// Send notification after transaction (can be async)
+	if (repair.shopId) {
+		const [shop] = await db
+			.select()
+			.from(schema.shops)
+			.where(eq(schema.shops.id, repair.shopId))
+			.limit(1);
+
+		if (shop) {
+			await notifyEstimateApproved(shop.ownerId, params.id, user.name || 'Customer');
+		}
+	}
 
 	logger.info('Estimate approved', { repairId: params.id, userId: user.id });
 

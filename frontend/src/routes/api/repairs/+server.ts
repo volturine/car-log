@@ -183,7 +183,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	}
 
 	// Use transaction to ensure atomicity
-	const result = await transaction(async () => {
+	const result = transaction((tx) => {
 		const repairId = generateId();
 
 		const newRepair = {
@@ -215,7 +215,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			updatedAt: new Date()
 		};
 
-		await db.insert(schema.repairs).values(newRepair);
+		tx.insert(schema.repairs).values(newRepair).run();
 
 		// Add parts if provided
 		const insertedParts = [];
@@ -233,7 +233,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 					createdAt: new Date()
 				};
 
-				await db.insert(schema.repairParts).values(partData);
+				tx.insert(schema.repairParts).values(partData).run();
 				insertedParts.push(partData);
 			}
 		}

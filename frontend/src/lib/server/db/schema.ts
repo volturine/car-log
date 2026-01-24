@@ -30,6 +30,9 @@ export const sessions = sqliteTable('sessions', {
 	userAgent: text('user_agent'),
 	createdAt: integer('created_at', { mode: 'timestamp' })
 		.notNull()
+		.default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: integer('updated_at', { mode: 'timestamp' })
+		.notNull()
 		.default(sql`CURRENT_TIMESTAMP`)
 });
 
@@ -47,6 +50,9 @@ export const accounts = sqliteTable('accounts', {
 	expiresAt: integer('expires_at', { mode: 'timestamp' }),
 	password: text('password'),
 	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`CURRENT_TIMESTAMP`),
+	updatedAt: integer('updated_at', { mode: 'timestamp' })
 		.notNull()
 		.default(sql`CURRENT_TIMESTAMP`)
 });

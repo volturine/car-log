@@ -150,11 +150,12 @@ export function errorResponse(
 
 /**
  * Execute database transaction
+ * Note: better-sqlite3 requires synchronous transaction callbacks
+ * The callback receives the transaction object (tx) to use for database operations
  */
-export async function transaction<T>(callback: () => Promise<T> | T): Promise<T> {
-	// Drizzle transactions for better-sqlite3
-	return db.transaction(async () => {
-		return await Promise.resolve(callback());
+export function transaction<T>(callback: (tx: typeof db) => T): T {
+	return db.transaction((tx) => {
+		return callback(tx);
 	});
 }
 

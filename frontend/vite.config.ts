@@ -36,9 +36,6 @@ export default {
 		],
 		hmr: {
 			host: 'code-server.bee-justice.ts.net'
-		},
-		proxy: {
-			'/api': 'http://localhost:8000'
 		}
 	},
 };
