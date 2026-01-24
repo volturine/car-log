@@ -8,11 +8,29 @@ class UseApp {
 
 	// Set default data
 	constructor(props: { [key: string]: any }) {
-		// Merge props into this instance
-		Object.assign(this, props);
+		// Load theme from localStorage on init
+		if (typeof window !== 'undefined') {
+			const savedTheme = localStorage.getItem('theme');
+			if (savedTheme === 'dark') {
+				this.isDarkMode = true;
+			} else if (savedTheme === 'light') {
+				this.isDarkMode = false;
+			} else {
+				// Merge props into this instance if no saved theme
+				Object.assign(this, props);
+			}
+		} else {
+			// Merge props into this instance (SSR)
+			Object.assign(this, props);
+		}
+
 		// Add and remove dark class to body whenever `isDarkMode` changes
 		$effect(() => {
 			document.body.classList.toggle("dark", this.isDarkMode);
+			// Persist theme to localStorage
+			if (typeof window !== 'undefined') {
+				localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+			}
 		});
 	}
 

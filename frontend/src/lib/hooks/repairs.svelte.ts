@@ -1,6 +1,7 @@
 import { setContext, getContext } from "svelte";
 import type { Car, Repair, RepairPart, BrandStats, ModelStats } from "$lib/types.js";
 import { toast } from "svelte-sonner";
+import { useDebounce } from "$lib/utils/reactive.svelte";
 
 class UseRepairs {
 	cars = $state<Car[]>([]);
@@ -9,6 +10,26 @@ class UseRepairs {
 	selectedRepairId = $state<string | null>(null);
 	currentView = $state<"cars" | "car-details" | "analytics" | "calendar" | "shop-dashboard">("cars");
 	loading = $state(false);
+	searchQuery = $state<string>("");
+
+	// Filtered repairs based on search query
+	filteredRepairs = $derived.by(() => {
+		if (!this.searchQuery.trim()) {
+			return this.repairs;
+		}
+
+		const query = this.searchQuery.toLowerCase();
+		return this.repairs.filter(repair =>
+			repair.title.toLowerCase().includes(query) ||
+			repair.description?.toLowerCase().includes(query) ||
+			repair.status.toLowerCase().includes(query)
+		);
+	});
+
+	// Debounced search function
+	debouncedSearch = useDebounce((query: string) => {
+		this.searchQuery = query;
+	}, 300);
 
 	constructor() {
 		// Load data from API
