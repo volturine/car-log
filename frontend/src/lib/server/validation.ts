@@ -69,29 +69,6 @@ export const repairSchema = z.object({
 		.default([])
 });
 
-// File upload validation
-export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-
-export function validateImageFile(file: File): { valid: boolean; error?: string } {
-	if (file.size === 0) {
-		return { valid: false, error: 'File is empty' };
-	}
-
-	if (file.size > MAX_FILE_SIZE) {
-		return { valid: false, error: `File size exceeds ${MAX_FILE_SIZE / 1024 / 1024}MB limit` };
-	}
-
-	if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-		return {
-			valid: false,
-			error: `File type ${file.type} not allowed. Allowed types: ${ALLOWED_IMAGE_TYPES.join(', ')}`
-		};
-	}
-
-	return { valid: true };
-}
-
 // Environment variable validation
 export function validateEnv() {
 	const requiredEnvVars = ['BETTER_AUTH_SECRET'];

@@ -39,42 +39,35 @@ export function isShopMember(user: any): boolean {
 }
 
 /**
+ * Fetch single record by ID - returns undefined if not found
+ */
+export async function fetchById<T extends { id: any }>(
+	table: any,
+	id: string
+): Promise<T | undefined> {
+	const [record] = await db.select().from(table).where(eq(table.id, id)).limit(1);
+	return record as T | undefined;
+}
+
+/**
  * Check if user has access to shop
  */
 export async function verifyShopAccess(shopId: string, userId: string, userRole: string) {
-	// Shop owners have access to their own shop
-	// Mechanics have access if they're assigned to the shop
-	const [shop] = await db
-		.select()
-		.from(schema.shops)
-		.where(eq(schema.shops.id, shopId))
-		.limit(1);
+	const shop = await fetchById(schema.shops, shopId);
+	if (!shop) throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
 
-	if (!shop) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
-	}
+	if (shop.ownerId === userId) return shop;
 
-	// Owner has access
-	if (shop.ownerId === userId) {
-		return shop;
-	}
-
-	// Check if mechanic is part of this shop
 	if (userRole === 'mechanic') {
 		const [membership] = await db
 			.select()
 			.from(schema.shopMembers)
 			.where(and(eq(schema.shopMembers.shopId, shopId), eq(schema.shopMembers.userId, userId)))
 			.limit(1);
-
-		if (!membership) {
-			throw error(API_ERRORS.FORBIDDEN.status, 'You do not have access to this shop');
-		}
-	} else {
-		throw error(API_ERRORS.FORBIDDEN.status, 'You do not have access to this shop');
+		if (membership) return shop;
 	}
 
-	return shop;
+	throw error(API_ERRORS.FORBIDDEN.status, 'You do not have access to this shop');
 }
 
 /**
@@ -86,17 +79,11 @@ export async function verifyOwnership<T extends Record<string, any>>(
 	userId: string,
 	resourceName: string = 'Resource'
 ): Promise<T> {
-	const [record] = await db
-		.select()
-		.from(table)
-		.where(and(eq(table.id, resourceId), eq(table.userId, userId)))
-		.limit(1);
-
-	if (!record) {
+	const record = await fetchById<T>(table, resourceId);
+	if (!record || record.userId !== userId) {
 		throw error(API_ERRORS.NOT_FOUND.status, `${resourceName} not found`);
 	}
-
-	return record as T;
+	return record;
 }
 
 /**

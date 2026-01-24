@@ -31,50 +31,39 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	logger.info('Uploading photos', { repairId, userId: user.id, fileCount: files.length });
 
-	// Validate all files before uploading any
+	// Validate, save files, then insert in transaction
+	const maxSize = FILE_UPLOAD.MAX_SIZE_BYTES;
 	for (const file of files) {
-		if (file.size === 0) {
-			throw error(400, 'Empty files are not allowed');
-		}
-
-		if (file.size > FILE_UPLOAD.MAX_FILE_SIZE) {
-			throw error(400, `File ${file.name} exceeds maximum size of ${FILE_UPLOAD.MAX_FILE_SIZE / 1024 / 1024}MB`);
-		}
-
-		if (!FILE_UPLOAD.ALLOWED_TYPES.includes(file.type)) {
-			throw error(400, `File type ${file.type} is not allowed`);
+		if (!file.size) throw error(400, 'Empty files not allowed');
+		if (file.size > maxSize) throw error(400, `File exceeds ${maxSize / 1024 / 1024}MB`);
+		if (!FILE_UPLOAD.ALLOWED_IMAGE_TYPES.includes(file.type as any)) {
+			throw error(400, `Type ${file.type} not allowed`);
 		}
 	}
 
-	// Upload all photos in a transaction
-	const uploadedPhotos = await transaction(async () => {
-		const photos = [];
+	// Save files to disk
+	const savedFiles = await Promise.all(
+		files.map(file => saveFile(file, user.id, repairId))
+	);
 
-		for (const file of files) {
-			// Save file to disk
-			const { filename, path } = await saveFile(file, user.id, repairId);
-
-			// Save to database
+	// Insert all photos in single transaction
+	const uploadedPhotos = transaction((tx) =>
+		files.map((file, i) => {
 			const photo = {
 				id: generateId(),
 				repairId,
 				userId: user.id,
-				filename,
+				filename: savedFiles[i].filename,
 				originalFilename: file.name,
 				mimeType: file.type,
 				size: file.size,
-				path,
+				path: savedFiles[i].path,
 				createdAt: new Date()
 			};
-
-			await db.insert(schema.photos).values(photo);
-			photos.push({ id: photo.id, url: `/api/photos/${photo.id}` });
-
-			logger.debug('Photo uploaded', { photoId: photo.id, filename: file.name, size: file.size });
-		}
-
-		return photos;
-	});
+			tx.insert(schema.photos).values(photo).run();
+			return { id: photo.id, url: `/api/photos/${photo.id}` };
+		})
+	);
 
 	logger.info('Photos uploaded', { repairId, userId: user.id, count: uploadedPhotos.length });
 

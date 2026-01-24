@@ -8,6 +8,7 @@ import {
 	validateBody,
 	successResponse,
 	transaction,
+	fetchById,
 	formatPhotosForResponse,
 	isShopMember,
 	verifyShopAccess
@@ -156,15 +157,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		await verifyShopAccess(validatedData.shopId, user.id, user.role || 'customer');
 
 		// Get car to find the owner
-		const [car] = await db
-			.select()
-			.from(schema.cars)
-			.where(eq(schema.cars.id, validatedData.carId))
-			.limit(1);
-
-		if (!car) {
-			throw error(404, 'Car not found');
-		}
+		const car = await fetchById(schema.cars, validatedData.carId);
+		if (!car) throw error(404, 'Car not found');
 
 		carOwnerId = car.userId;
 
