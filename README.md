@@ -24,30 +24,30 @@ A secure, multi-user car repair tracking application with authentication, databa
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 18+ and Bun
 
 ### Installation
 
-1. Navigate to the frontend directory:
+1. Navigate to the project root:
 ```bash
-cd frontend
+cd car-log
 ```
 
 2. Install dependencies:
 ```bash
-npm install
+bun install
 ```
 
 3. The database is already initialized. If you need to reset it:
 ```bash
-npx drizzle-kit push
+bunx drizzle-kit push
 ```
 
 ### Running the Application
 
 1. Start the development server:
 ```bash
-npm run dev
+bun run dev
 ```
 
 2. Open your browser to `http://localhost:5173`
@@ -87,7 +87,7 @@ To test the multi-user functionality:
 ## Project Structure
 
 ```
-frontend/
+.
 ├── src/
 │   ├── lib/
 │   │   ├── server/           # Server-side code
@@ -138,7 +138,7 @@ All endpoints require authentication:
 
 ## Environment Variables
 
-Create a `.env` file in the frontend directory:
+Create a `.env` file in the project root:
 
 ```env
 BETTER_AUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars
@@ -148,8 +148,8 @@ BETTER_AUTH_URL=http://localhost:5173
 ## Building for Production
 
 ```bash
-npm run build
-npm run preview
+bun run build
+bun run preview
 ```
 
 ## Testing Scenarios

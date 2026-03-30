@@ -199,7 +199,7 @@ Forms and Actions
 Internationalization (i18n) with Paraglide.js
 
 - Use Paraglide.js for internationalization: https://inlang.com/m/gerre34r/library-inlang-paraglideJs
-- Install Paraglide.js: `npm install @inlang/paraglide-js`
+- Install Paraglide.js: `bun add @inlang/paraglide-js`
 - Set up language files in the `languages` directory.
 - Use the `t` function to translate strings:
 
