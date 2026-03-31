@@ -126,13 +126,19 @@
 			{:else}
 				<div class="divide-y">
 					{#each notifications as notification (notification.id)}
-						<!-- svelte-ignore a11y_no_static_element_interactions -->
-						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="cursor-pointer p-4 transition-colors hover:bg-accent/50 {notification.read
+							role="button"
+							tabindex="0"
+							class="w-full p-4 text-left transition-colors hover:bg-accent/50 {notification.read
 								? 'opacity-60'
 								: ''}"
 							onclick={() => handleTap(notification)}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleTap(notification);
+								}
+							}}
 						>
 							<div class="flex gap-3">
 								<div class="mt-1 flex-shrink-0">

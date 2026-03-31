@@ -12,7 +12,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
-	import { formatCurrency, formatDate } from '$lib/utils';
+	import { formatCurrency, formatDate, carLabel } from '$lib/utils';
 	import {
 		ChevronRightIcon,
 		AlertCircleIcon,
@@ -65,12 +65,6 @@
 			.filter((r) => r.status === REPAIR_STATUS.COMPLETED)
 			.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
 	);
-
-	function carLabel(repair: Repair): string {
-		const car = repairsState.cars.find((c) => c.id === repair.carId);
-		if (!car) return 'Unknown vehicle';
-		return `${car.brand} ${car.model} - ${car.licensePlate}`;
-	}
 
 	function navigateToCar(repair: Repair) {
 		goto(resolve(`/app/cars/${repair.carId}`));
@@ -168,7 +162,7 @@
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
-									{carLabel(repair)}
+									{carLabel(repairsState.cars, repair.carId)}
 								</div>
 								<div class="text-sm text-muted-foreground">
 									Estimated: {formatCurrency(repair.estimatedCost ?? 0)} — {formatDate(
@@ -219,7 +213,7 @@
 								<div class="flex-1">
 									<div class="font-medium">{repair.title}</div>
 									<div class="text-sm text-muted-foreground">
-										{carLabel(repair)}
+										{carLabel(repairsState.cars, repair.carId)}
 									</div>
 									<div class="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
 										{#if repair.assignedMechanic}
@@ -286,7 +280,9 @@
 								>
 									<div class="flex-1">
 										<div class="font-medium">{repair.title}</div>
-										<div class="text-sm text-muted-foreground">{carLabel(repair)}</div>
+										<div class="text-sm text-muted-foreground">
+											{carLabel(repairsState.cars, repair.carId)}
+										</div>
 									</div>
 									<div class="flex items-center gap-3">
 										<div class="text-right">
@@ -339,7 +335,7 @@
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
-									{carLabel(repair)}
+									{carLabel(repairsState.cars, repair.carId)}
 								</div>
 								<div class="text-sm text-muted-foreground">
 									Completed {formatDate(repair.completedDate)}

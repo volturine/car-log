@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
 	requireAuth,
 	verifyOwnership,
@@ -17,7 +17,7 @@ import {
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { PAYMENT_STATUS, REPAIR_STATUS } from '$lib/constants';
-import { listPayments } from '$lib/server/payments';
+import { listPaymentsByRepairIds } from '$lib/server/payments';
 import { generateId } from '$lib/utils';
 import { error } from '@sveltejs/kit';
 
@@ -88,52 +88,67 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		}
 	}
 
-	// Get repair parts and photos for each repair
-	const repairsWithParts = await Promise.all(
-		repairs.map(async (repair) => {
-			const parts = await db
-				.select()
-				.from(schema.repairParts)
-				.where(eq(schema.repairParts.repairId, repair.id));
-
-			const photos = await db
-				.select()
-				.from(schema.photos)
-				.where(eq(schema.photos.repairId, repair.id));
-
-			const payments = await listPayments(repair.id);
-
-			// Get shop info if shopId exists
-			let shopInfo = null;
-			if (repair.shopId) {
-				const [shop] = await db
-					.select()
-					.from(schema.shops)
-					.where(eq(schema.shops.id, repair.shopId))
-					.limit(1);
-				shopInfo = shop || null;
-			}
-
-			// Get car info
-			const [car] = await db
-				.select()
-				.from(schema.cars)
-				.where(eq(schema.cars.id, repair.carId))
-				.limit(1);
-
-			const assignedMechanic = await getMechanic(repair.assignedMechanicId);
-
-			return {
-				...repair,
-				parts,
-				payments,
-				photos: formatPhotosForResponse(photos),
-				shop: shopInfo,
-				car: car || null,
-				assignedMechanic
-			};
-		})
+	const repairIds = repairs.map((r) => r.id);
+	const shopIds = Array.from(
+		new Set(repairs.map((r) => r.shopId).filter((id): id is string => Boolean(id)))
 	);
+	const carIds = Array.from(new Set(repairs.map((r) => r.carId)));
+	const mechanicIds = Array.from(
+		new Set(repairs.map((r) => r.assignedMechanicId).filter((id): id is string => Boolean(id)))
+	);
+
+	const [parts, photos, payments, shops, cars, mechanics] = await Promise.all([
+		repairIds.length > 0
+			? db.select().from(schema.repairParts).where(inArray(schema.repairParts.repairId, repairIds))
+			: Promise.resolve([]),
+		repairIds.length > 0
+			? db.select().from(schema.photos).where(inArray(schema.photos.repairId, repairIds))
+			: Promise.resolve([]),
+		listPaymentsByRepairIds(repairIds),
+		shopIds.length > 0
+			? db.select().from(schema.shops).where(inArray(schema.shops.id, shopIds))
+			: Promise.resolve([]),
+		carIds.length > 0
+			? db.select().from(schema.cars).where(inArray(schema.cars.id, carIds))
+			: Promise.resolve([]),
+		Promise.all(mechanicIds.map((id) => getMechanic(id)))
+	]);
+
+	const partsByRepairId = new Map<string, (typeof schema.repairParts.$inferSelect)[]>();
+	for (const part of parts) {
+		const current = partsByRepairId.get(part.repairId) ?? [];
+		partsByRepairId.set(part.repairId, [...current, part]);
+	}
+
+	const photosByRepairId = new Map<string, (typeof schema.photos.$inferSelect)[]>();
+	for (const photo of photos) {
+		const current = photosByRepairId.get(photo.repairId) ?? [];
+		photosByRepairId.set(photo.repairId, [...current, photo]);
+	}
+
+	const paymentsByRepairId = new Map<string, (typeof schema.payments.$inferSelect)[]>();
+	for (const payment of payments) {
+		const current = paymentsByRepairId.get(payment.repairId) ?? [];
+		paymentsByRepairId.set(payment.repairId, [...current, payment]);
+	}
+
+	const shopById = new Map(shops.map((shop) => [shop.id, shop]));
+	const carById = new Map(cars.map((car) => [car.id, car]));
+	const mechanicById = new Map(
+		mechanics.filter((m): m is NonNullable<typeof m> => Boolean(m)).map((m) => [m.id, m])
+	);
+
+	const repairsWithParts = repairs.map((repair) => ({
+		...repair,
+		parts: partsByRepairId.get(repair.id) ?? [],
+		payments: paymentsByRepairId.get(repair.id) ?? [],
+		photos: formatPhotosForResponse(photosByRepairId.get(repair.id) ?? []),
+		shop: repair.shopId ? (shopById.get(repair.shopId) ?? null) : null,
+		car: carById.get(repair.carId) ?? null,
+		assignedMechanic: repair.assignedMechanicId
+			? (mechanicById.get(repair.assignedMechanicId) ?? null)
+			: null
+	}));
 
 	logger.debug('Repairs fetched', { count: repairsWithParts.length, userId: user.id });
 

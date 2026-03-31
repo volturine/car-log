@@ -1,4 +1,5 @@
 import { DATE_FORMATS } from '$lib/constants';
+import type { Car } from '$lib/types';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -37,4 +38,10 @@ export function generateId(): string {
 export function toError(value: unknown): Error {
 	if (value instanceof Error) return value;
 	return new Error(String(value));
+}
+
+export function carLabel(cars: Car[], carId: string): string {
+	const car = cars.find((c) => c.id === carId);
+	if (!car) return 'Unknown vehicle';
+	return `${car.brand} ${car.model} — ${car.licensePlate}`;
 }

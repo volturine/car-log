@@ -10,7 +10,6 @@
 	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
-	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { CarIcon, PlusIcon, SearchIcon } from '@lucide/svelte';
 	import { fly } from 'svelte/transition';
@@ -111,50 +110,49 @@
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredCars as car (car.id)}
 				<div transition:fly={{ y: 20, duration: 300 }}>
-					<Card
-						class="cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-primary/10"
-						onclick={() => goto(resolve(`/app/cars/${car.id}`))}
-					>
-						<CardHeader>
-							<div class="flex items-start justify-between">
-								<div class="flex-1">
-									<CardTitle class="text-xl">{car.brand} {car.model}</CardTitle>
-									<CardDescription>{car.year} • {car.color}</CardDescription>
+					<a href={resolve(`/app/cars/${car.id}`)} class="block">
+						<Card class="transition-all duration-200 hover:shadow-lg hover:shadow-primary/10">
+							<CardHeader>
+								<div class="flex items-start justify-between">
+									<div class="flex-1">
+										<CardTitle class="text-xl">{car.brand} {car.model}</CardTitle>
+										<CardDescription>{car.year} • {car.color}</CardDescription>
+									</div>
+									<Badge variant="secondary">{getCarRepairCount(car.id)} repairs</Badge>
 								</div>
-								<Badge variant="secondary">{getCarRepairCount(car.id)} repairs</Badge>
-							</div>
-						</CardHeader>
-						<CardContent class="flex flex-col gap-2">
-							{@const badges = getCarActionBadges(car.id)}
-							{#if badges.pending > 0 || badges.active > 0 || badges.unpaid > 0}
-								<div class="flex flex-wrap gap-1.5">
-									{#if badges.pending > 0}
-										<Badge class="bg-blue-500 text-xs">{badges.pending} awaiting approval</Badge>
-									{/if}
-									{#if badges.active > 0}
-										<Badge variant="default" class="text-xs">{badges.active} in progress</Badge>
-									{/if}
-									{#if badges.unpaid > 0}
-										<Badge class="bg-yellow-500 text-xs text-foreground"
-											>{badges.unpaid} unpaid</Badge
-										>
-									{/if}
+							</CardHeader>
+							<CardContent class="flex flex-col gap-2">
+								{@const badges = getCarActionBadges(car.id)}
+								{#if badges.pending > 0 || badges.active > 0 || badges.unpaid > 0}
+									<div class="flex flex-wrap gap-1.5">
+										{#if badges.pending > 0}
+											<Badge class="bg-blue-500 text-xs">{badges.pending} awaiting approval</Badge>
+										{/if}
+										{#if badges.active > 0}
+											<Badge variant="default" class="text-xs">{badges.active} in progress</Badge>
+										{/if}
+										{#if badges.unpaid > 0}
+											<Badge class="bg-yellow-500 text-xs text-foreground"
+												>{badges.unpaid} unpaid</Badge
+											>
+										{/if}
+									</div>
+								{/if}
+								<div class="flex items-center gap-2 text-sm">
+									<span class="font-medium">Plate:</span>
+									<span class="text-muted-foreground">{car.licensePlate}</span>
 								</div>
-							{/if}
-							<div class="flex items-center gap-2 text-sm">
-								<span class="font-medium">Plate:</span>
-								<span class="text-muted-foreground">{car.licensePlate}</span>
-							</div>
-							<div class="flex items-center gap-2 text-sm">
-								<span class="font-medium">Owner:</span>
-								<span class="text-muted-foreground">{car.ownerName}</span>
-							</div>
-							<div class="flex items-center gap-2 text-sm">
-								<span class="font-medium">VIN:</span>
-								<span class="font-mono text-xs text-muted-foreground">{car.vin}</span>
-							</div>
-						</CardContent>
-					</Card>
+								<div class="flex items-center gap-2 text-sm">
+									<span class="font-medium">Owner:</span>
+									<span class="text-muted-foreground">{car.ownerName}</span>
+								</div>
+								<div class="flex items-center gap-2 text-sm">
+									<span class="font-medium">VIN:</span>
+									<span class="font-mono text-xs text-muted-foreground">{car.vin}</span>
+								</div>
+							</CardContent>
+						</Card>
+					</a>
 				</div>
 			{/each}
 		</div>

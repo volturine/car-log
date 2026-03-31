@@ -19,14 +19,13 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	const user = requireAuth(locals);
 
 	const formData = await request.formData();
-	const repairId = formData.get('repairId') as string;
-	const files = formData.getAll('files') as File[];
-
-	if (!repairId) {
+	const repairId = formData.get('repairId');
+	if (typeof repairId !== 'string' || !repairId) {
 		throw error(400, 'repairId is required');
 	}
 
-	if (!files || files.length === 0) {
+	const files = formData.getAll('files').filter((entry): entry is File => entry instanceof File);
+	if (files.length === 0) {
 		throw error(400, 'At least one file is required');
 	}
 

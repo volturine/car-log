@@ -126,14 +126,16 @@
 	};
 
 	const handlePhotoUpload = (e: Event) => {
-		const input = e.target as HTMLInputElement;
+		const input = e.target;
+		if (!(input instanceof HTMLInputElement)) return;
 		const files = input.files;
 		if (!files) return;
 
 		Array.from(files).forEach((file) => {
 			const reader = new FileReader();
-			reader.onload = (e) => {
-				const result = e.target?.result as string;
+			reader.onload = () => {
+				const result = reader.result;
+				if (typeof result !== 'string') return;
 				photos = [...photos, { url: result, file }];
 			};
 			reader.readAsDataURL(file);
