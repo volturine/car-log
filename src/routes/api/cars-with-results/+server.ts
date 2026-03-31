@@ -3,7 +3,7 @@ import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { generateId } from '$lib/utils/helpers';
+import { generateId } from '$lib/utils';
 import {
 	apiOk,
 	unauthorizedError,

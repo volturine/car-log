@@ -2,6 +2,8 @@
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 	import { fly } from 'svelte/transition';
 
@@ -98,7 +100,7 @@
 	};
 </script>
 
-<div class="p-6 space-y-6">
+<div class="space-y-6 p-6">
 	<div class="flex items-center justify-between">
 		<div>
 			<h1 class="text-3xl font-bold">Repair Calendar</h1>
@@ -123,7 +125,7 @@
 		<CardContent class="p-4">
 			<div class="grid grid-cols-7 gap-2">
 				{#each dayNames as dayName (dayName)}
-					<div class="text-center font-semibold text-sm p-2 text-muted-foreground">
+					<div class="p-2 text-center text-sm font-semibold text-muted-foreground">
 						{dayName}
 					</div>
 				{/each}
@@ -134,35 +136,35 @@
 					{:else}
 						{@const dayRepairs = getRepairsForDay(day)}
 						<div
-							class="aspect-square border rounded-lg p-2 flex flex-col gap-1 overflow-hidden hover:shadow-lg-lg transition-shadow-lg {isToday(
+							class="hover:shadow-lg-lg transition-shadow-lg flex aspect-square flex-col gap-1 overflow-hidden rounded-lg border p-2 {isToday(
 								day
 							)
-								? 'border-primary border-2'
+								? 'border-2 border-primary'
 								: ''}"
 							transition:fly={{ y: 10, duration: 200, delay: index * 5 }}
 						>
 							<div class="text-sm font-medium {isToday(day) ? 'text-primary' : ''}">
 								{day}
 							</div>
-							<div class="flex-1 overflow-y-auto space-y-1">
+							<div class="flex-1 space-y-1 overflow-y-auto">
 								{#each dayRepairs.slice(0, 3) as repair (repair.id)}
 									{@const car = repairs.cars.find((c) => c.id === repair.carId)}
 									<button
 										type="button"
-										onclick={() => repairs.selectCar(repair.carId)}
+										onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
 										class="w-full text-left"
 									>
 										<div
-											class="text-xs p-1 rounded border {statusColors[
+											class="rounded border p-1 text-xs {statusColors[
 												repair.status
-											]} truncate hover:scale-105 transition-transform"
+											]} truncate transition-transform hover:scale-105"
 										>
 											{car ? `${car.brand} ${car.model}` : 'Unknown'}
 										</div>
 									</button>
 								{/each}
 								{#if dayRepairs.length > 3}
-									<div class="text-xs text-muted-foreground text-center">
+									<div class="text-center text-xs text-muted-foreground">
 										+{dayRepairs.length - 3} more
 									</div>
 								{/if}

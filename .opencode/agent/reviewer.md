@@ -20,7 +20,7 @@ and which specialist agent should fix it.
 
 - Review code changes for correctness, style, and maintainability
 - Run `just verify` to validate changes (format + lint + type check)
-- Run `just test` to validate backend tests pass
+- Run `just test` to validate the test suite passes
 - Investigate bugs through systematic debugging
 - Provide specific, actionable feedback with file paths and line numbers
 - **Route fixes** — specify whether the backend or frontend agent should fix each issue

@@ -10,6 +10,8 @@
 	} from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { CarIcon, PlusIcon, SearchIcon } from '@lucide/svelte';
 	import { fly } from 'svelte/transition';
 	import CarForm from './car-form.svelte';
@@ -35,7 +37,7 @@
 	};
 </script>
 
-<div class="p-6 space-y-6">
+<div class="space-y-6 p-6">
 	<div class="flex items-center justify-between gap-4">
 		<div>
 			<h1 class="text-3xl font-bold">Cars</h1>
@@ -48,7 +50,7 @@
 	</div>
 
 	<div class="relative">
-		<SearchIcon class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+		<SearchIcon class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 		<Input
 			bind:value={searchQuery}
 			placeholder="Search by brand, model, plate, or owner..."
@@ -65,8 +67,8 @@
 	{#if filteredCars.length === 0}
 		<Card class="border-dashed">
 			<CardContent class="flex flex-col items-center justify-center py-12">
-				<CarIcon class="size-12 text-muted-foreground mb-4" />
-				<p class="text-muted-foreground text-center">
+				<CarIcon class="mb-4 size-12 text-muted-foreground" />
+				<p class="text-center text-muted-foreground">
 					{searchQuery ? 'No cars found matching your search' : 'No cars added yet'}
 				</p>
 				{#if !searchQuery && !showAddForm}
@@ -82,8 +84,8 @@
 			{#each filteredCars as car (car.id)}
 				<div transition:fly={{ y: 20, duration: 300 }}>
 					<Card
-						class="hover:shadow-lg-lg-lg hover:shadow-lg-lg-primary/10 transition-all duration-200 cursor-pointer"
-						onclick={() => repairs.selectCar(car.id)}
+						class="hover:shadow-lg-lg-lg hover:shadow-lg-lg-primary/10 cursor-pointer transition-all duration-200"
+						onclick={() => goto(resolve(`/app/cars/${car.id}`))}
 					>
 						<CardHeader>
 							<div class="flex items-start justify-between">
@@ -105,7 +107,7 @@
 							</div>
 							<div class="flex items-center gap-2 text-sm">
 								<span class="font-medium">VIN:</span>
-								<span class="text-muted-foreground font-mono text-xs">{car.vin}</span>
+								<span class="font-mono text-xs text-muted-foreground">{car.vin}</span>
 							</div>
 						</CardContent>
 					</Card>

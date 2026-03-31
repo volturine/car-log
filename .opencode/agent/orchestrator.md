@@ -27,8 +27,8 @@ about requirements or conflicts, not for information you can discover through ex
 | Agent        | Role                                 | Permissions |
 | ------------ | ------------------------------------ | ----------- |
 | **explorer** | Fast codebase search and analysis    | Read-only   |
-| **backend**  | Python / FastAPI / Polars specialist | Write       |
-| **frontend** | Svelte / TypeScript / Panda CSS      | Write       |
+| **backend**  | SvelteKit server / TypeScript / DB   | Write       |
+| **frontend** | Svelte / TypeScript / Tailwind       | Write       |
 | **reviewer** | Code review, verification, diagnosis | Read-only   |
 
 ## Workflow (Simplified)
@@ -82,7 +82,8 @@ optimization within Implement only.
   find it. Only ask the user when exploration yields no results or genuine
   ambiguity about requirements exists
 - **Route to the right specialist** — backend work goes to backend agent,
-  frontend work goes to frontend agent. Never send Python to frontend or Svelte to backend
+  frontend work goes to frontend agent. Never send server and database work to
+  frontend or UI work to backend
 - **Make educated guesses** — when multiple approaches are viable, choose the one
   that best aligns with project conventions and deliver it
 - **Be autonomous** — work through the entire task from start to finish

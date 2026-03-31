@@ -1,5 +1,9 @@
 <script lang="ts">
-	import './layout.css';
+	import './app.css';
+	import { Toaster } from 'svelte-sonner';
+
+	let { children } = $props();
 </script>
 
-<slot />
+<Toaster position="bottom-right" richColors theme="system" />
+{@render children()}

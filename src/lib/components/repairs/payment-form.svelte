@@ -12,7 +12,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { DollarSign, CreditCard } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils/helpers';
+	import { formatCurrency } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 	import type { Repair } from '$lib/types';
 
@@ -86,7 +86,7 @@
 
 	<CardContent class="space-y-4">
 		<!-- Payment Summary -->
-		<div class="grid gap-2 p-4 bg-muted/50 rounded-lg">
+		<div class="grid gap-2 rounded-lg bg-muted/50 p-4">
 			<div class="flex items-center justify-between">
 				<span class="text-sm text-muted-foreground">Total Cost:</span>
 				<span class="font-semibold">{formatCurrency(repair.totalCost)}</span>
@@ -97,9 +97,9 @@
 					{formatCurrency(repair.amountPaid || 0)}
 				</span>
 			</div>
-			<div class="flex items-center justify-between pt-2 border-t">
+			<div class="flex items-center justify-between border-t pt-2">
 				<span class="text-sm font-medium">Remaining Balance:</span>
-				<span class="font-bold text-lg {isFullyPaid ? 'text-green-600 dark:text-green-400' : ''}">
+				<span class="text-lg font-bold {isFullyPaid ? 'text-green-600 dark:text-green-400' : ''}">
 					{formatCurrency(remainingBalance)}
 				</span>
 			</div>
@@ -130,7 +130,7 @@
 					<Label for="amount">Payment Amount *</Label>
 					<div class="flex gap-2">
 						<div class="relative flex-1">
-							<span class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+							<span class="absolute top-1/2 left-3 -translate-y-1/2 text-muted-foreground">$</span>
 							<Input
 								id="amount"
 								type="number"
@@ -193,13 +193,13 @@
 				</div>
 
 				<Button type="submit" class="w-full" disabled={isSubmitting || amount <= 0}>
-					<CreditCard class="h-4 w-4 mr-2" />
+					<CreditCard class="mr-2 h-4 w-4" />
 					{isSubmitting ? 'Recording...' : `Record Payment of ${formatCurrency(amount)}`}
 				</Button>
 			</form>
 		{:else}
-			<div class="text-center py-4 text-green-600 dark:text-green-400">
-				<CreditCard class="h-12 w-12 mx-auto mb-2" />
+			<div class="py-4 text-center text-green-600 dark:text-green-400">
+				<CreditCard class="mx-auto mb-2 h-12 w-12" />
 				<p class="font-semibold">Fully Paid</p>
 				<p class="text-sm text-muted-foreground">This repair has been paid in full</p>
 			</div>

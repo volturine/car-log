@@ -66,7 +66,7 @@
 		<CardHeader>
 			<div class="flex items-start justify-between gap-4">
 				<div class="flex-1">
-					<div class="flex items-center gap-2 mb-2">
+					<div class="mb-2 flex items-center gap-2">
 						<CardTitle>{repair.title}</CardTitle>
 						<Badge variant={STATUS_COLORS[repair.status]}>{STATUS_LABELS[repair.status]}</Badge>
 					</div>
@@ -88,21 +88,21 @@
 					<button
 						type="button"
 						onclick={() => (showPhotos = !showPhotos)}
-						class="text-sm font-medium mb-2 hover:underline"
+						class="mb-2 text-sm font-medium hover:underline"
 					>
 						{showPhotos ? 'Hide' : 'Show'} Photos ({repair.photos.length})
 					</button>
 					{#if showPhotos}
 						<div
-							class="grid grid-cols-2 md:grid-cols-4 gap-2"
+							class="grid grid-cols-2 gap-2 md:grid-cols-4"
 							transition:fly={{ y: -10, duration: 200 }}
 						>
 							{#each repair.photos as photo, index (index)}
-								<div class="aspect-square rounded-lg overflow-hidden border">
+								<div class="aspect-square overflow-hidden rounded-lg border">
 									<img
 										src={photo.url}
 										alt="Repair photo {index + 1}"
-										class="w-full h-full object-cover"
+										class="h-full w-full object-cover"
 									/>
 								</div>
 							{/each}
@@ -119,8 +119,8 @@
 					</div>
 					<div class="flex flex-col gap-2">
 						{#each repair.parts as part (part.id)}
-							<div class="flex flex-col gap-1 p-3 bg-muted rounded-lg">
-								<div class="flex justify-between items-start">
+							<div class="flex flex-col gap-1 rounded-lg bg-muted p-3">
+								<div class="flex items-start justify-between">
 									<div class="flex-1">
 										<p class="font-medium">{part.name}</p>
 										{#if part.description}

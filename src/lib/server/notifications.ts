@@ -1,5 +1,5 @@
 import { db, schema } from './db';
-import { generateId } from '$lib/utils/helpers';
+import { generateId } from '$lib/utils';
 import { apiLogger } from './logger';
 
 const logger = apiLogger.child('notifications');

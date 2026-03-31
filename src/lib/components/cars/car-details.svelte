@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
 	import { Card, CardHeader, CardTitle, CardContent } from '$lib/components/ui/card';
 	import { Separator } from '$lib/components/ui/separator';
@@ -14,15 +16,16 @@
 	let showEditForm = $state(false);
 	let showAddRepair = $state(false);
 
-	const handleDelete = () => {
+	const handleDelete = async () => {
 		if (!repairs.selectedCar) return;
 		if (
 			confirm(
 				`Are you sure you want to delete ${repairs.selectedCar.brand} ${repairs.selectedCar.model}? This will also delete all associated repairs.`
 			)
 		) {
-			repairs.deleteCar(repairs.selectedCar.id);
+			await repairs.deleteCar(repairs.selectedCar.id);
 			toast.success('Car deleted successfully');
+			goto(resolve('/app/cars'));
 		}
 	};
 
@@ -30,9 +33,9 @@
 </script>
 
 {#if repairs.selectedCar}
-	<div class="p-6 space-y-6">
+	<div class="space-y-6 p-6">
 		<div class="flex items-center gap-4">
-			<Button variant="ghost" size="icon" onclick={() => repairs.goToCars()}>
+			<Button variant="ghost" size="icon" onclick={() => goto(resolve('/app/cars'))}>
 				<ArrowLeftIcon />
 			</Button>
 			<div class="flex-1">
@@ -78,7 +81,7 @@
 				{#if repairs.selectedCar.vin}
 					<div class="md:col-span-2">
 						<p class="text-sm text-muted-foreground">VIN</p>
-						<p class="font-medium font-mono text-sm">{repairs.selectedCar.vin}</p>
+						<p class="font-mono text-sm font-medium">{repairs.selectedCar.vin}</p>
 					</div>
 				{/if}
 			</CardContent>

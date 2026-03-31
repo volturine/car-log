@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, validateBody, successResponse } from '$lib/server/api-utils';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { generateId } from '$lib/utils/helpers';
+import { generateId } from '$lib/utils';
 
 const logger = apiLogger.child('cars');
 

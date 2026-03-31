@@ -1,15 +1,16 @@
 import adapter from '@sveltejs/adapter-auto';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
-export default {
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
 	preprocess: [vitePreprocess({ postcss: true })],
-
+	vitePlugin: {
+		dynamicCompileOptions: (opts) =>
+			opts.filename.includes('node_modules') ? undefined : { runes: true }
+	},
 	kit: {
-		adapter: adapter(),
-
-		// Ensure the app is served from the root path
-		paths: {
-			base: ''
-		}
+		adapter: adapter()
 	}
 };
+
+export default config;

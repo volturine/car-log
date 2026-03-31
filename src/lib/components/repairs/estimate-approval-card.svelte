@@ -11,7 +11,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import { CheckCircle2, XCircle, Clock } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils/helpers';
+	import { formatCurrency } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 	import type { Repair } from '$lib/types';
 
@@ -76,7 +76,7 @@
 	}
 </script>
 
-<Card class={isPending ? 'border-blue-500 border-2' : ''}>
+<Card class={isPending ? 'border-2 border-blue-500' : ''}>
 	<CardHeader>
 		<div class="flex items-start justify-between">
 			<div>
@@ -110,19 +110,19 @@
 
 	<CardContent class="space-y-4">
 		<!-- Estimate Details -->
-		<div class="grid gap-3 p-4 bg-muted/50 rounded-lg">
+		<div class="grid gap-3 rounded-lg bg-muted/50 p-4">
 			<div class="flex items-center justify-between">
 				<span class="text-sm text-muted-foreground">Estimated Cost:</span>
-				<span class="font-semibold text-lg">{formatCurrency(repair.estimatedCost || 0)}</span>
+				<span class="text-lg font-semibold">{formatCurrency(repair.estimatedCost || 0)}</span>
 			</div>
 			<div class="flex items-center justify-between">
 				<span class="text-sm text-muted-foreground">Estimated Hours:</span>
 				<span class="font-medium">{repair.estimatedHours || 0}h</span>
 			</div>
 			{#if repair.estimateNotes}
-				<div class="pt-2 border-t">
+				<div class="border-t pt-2">
 					<span class="text-sm font-medium">Notes:</span>
-					<p class="text-sm text-muted-foreground mt-1">{repair.estimateNotes}</p>
+					<p class="mt-1 text-sm text-muted-foreground">{repair.estimateNotes}</p>
 				</div>
 			{/if}
 		</div>
@@ -130,7 +130,7 @@
 		<!-- Parts Breakdown -->
 		{#if repair.parts && repair.parts.length > 0}
 			<div>
-				<h4 class="text-sm font-medium mb-2">Parts Breakdown:</h4>
+				<h4 class="mb-2 text-sm font-medium">Parts Breakdown:</h4>
 				<div class="space-y-2">
 					{#each repair.parts as part (part.name)}
 						<div class="flex items-center justify-between text-sm">
@@ -148,7 +148,7 @@
 		{#if isPending && !showRejectForm}
 			<div class="flex gap-2 pt-2">
 				<Button onclick={approveEstimate} disabled={isApproving} class="flex-1">
-					<CheckCircle2 class="h-4 w-4 mr-2" />
+					<CheckCircle2 class="mr-2 h-4 w-4" />
 					{isApproving ? 'Approving...' : 'Approve Estimate'}
 				</Button>
 				<Button
@@ -157,7 +157,7 @@
 					disabled={isApproving}
 					class="flex-1"
 				>
-					<XCircle class="h-4 w-4 mr-2" />
+					<XCircle class="mr-2 h-4 w-4" />
 					Reject
 				</Button>
 			</div>
@@ -165,7 +165,7 @@
 
 		<!-- Reject Form -->
 		{#if showRejectForm && isPending}
-			<div class="space-y-3 p-4 border rounded-lg bg-red-50 dark:bg-red-950/20">
+			<div class="space-y-3 rounded-lg border bg-red-50 p-4 dark:bg-red-950/20">
 				<div class="space-y-2">
 					<Label for="rejectReason">Reason for Rejection</Label>
 					<Textarea

@@ -2,18 +2,22 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
-const hmrHost = process.env.HMR_HOST;
-const hmrProtocol = (process.env.HMR_PROTOCOL as 'ws' | 'wss' | undefined) || 'ws';
-const hmrClientPort = Number(process.env.HMR_CLIENT_PORT || '3000');
+function getHmrProtocol(value: string | undefined): 'ws' | 'wss' {
+	if (value === 'wss') return 'wss';
+	return 'ws';
+}
 
-const hmr = hmrHost
-	? {
-			host: hmrHost,
-			protocol: hmrProtocol,
-			clientPort: hmrClientPort,
-			port: 3000
-		}
-	: undefined;
+const hmrHost = process.env.HMR_HOST;
+const hmrClientPort = Number(process.env.HMR_CLIENT_PORT || '3000');
+const hmr =
+	hmrHost === undefined
+		? undefined
+		: {
+				host: hmrHost,
+				protocol: getHmrProtocol(process.env.HMR_PROTOCOL),
+				clientPort: hmrClientPort,
+				port: 3000
+			};
 
 export default defineConfig({
 	plugins: [

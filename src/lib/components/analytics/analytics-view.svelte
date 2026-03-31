@@ -18,7 +18,7 @@
 	const completedRepairs = $derived(repairs.repairs.filter((r) => r.status === 'completed').length);
 </script>
 
-<div class="p-6 space-y-6">
+<div class="space-y-6 p-6">
 	<div>
 		<h1 class="text-3xl font-bold">Analytics</h1>
 		<p class="text-muted-foreground">Repair statistics by brand and model</p>
@@ -94,9 +94,9 @@
 					</CardHeader>
 					<CardContent>
 						<div class="flex flex-col gap-2">
-							<p class="text-sm font-medium mb-2">Models:</p>
+							<p class="mb-2 text-sm font-medium">Models:</p>
 							{#each brand.models as model (model.model)}
-								<div class="flex items-center justify-between p-3 bg-muted rounded-lg">
+								<div class="flex items-center justify-between rounded-lg bg-muted p-3">
 									<div class="flex-1">
 										<p class="font-medium">{model.model}</p>
 										<p class="text-sm text-muted-foreground">{model.totalRepairs} repairs</p>

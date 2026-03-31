@@ -3,6 +3,7 @@
 	import { signOut } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 	import {
 		Sidebar,
@@ -31,9 +32,11 @@
 
 	let { user }: { user?: { name: string; email: string; role?: string | null } } = $props();
 
-	let isShopUser = $derived(
+	const isShopUser = $derived(
 		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
 	);
+
+	const pathname = $derived(page.url.pathname);
 
 	async function handleSignOut() {
 		await signOut();
@@ -42,10 +45,10 @@
 </script>
 
 <Sidebar collapsible="offcanvas">
-	<SidebarHeader class="border-b border-sidebar-border h-14 flex-row items-center px-4">
+	<SidebarHeader class="h-14 flex-row items-center border-b border-sidebar-border px-4">
 		<div class="flex items-center gap-2">
 			<WrenchIcon class="size-6 text-primary" />
-			<span class="font-semibold text-lg">Auto Repair</span>
+			<span class="text-lg font-semibold">Auto Repair</span>
 		</div>
 	</SidebarHeader>
 
@@ -56,40 +59,44 @@
 				<SidebarMenu>
 					{#if isShopUser}
 						<SidebarMenuItem>
-							<SidebarMenuButton
-								isActive={repairs.currentView === 'shop-dashboard'}
-								onclick={() => repairs.goToShopDashboard()}
-							>
-								<StoreIcon />
-								<span>Shop Dashboard</span>
+							<SidebarMenuButton isActive={pathname.startsWith(resolve('/app/shop'))}>
+								{#snippet child({ props })}
+									<a href={resolve('/app/shop')} {...props}>
+										<StoreIcon />
+										<span>Shop Dashboard</span>
+									</a>
+								{/snippet}
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 					{/if}
 					<SidebarMenuItem>
-						<SidebarMenuButton
-							isActive={repairs.currentView === 'cars'}
-							onclick={() => repairs.goToCars()}
-						>
-							<CarIcon />
-							<span>Cars</span>
+						<SidebarMenuButton isActive={pathname.startsWith(resolve('/app/cars'))}>
+							{#snippet child({ props })}
+								<a href={resolve('/app/cars')} {...props}>
+									<CarIcon />
+									<span>Cars</span>
+								</a>
+							{/snippet}
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 					<SidebarMenuItem>
-						<SidebarMenuButton
-							isActive={repairs.currentView === 'calendar'}
-							onclick={() => repairs.goToCalendar()}
-						>
-							<CalendarIcon />
-							<span>Calendar</span>
+						<SidebarMenuButton isActive={pathname.startsWith(resolve('/app/calendar'))}>
+							{#snippet child({ props })}
+								<a href={resolve('/app/calendar')} {...props}>
+									<CalendarIcon />
+									<span>Calendar</span>
+								</a>
+							{/snippet}
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 					<SidebarMenuItem>
-						<SidebarMenuButton
-							isActive={repairs.currentView === 'analytics'}
-							onclick={() => repairs.goToAnalytics()}
-						>
-							<BarChart3Icon />
-							<span>Analytics</span>
+						<SidebarMenuButton isActive={pathname.startsWith(resolve('/app/analytics'))}>
+							{#snippet child({ props })}
+								<a href={resolve('/app/analytics')} {...props}>
+									<BarChart3Icon />
+									<span>Analytics</span>
+								</a>
+							{/snippet}
 						</SidebarMenuButton>
 					</SidebarMenuItem>
 				</SidebarMenu>
@@ -108,7 +115,7 @@
 					<div class="font-medium">{user.name}</div>
 					<div class="text-muted-foreground">{user.email}</div>
 					{#if user.role}
-						<div class="text-xs text-primary mt-1 capitalize">
+						<div class="mt-1 text-xs text-primary capitalize">
 							{user.role.replace('_', ' ')}
 						</div>
 					{/if}

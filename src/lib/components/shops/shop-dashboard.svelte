@@ -9,7 +9,7 @@
 	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
-	import { formatCurrency, formatDate } from '$lib/utils/helpers';
+	import { formatCurrency, formatDate } from '$lib/utils';
 	import type { Repair } from '$lib/types';
 
 	const repairsState = useRepairs();
@@ -57,7 +57,7 @@
 	}
 </script>
 
-<div class="p-6 space-y-6">
+<div class="space-y-6 p-6">
 	<div class="flex items-center justify-between">
 		<div>
 			<h1 class="text-3xl font-bold">Shop Dashboard</h1>
@@ -108,7 +108,7 @@
 			<CardContent>
 				<div class="space-y-3">
 					{#each pendingEstimates as repair (repair.id)}
-						<div class="flex items-center justify-between p-3 border rounded-lg">
+						<div class="flex items-center justify-between rounded-lg border p-3">
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
@@ -140,7 +140,7 @@
 			<CardContent>
 				<div class="space-y-3">
 					{#each activeRepairs as repair (repair.id)}
-						<div class="flex items-center justify-between p-3 border rounded-lg">
+						<div class="flex items-center justify-between rounded-lg border p-3">
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
@@ -158,7 +158,7 @@
 								<Badge class="bg-{getStatusColor(repair.status)}">
 									{getStatusLabel(repair.status)}
 								</Badge>
-								<div class="text-sm font-medium mt-1">{formatCurrency(repair.totalCost)}</div>
+								<div class="mt-1 text-sm font-medium">{formatCurrency(repair.totalCost)}</div>
 							</div>
 						</div>
 					{/each}
@@ -177,7 +177,7 @@
 			<CardContent>
 				<div class="space-y-3">
 					{#each completedRepairs as repair (repair.id)}
-						<div class="flex items-center justify-between p-3 border rounded-lg">
+						<div class="flex items-center justify-between rounded-lg border p-3">
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
@@ -191,7 +191,7 @@
 								<Badge class="bg-{getStatusColor(repair.status)}">
 									{getStatusLabel(repair.status)}
 								</Badge>
-								<div class="text-sm font-medium mt-1">{formatCurrency(repair.totalCost)}</div>
+								<div class="mt-1 text-sm font-medium">{formatCurrency(repair.totalCost)}</div>
 								{#if repair.status === REPAIR_STATUS.COMPLETED}
 									<div class="text-xs text-yellow-600">Awaiting payment</div>
 								{/if}

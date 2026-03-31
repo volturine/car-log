@@ -4,7 +4,7 @@ import { db, schema } from '$lib/server/db';
 import { requireRole, validateBody, successResponse } from '$lib/server/api-utils';
 import { shopSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { generateId } from '$lib/utils/helpers';
+import { generateId } from '$lib/utils';
 
 const logger = apiLogger.child('shops');
 

@@ -11,7 +11,7 @@
 		SheetTitle,
 		SheetTrigger
 	} from '$lib/components/ui/sheet';
-	import { formatDate } from '$lib/utils/helpers';
+	import { formatDate } from '$lib/utils';
 
 	type Notification = {
 		id: string;
@@ -108,7 +108,7 @@
 				<Bell class="h-5 w-5" />
 				{#if unreadCount > 0}
 					<Badge
-						class="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500"
+						class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center bg-red-500 p-0"
 					>
 						{unreadCount > 9 ? '9+' : unreadCount}
 					</Badge>
@@ -132,30 +132,30 @@
 				<div class="p-8 text-center text-muted-foreground">Loading...</div>
 			{:else if notifications.length === 0}
 				<div class="p-8 text-center text-muted-foreground">
-					<Bell class="h-12 w-12 mx-auto mb-2 opacity-20" />
+					<Bell class="mx-auto mb-2 h-12 w-12 opacity-20" />
 					<p>No notifications yet</p>
 				</div>
 			{:else}
 				<div class="divide-y">
 					{#each notifications as notification (notification.id)}
 						<div
-							class="p-4 hover:bg-accent/50 transition-colors {notification.read
+							class="p-4 transition-colors hover:bg-accent/50 {notification.read
 								? 'opacity-60'
 								: ''}"
 						>
 							<div class="flex gap-3">
-								<div class="flex-shrink-0 mt-1">
-									<div class="w-2 h-2 rounded-full {getNotificationColor(notification.type)}"></div>
+								<div class="mt-1 flex-shrink-0">
+									<div class="h-2 w-2 rounded-full {getNotificationColor(notification.type)}"></div>
 								</div>
-								<div class="flex-1 min-w-0">
+								<div class="min-w-0 flex-1">
 									<div class="flex items-start justify-between gap-2">
-										<h4 class="font-medium text-sm">{notification.title}</h4>
+										<h4 class="text-sm font-medium">{notification.title}</h4>
 										<button
 											onclick={() => deleteNotification(notification.id)}
 											class="text-muted-foreground hover:text-foreground"
 											aria-label="Delete notification"
 										>
-											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
 													stroke-linecap="round"
 													stroke-linejoin="round"
@@ -165,8 +165,8 @@
 											</svg>
 										</button>
 									</div>
-									<p class="text-sm text-muted-foreground mt-1">{notification.message}</p>
-									<div class="flex items-center gap-2 mt-2">
+									<p class="mt-1 text-sm text-muted-foreground">{notification.message}</p>
+									<div class="mt-2 flex items-center gap-2">
 										<span class="text-xs text-muted-foreground">
 											{formatDate(notification.createdAt)}
 										</span>

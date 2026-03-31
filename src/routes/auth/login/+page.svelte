@@ -26,25 +26,21 @@
 
 		loading = true;
 
-		try {
-			const result = await signIn.email({
+		const result = await signIn
+			.email({
 				email,
-				password,
-				callbackURL: '/'
-			});
+				password
+			})
+			.catch(() => ({ error: { message: 'Network error — check your connection' }, data: null }));
 
-			if (result.error) {
-				toast.error(result.error.message || 'Failed to sign in');
-			} else {
-				toast.success('Signed in successfully');
-				goto(resolve('/'));
-			}
-		} catch (error) {
-			toast.error('An error occurred during sign in');
-			console.error(error);
-		} finally {
+		if (result.error) {
+			toast.error(result.error.message || 'Failed to sign in');
 			loading = false;
+			return;
 		}
+
+		toast.success('Signed in successfully');
+		goto(resolve('/app'));
 	}
 </script>
 

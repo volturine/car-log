@@ -18,16 +18,27 @@ format:
     @echo "Formatting project..."
     bun run format
 
-# Run linters and type checks
+# Run Svelte and type checks
 check:
-    bun run check && bun run lint
+    @echo "Running Svelte and type checks..."
+    bun run check
 
-# Run tests (if script exists)
+# Run lint and formatting checks
+lint:
+    @echo "Running lint and formatting checks..."
+    bun run lint
+
+# Run tests
 test:
-    @echo "No test script configured in package.json"
+    @echo "Running tests..."
+    bun run test
 
 # Full verification gate -- must pass before any task is declared done
-verify: format check
+verify:
+    @echo "Running full verification..."
+    bun run check
+    bun run lint
+    bun run test
 
 
 # Build for production

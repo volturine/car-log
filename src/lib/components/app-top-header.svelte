@@ -10,7 +10,7 @@
 </script>
 
 <header
-	class="sticky top-0 z-50 flex items-center justify-between px-4 gap-4 border-b h-14 bg-background/95 backdrop-blur-sm"
+	class="sticky top-0 z-50 flex h-14 items-center justify-between gap-4 border-b bg-background/95 px-4 backdrop-blur-sm"
 >
 	<Button size="icon" variant="ghost" class="size-8" onclick={() => sidebar.toggle()}>
 		<PanelLeftIcon />

@@ -8,10 +8,6 @@ class UseRepairs {
 	cars = $state<Car[]>([]);
 	repairs = $state<Repair[]>([]);
 	selectedCarId = $state<string | null>(null);
-	selectedRepairId = $state<string | null>(null);
-	currentView = $state<'cars' | 'car-details' | 'analytics' | 'calendar' | 'shop-dashboard'>(
-		'cars'
-	);
 	loading = $state(false);
 	searchQuery = $state<string>('');
 
@@ -77,8 +73,6 @@ class UseRepairs {
 					.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 			: []
 	);
-
-	selectedRepair = $derived(this.repairs.find((r) => r.id === this.selectedRepairId));
 
 	brandStats = $derived.by(() => {
 		const statsMap = new SvelteMap<
@@ -176,7 +170,6 @@ class UseRepairs {
 			this.repairs = this.repairs.filter((repair) => repair.carId !== id);
 			if (this.selectedCarId === id) {
 				this.selectedCarId = null;
-				this.currentView = 'cars';
 			}
 			toast.success('Car deleted successfully');
 		} catch (error) {
@@ -244,9 +237,6 @@ class UseRepairs {
 			});
 			if (!response.ok) throw new Error('Failed to delete repair');
 			this.repairs = this.repairs.filter((repair) => repair.id !== id);
-			if (this.selectedRepairId === id) {
-				this.selectedRepairId = null;
-			}
 			toast.success('Repair deleted successfully');
 		} catch (error) {
 			console.error('Failed to delete repair:', error);
@@ -276,29 +266,6 @@ class UseRepairs {
 			toast.error('Failed to upload photos');
 			throw error;
 		}
-	};
-
-	selectCar = (id: string) => {
-		this.selectedCarId = id;
-		this.currentView = 'car-details';
-	};
-
-	goToCars = () => {
-		this.selectedCarId = null;
-		this.selectedRepairId = null;
-		this.currentView = 'cars';
-	};
-
-	goToAnalytics = () => {
-		this.currentView = 'analytics';
-	};
-
-	goToCalendar = () => {
-		this.currentView = 'calendar';
-	};
-
-	goToShopDashboard = () => {
-		this.currentView = 'shop-dashboard';
 	};
 }
 

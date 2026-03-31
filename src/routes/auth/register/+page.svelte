@@ -41,31 +41,27 @@
 
 		loading = true;
 
-		try {
-			const result = await signUp.email(
+		const result = await signUp
+			.email(
 				{
 					email,
 					password,
-					name,
-					callbackURL: '/'
+					name
 				},
 				{
 					body: { role }
 				}
-			);
+			)
+			.catch(() => ({ error: { message: 'Network error — check your connection' }, data: null }));
 
-			if (result.error) {
-				toast.error(result.error.message || 'Failed to register');
-			} else {
-				toast.success('Account created successfully');
-				goto(resolve('/'));
-			}
-		} catch (error) {
-			toast.error('An error occurred during registration');
-			console.error(error);
-		} finally {
+		if (result.error) {
+			toast.error(result.error.message || 'Failed to register');
 			loading = false;
+			return;
 		}
+
+		toast.success('Account created successfully');
+		goto(resolve('/app'));
 	}
 </script>
 

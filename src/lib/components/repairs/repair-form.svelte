@@ -16,6 +16,7 @@
 	import { toast } from 'svelte-sonner';
 	import { PlusIcon, Trash2Icon, ImageIcon, XIcon, ExternalLinkIcon } from '@lucide/svelte';
 	import { REPAIR_STATUS, USER_ROLE } from '$lib/constants';
+	import { untrack } from 'svelte';
 	import type { Repair, RepairPart } from '$lib/types.js';
 
 	let { carId, repair, onCancel, onSuccess, user }: Props = $props();
@@ -26,19 +27,20 @@
 
 	const repairs = useRepairs();
 
-	function initFormData() {
-		return {
+	let formData = $state(
+		untrack(() => ({
 			title: repair?.title || '',
 			description: repair?.description || '',
 			status:
-				repair?.status || (isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : REPAIR_STATUS.PENDING),
+				repair?.status ||
+				(user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
+					? REPAIR_STATUS.ESTIMATE_PENDING
+					: REPAIR_STATUS.PENDING),
 			shopId: repair?.shopId || '',
 			assignedMechanicId: repair?.assignedMechanicId || '',
-			// Estimate fields
 			estimatedCost: repair?.estimatedCost || 0,
 			estimatedHours: repair?.estimatedHours || 0,
 			estimateNotes: repair?.estimateNotes || '',
-			// Actual fields
 			laborCost: repair?.laborCost || 0,
 			laborHours: repair?.laborHours || 0,
 			startDate: repair?.startDate
@@ -47,19 +49,14 @@
 			completedDate: repair?.completedDate
 				? new Date(repair.completedDate).toISOString().split('T')[0]
 				: ''
-		};
-	}
-
-	let formData = $state(initFormData());
-	let parts = $state<RepairPart[]>([]);
-	let photos = $state<{ url: string; file?: File }[]>([]);
+		}))
+	);
+	let parts = $state<RepairPart[]>(untrack(() => (repair?.parts ? [...repair.parts] : [])));
+	let photos = $state<{ url: string; file?: File }[]>(
+		untrack(() => (repair?.photos ? repair.photos.map((p) => ({ url: p.url })) : []))
+	);
 	let newPart = $state({ name: '', description: '', quantity: 1, unitCost: 0, sourceUrl: '' });
 	let isSubmitting = $state(false);
-
-	$effect(() => {
-		parts = repair?.parts ? [...repair.parts] : [];
-		photos = repair?.photos ? repair.photos.map((p) => ({ url: p.url })) : [];
-	});
 
 	const addPart = () => {
 		if (!newPart.name || newPart.unitCost <= 0) {
@@ -228,8 +225,8 @@
 
 			{#if isShopUser}
 				<!-- Estimate Section for Shops -->
-				<div class="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-4">
-					<h3 class="font-semibold text-sm">Estimate Details</h3>
+				<div class="space-y-4 rounded-lg bg-blue-50 p-4 dark:bg-blue-950">
+					<h3 class="text-sm font-semibold">Estimate Details</h3>
 					<div class="grid gap-4 md:grid-cols-2">
 						<div class="flex flex-col gap-2">
 							<Label for="estimatedCost">Estimated Cost ($)</Label>
@@ -298,27 +295,27 @@
 
 			<div class="flex flex-col gap-4">
 				<Label>Photos</Label>
-				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+				<div class="grid grid-cols-2 gap-4 md:grid-cols-4">
 					{#each photos as photo, index (index)}
-						<div class="relative group aspect-square rounded-lg overflow-hidden border">
+						<div class="group relative aspect-square overflow-hidden rounded-lg border">
 							<img
 								src={photo.url}
 								alt="Repair photo {index + 1}"
-								class="w-full h-full object-cover"
+								class="h-full w-full object-cover"
 							/>
 							<button
 								type="button"
 								onclick={() => removePhoto(index)}
-								class="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+								class="text-destructive-foreground absolute top-2 right-2 rounded-full bg-destructive p-1 opacity-0 transition-opacity group-hover:opacity-100"
 							>
 								<XIcon class="size-4" />
 							</button>
 						</div>
 					{/each}
 					<label
-						class="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:bg-accent transition-colors"
+						class="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors hover:bg-accent"
 					>
-						<ImageIcon class="size-8 text-muted-foreground mb-2" />
+						<ImageIcon class="mb-2 size-8 text-muted-foreground" />
 						<span class="text-sm text-muted-foreground">Add Photo</span>
 						<input
 							type="file"
@@ -335,14 +332,14 @@
 				<Label>Parts & Materials</Label>
 				<div class="flex flex-col gap-2">
 					{#each parts as part (part.id)}
-						<div class="flex flex-col gap-2 p-3 border rounded-lg">
+						<div class="flex flex-col gap-2 rounded-lg border p-3">
 							<div class="flex items-start justify-between gap-2">
 								<div class="flex-1">
 									<p class="font-medium">{part.name}</p>
 									{#if part.description}
 										<p class="text-sm text-muted-foreground">{part.description}</p>
 									{/if}
-									<p class="text-sm text-muted-foreground mt-1">
+									<p class="mt-1 text-sm text-muted-foreground">
 										{part.quantity} × ${part.unitCost.toFixed(2)} = ${part.totalCost.toFixed(2)}
 									</p>
 								</div>
@@ -372,7 +369,7 @@
 					{/each}
 				</div>
 
-				<div class="flex flex-col gap-2 p-4 bg-muted rounded-lg">
+				<div class="flex flex-col gap-2 rounded-lg bg-muted p-4">
 					<div class="grid gap-2">
 						<Input bind:value={newPart.name} placeholder="Part name *" />
 						<Textarea
@@ -399,7 +396,7 @@
 				</div>
 			</div>
 
-			<div class="p-4 bg-muted rounded-lg flex flex-col gap-2">
+			<div class="flex flex-col gap-2 rounded-lg bg-muted p-4">
 				<div class="flex justify-between text-sm">
 					<span>Parts Total:</span>
 					<span class="font-medium">${totalPartsCost.toFixed(2)}</span>
@@ -413,7 +410,7 @@
 						<span>({formData.laborHours}h @ ${hourlyRate.toFixed(2)}/hr)</span>
 					</div>
 				{/if}
-				<div class="flex justify-between text-lg font-bold pt-2 border-t">
+				<div class="flex justify-between border-t pt-2 text-lg font-bold">
 					<span>Total Cost:</span>
 					<span>${totalCost.toFixed(2)}</span>
 				</div>

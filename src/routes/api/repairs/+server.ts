@@ -15,7 +15,7 @@ import {
 } from '$lib/server/api-utils';
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { generateId } from '$lib/utils/helpers';
+import { generateId } from '$lib/utils';
 import { error } from '@sveltejs/kit';
 
 const logger = apiLogger.child('repairs');

@@ -1,3 +1,4 @@
+import { SESSION_CONFIG, USER_ROLE } from '$lib/constants';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from './db';
@@ -18,21 +19,21 @@ export const auth = betterAuth({
 	}),
 	emailAndPassword: {
 		enabled: true,
-		requireEmailVerification: false // Set to true in production with email service
+		requireEmailVerification: false
 	},
 	session: {
-		expiresIn: 60 * 60 * 24 * 7, // 7 days
-		updateAge: 60 * 60 * 24, // 1 day
+		expiresIn: SESSION_CONFIG.EXPIRY_SECONDS,
+		updateAge: SESSION_CONFIG.UPDATE_AGE_SECONDS,
 		cookieCache: {
 			enabled: true,
-			maxAge: 5 * 60 // 5 minutes
+			maxAge: SESSION_CONFIG.COOKIE_CACHE_SECONDS
 		}
 	},
 	user: {
 		additionalFields: {
 			role: {
 				type: 'string',
-				defaultValue: 'customer',
+				defaultValue: USER_ROLE.CUSTOMER,
 				required: false
 			},
 			shopId: {

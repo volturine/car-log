@@ -4,7 +4,7 @@ import { schema } from '$lib/server/db';
 import { saveFile } from '$lib/server/storage';
 import { requireAuth, verifyOwnership, successResponse, transaction } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
-import { generateId } from '$lib/utils/helpers';
+import { generateId } from '$lib/utils';
 import { FILE_UPLOAD } from '$lib/constants';
 
 const logger = apiLogger.child('photos');
