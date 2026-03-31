@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { eq, and, sql, inArray } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import {
 	requireAuth,
 	verifyOwnership,
@@ -12,7 +12,7 @@ import {
 	formatPhotosForResponse,
 	isShopMember,
 	verifyShopAccess,
-	getMechanic
+	getMechanicsByIds
 } from '$lib/server/api-utils';
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
@@ -63,12 +63,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 				repairs = await db
 					.select()
 					.from(schema.repairs)
-					.where(
-						shopIds.length === 1
-							? eq(schema.repairs.shopId, shopIds[0])
-							: // For multiple shops, we need to use OR
-								sql`${schema.repairs.shopId} IN ${shopIds}`
-					);
+					.where(inArray(schema.repairs.shopId, shopIds));
 			} else {
 				repairs = [];
 			}
@@ -111,32 +106,45 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		carIds.length > 0
 			? db.select().from(schema.cars).where(inArray(schema.cars.id, carIds))
 			: Promise.resolve([]),
-		Promise.all(mechanicIds.map((id) => getMechanic(id)))
+		getMechanicsByIds(mechanicIds)
 	]);
 
 	const partsByRepairId = new Map<string, (typeof schema.repairParts.$inferSelect)[]>();
 	for (const part of parts) {
-		const current = partsByRepairId.get(part.repairId) ?? [];
-		partsByRepairId.set(part.repairId, [...current, part]);
+		const current = partsByRepairId.get(part.repairId);
+		if (current) {
+			current.push(part);
+			continue;
+		}
+
+		partsByRepairId.set(part.repairId, [part]);
 	}
 
 	const photosByRepairId = new Map<string, (typeof schema.photos.$inferSelect)[]>();
 	for (const photo of photos) {
-		const current = photosByRepairId.get(photo.repairId) ?? [];
-		photosByRepairId.set(photo.repairId, [...current, photo]);
+		const current = photosByRepairId.get(photo.repairId);
+		if (current) {
+			current.push(photo);
+			continue;
+		}
+
+		photosByRepairId.set(photo.repairId, [photo]);
 	}
 
 	const paymentsByRepairId = new Map<string, (typeof schema.payments.$inferSelect)[]>();
 	for (const payment of payments) {
-		const current = paymentsByRepairId.get(payment.repairId) ?? [];
-		paymentsByRepairId.set(payment.repairId, [...current, payment]);
+		const current = paymentsByRepairId.get(payment.repairId);
+		if (current) {
+			current.push(payment);
+			continue;
+		}
+
+		paymentsByRepairId.set(payment.repairId, [payment]);
 	}
 
 	const shopById = new Map(shops.map((shop) => [shop.id, shop]));
 	const carById = new Map(cars.map((car) => [car.id, car]));
-	const mechanicById = new Map(
-		mechanics.filter((m): m is NonNullable<typeof m> => Boolean(m)).map((m) => [m.id, m])
-	);
+	const mechanicById = new Map(mechanics.map((m) => [m.id, m]));
 
 	const repairsWithParts = repairs.map((repair) => ({
 		...repair,

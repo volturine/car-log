@@ -1,6 +1,6 @@
 import { error, type NumericRange } from '@sveltejs/kit';
 import { db, schema } from './db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, inArray } from 'drizzle-orm';
 import type { AnySQLiteColumn, AnySQLiteTable } from 'drizzle-orm/sqlite-core';
 import { API_ERRORS, USER_ROLE } from '$lib/constants';
 import { z } from 'zod';
@@ -216,4 +216,21 @@ export async function getMechanic(id: string | null): Promise<Mechanic | null> {
 		.limit(1);
 
 	return user ?? null;
+}
+
+export async function getMechanicsByIds(ids: string[]): Promise<Mechanic[]> {
+	if (ids.length === 0) {
+		return [];
+	}
+
+	const unique = Array.from(new Set(ids));
+
+	return db
+		.select({
+			id: schema.users.id,
+			name: schema.users.name,
+			email: schema.users.email
+		})
+		.from(schema.users)
+		.where(inArray(schema.users.id, unique));
 }

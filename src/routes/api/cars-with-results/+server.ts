@@ -6,12 +6,12 @@ import { apiLogger } from '$lib/server/logger';
 import { generateId, toError } from '$lib/utils';
 import {
 	apiOk,
+	internalError,
 	unauthorizedError,
 	validationError,
 	toJsonResponse,
 	type ApiResult
 } from '$lib/server/result';
-import { errAsync } from 'neverthrow';
 import { z } from 'zod';
 
 const logger = apiLogger.child('cars');
@@ -55,11 +55,7 @@ async function fetchUserCars(
 		return apiOk(cars);
 	} catch (err) {
 		logger.error('Failed to fetch cars', toError(err), { userId });
-		return errAsync(new Error('Failed to fetch cars')).mapErr(() => ({
-			type: 'internal' as const,
-			message: 'Failed to fetch cars',
-			status: 500 as const
-		}));
+		return internalError('Failed to fetch cars');
 	}
 }
 
@@ -86,11 +82,7 @@ async function createCar(
 		return apiOk(newCar, 201);
 	} catch (err) {
 		logger.error('Failed to create car', toError(err), { userId });
-		return errAsync(new Error('Failed to create car')).mapErr(() => ({
-			type: 'internal' as const,
-			message: 'Failed to create car',
-			status: 500 as const
-		}));
+		return internalError('Failed to create car');
 	}
 }
 

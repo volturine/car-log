@@ -13,6 +13,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
 	import { formatCurrency, formatDate, carLabel } from '$lib/utils';
+	import { carPath } from '$lib/utils/navigation';
 	import {
 		ChevronRightIcon,
 		WrenchIcon,
@@ -23,7 +24,7 @@
 	} from '@lucide/svelte';
 	import QuickStatusButton from '$lib/components/repairs/quick-status-button.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { Repair, Shop } from '$lib/types';
+	import type { Shop } from '$lib/types';
 
 	let { shop, userId }: { shop: Shop | null; userId: string } = $props();
 
@@ -68,10 +69,6 @@
 			)
 			.slice(0, 5)
 	);
-
-	function navigateToCar(repair: Repair) {
-		goto(resolve(`/app/cars/${repair.carId}`));
-	}
 
 	function refresh() {
 		repairs.loadData();
@@ -139,7 +136,7 @@
 						<div class="flex items-center gap-2 rounded-lg border p-3">
 							<button
 								type="button"
-								onclick={() => navigateToCar(repair)}
+								onclick={() => goto(carPath(repair.carId))}
 								class="flex flex-1 items-center text-left transition-colors hover:opacity-80"
 							>
 								<div class="flex-1">
@@ -192,7 +189,7 @@
 						<div class="flex items-center gap-2 rounded-lg border p-3">
 							<button
 								type="button"
-								onclick={() => navigateToCar(repair)}
+								onclick={() => goto(carPath(repair.carId))}
 								class="flex flex-1 items-center text-left transition-colors hover:opacity-80"
 							>
 								<div class="flex-1">
@@ -249,7 +246,7 @@
 					{#each unassigned as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => navigateToCar(repair)}
+							onclick={() => goto(carPath(repair.carId))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -296,7 +293,7 @@
 					{#each completed as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => navigateToCar(repair)}
+							onclick={() => goto(carPath(repair.carId))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">

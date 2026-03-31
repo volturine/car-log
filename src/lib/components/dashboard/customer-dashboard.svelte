@@ -13,6 +13,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
 	import { formatCurrency, formatDate, carLabel } from '$lib/utils';
+	import { carPath } from '$lib/utils/navigation';
 	import EstimateApprovalCard from '$lib/components/repairs/estimate-approval-card.svelte';
 	import {
 		ChevronRightIcon,
@@ -24,7 +25,6 @@
 		AlertCircleIcon
 	} from '@lucide/svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { Repair } from '$lib/types';
 
 	const repairs = useRepairs();
 
@@ -54,10 +54,6 @@
 	const outstanding = $derived(
 		unpaid.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
 	);
-
-	function navigateToCar(repair: Repair) {
-		goto(resolve(`/app/cars/${repair.carId}`));
-	}
 
 	function toggle(id: string) {
 		expanded = expanded === id ? null : id;
@@ -193,7 +189,7 @@
 					{#each active as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => navigateToCar(repair)}
+							onclick={() => goto(carPath(repair.carId))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -237,7 +233,7 @@
 					{#each unpaid as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => navigateToCar(repair)}
+							onclick={() => goto(carPath(repair.carId))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -274,7 +270,7 @@
 					{#each recent as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => navigateToCar(repair)}
+							onclick={() => goto(carPath(repair.carId))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">

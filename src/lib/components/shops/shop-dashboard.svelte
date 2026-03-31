@@ -13,6 +13,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
 	import { formatCurrency, formatDate, carLabel } from '$lib/utils';
+	import { carPath } from '$lib/utils/navigation';
 	import {
 		ChevronRightIcon,
 		AlertCircleIcon,
@@ -26,7 +27,7 @@
 	import PaymentForm from '$lib/components/repairs/payment-form.svelte';
 	import QuickStatusButton from '$lib/components/repairs/quick-status-button.svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { Repair, Shop } from '$lib/types';
+	import type { Shop } from '$lib/types';
 
 	let { shop, isOwner = false }: { shop: Shop | null; isOwner?: boolean } = $props();
 
@@ -65,10 +66,6 @@
 			.filter((r) => r.status === REPAIR_STATUS.COMPLETED)
 			.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
 	);
-
-	function navigateToCar(repair: Repair) {
-		goto(resolve(`/app/cars/${repair.carId}`));
-	}
 
 	function toggle(id: string) {
 		expanded = expanded === id ? null : id;
@@ -156,7 +153,7 @@
 					{#each pendingEstimates as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => navigateToCar(repair)}
+							onclick={() => goto(carPath(repair.carId))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -207,7 +204,7 @@
 						<div class="flex items-center gap-2 rounded-lg border p-3">
 							<button
 								type="button"
-								onclick={() => navigateToCar(repair)}
+								onclick={() => goto(carPath(repair.carId))}
 								class="flex flex-1 items-center text-left transition-colors hover:opacity-80"
 							>
 								<div class="flex-1">
@@ -303,7 +300,7 @@
 									variant="ghost"
 									size="icon"
 									class="ml-2 shrink-0"
-									onclick={() => navigateToCar(repair)}
+									onclick={() => goto(carPath(repair.carId))}
 								>
 									<CarIcon class="h-4 w-4" />
 								</Button>
@@ -329,7 +326,7 @@
 					{#each completedRepairs as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => navigateToCar(repair)}
+							onclick={() => goto(carPath(repair.carId))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
