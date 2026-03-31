@@ -1,14 +1,7 @@
 <script lang="ts">
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
 	import { Button } from '$lib/components/ui/button';
-	import {
-		Card,
-		CardHeader,
-		CardTitle,
-		CardDescription,
-		CardContent
-	} from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
+	import { Card, CardHeader, CardTitle, CardContent } from '$lib/components/ui/card';
 	import { Separator } from '$lib/components/ui/separator';
 	import CarForm from './car-form.svelte';
 	import RepairForm from '../repairs/repair-form.svelte';

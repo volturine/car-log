@@ -76,6 +76,5 @@ export const handle = sequence(rateLimitHandle, authHandle, securityHandle);
 
 // Global type for rate limiting
 declare global {
-	// eslint-disable-next-line no-var
 	var rateLimits: Map<string, { count: number; resetAt: number }>;
 }

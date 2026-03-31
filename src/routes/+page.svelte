@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Toaster } from 'svelte-sonner';
 	import { setApp } from '$lib/hooks/app.svelte.js';
-	import { setRepairs, useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import { setRepairs } from '$lib/hooks/repairs.svelte.js';
 	import { SidebarProvider, SidebarInset } from '$lib/components/ui/sidebar';
 	import AppSidebar from '$lib/components/app-sidebar.svelte';
 	import AppTopHeader from '$lib/components/app-top-header.svelte';

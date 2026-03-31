@@ -38,11 +38,13 @@ Goal: Convert a list of numbers into their squares and keep only evens.
 Analogy: Think of a conveyor belt that stamps each item, then a bouncer who only lets even-numbered tickets through.
 
 Diagram:
+
 ```
 input -> map(square) -> filter(is_even) -> output
 ```
 
 Walkthrough:
+
 - Read the input list
 - Square each number in order
 - Check each squared value for evenness

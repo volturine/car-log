@@ -16,7 +16,6 @@ import {
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils/helpers';
-import { USER_ROLE } from '$lib/constants';
 import { error } from '@sveltejs/kit';
 
 const logger = apiLogger.child('repairs');
@@ -30,7 +29,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	logger.debug('Fetching repairs', { userId: user.id, carId, shopId });
 
-	let repairs;
+	let repairs: Array<typeof schema.repairs.$inferSelect> = [];
 
 	if (isShopMember(user)) {
 		// Shop owners/mechanics see repairs for their shop(s)
@@ -45,10 +44,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 					.from(schema.repairs)
 					.where(and(eq(schema.repairs.shopId, shopId), eq(schema.repairs.carId, carId)));
 			} else {
-				repairs = await db
-					.select()
-					.from(schema.repairs)
-					.where(eq(schema.repairs.shopId, shopId));
+				repairs = await db.select().from(schema.repairs).where(eq(schema.repairs.shopId, shopId));
 			}
 		} else {
 			// Get all repairs for all shops the user is a member of

@@ -11,7 +11,7 @@ import {
 	toJsonResponse,
 	type ApiResult
 } from '$lib/server/result';
-import { ResultAsync, errAsync } from 'neverthrow';
+import { errAsync } from 'neverthrow';
 import { z } from 'zod';
 
 const logger = apiLogger.child('cars');
@@ -42,7 +42,9 @@ async function validateCarData(request: Request): Promise<ApiResult<z.infer<type
 }
 
 // Helper: Fetch user cars with Result
-async function fetchUserCars(userId: string): Promise<ApiResult<typeof schema.cars.$inferSelect[]>> {
+async function fetchUserCars(
+	userId: string
+): Promise<ApiResult<(typeof schema.cars.$inferSelect)[]>> {
 	try {
 		logger.info('Fetching cars', { userId });
 
@@ -65,7 +67,7 @@ async function fetchUserCars(userId: string): Promise<ApiResult<typeof schema.ca
 async function createCar(
 	userId: string,
 	carData: z.infer<typeof carSchema>
-): Promise<ApiResult<typeof schema.cars.$inferSelect>> {
+): Promise<ApiResult<typeof schema.cars.$inferInsert>> {
 	try {
 		logger.info('Creating car', { userId, brand: carData.brand });
 

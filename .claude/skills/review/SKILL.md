@@ -47,16 +47,20 @@ $ARGUMENTS
 ## Example output
 
 ### Assessment
+
 Partially Agree — the approach is sound, but there are unsafe edge cases around null handling.
 
 ### Strengths
+
 - Clear separation between parsing and validation steps
 - Query is parameterized to avoid injection risks
 
 ### Issues Found
+
 - Severity: High; Location: src/app.ts:42; Issue: Accesses `user.id` without null check; Fix: Guard with `if (!user) return` before access.
 - Severity: Medium; Location: src/db.py:118; Issue: Missing transaction rollback on failure; Fix: Wrap in `try/except` and call `rollback()`.
 
 ### Recommendations
+
 1. Add unit tests for null user paths to prevent regressions.
 2. Consider extracting validation into a reusable helper.

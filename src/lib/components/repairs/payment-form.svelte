@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -114,7 +120,7 @@
 		{#if !isFullyPaid}
 			<!-- Payment Form -->
 			<form
-				onsubmit={(e) => {
+				onsubmit={(e: Event) => {
 					e.preventDefault();
 					recordPayment();
 				}}
@@ -137,9 +143,7 @@
 								required
 							/>
 						</div>
-						<Button type="button" variant="outline" onclick={setFullAmount}>
-							Full Amount
-						</Button>
+						<Button type="button" variant="outline" onclick={setFullAmount}>Full Amount</Button>
 					</div>
 					<p class="text-xs text-muted-foreground">
 						Maximum: {formatCurrency(remainingBalance)}
@@ -149,7 +153,8 @@
 				<div class="space-y-2">
 					<Label for="method">Payment Method</Label>
 					<Select
-						onValueChange={(value) => {
+						type="single"
+						onValueChange={(value: string) => {
 							if (value) method = value;
 						}}
 						value={method}

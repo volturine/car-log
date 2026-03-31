@@ -1,11 +1,15 @@
 <script lang="ts">
 	import { useRepairs } from '$lib/hooks/repairs.svelte';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
 	import { formatCurrency, formatDate } from '$lib/utils/helpers';
-	import { onMount } from 'svelte';
 	import type { Repair } from '$lib/types';
 
 	const repairsState = useRepairs();
@@ -16,9 +20,7 @@
 
 	let activeRepairs = $derived(
 		repairsState.repairs.filter(
-			(r) =>
-				r.status === REPAIR_STATUS.ESTIMATE_APPROVED ||
-				r.status === REPAIR_STATUS.IN_PROGRESS
+			(r) => r.status === REPAIR_STATUS.ESTIMATE_APPROVED || r.status === REPAIR_STATUS.IN_PROGRESS
 		)
 	);
 
@@ -37,7 +39,7 @@
 	let unpaidRevenue = $derived(
 		repairsState.repairs
 			.filter((r) => r.status === REPAIR_STATUS.COMPLETED)
-			.reduce((sum, r) => sum + (r.totalCost - r.amountPaid), 0)
+			.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
 	);
 
 	function getStatusColor(status: string): string {
@@ -46,6 +48,12 @@
 
 	function getStatusLabel(status: string): string {
 		return STATUS_LABELS[status as keyof typeof STATUS_LABELS] || status;
+	}
+
+	function carLabel(repair: Repair): string {
+		const car = repairsState.cars.find((c) => c.id === repair.carId);
+		if (!car) return 'Unknown vehicle';
+		return `${car.brand} ${car.model} - ${car.licensePlate}`;
 	}
 </script>
 
@@ -99,15 +107,17 @@
 			</CardHeader>
 			<CardContent>
 				<div class="space-y-3">
-					{#each pendingEstimates as repair}
+					{#each pendingEstimates as repair (repair.id)}
 						<div class="flex items-center justify-between p-3 border rounded-lg">
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
-									{repair.car?.brand} {repair.car?.model} - {repair.car?.licensePlate}
+									{carLabel(repair)}
 								</div>
 								<div class="text-sm text-muted-foreground">
-									Estimated: {formatCurrency(repair.estimatedCost)} - {formatDate(repair.createdAt)}
+									Estimated: {formatCurrency(repair.estimatedCost ?? 0)} - {formatDate(
+										repair.createdAt
+									)}
 								</div>
 							</div>
 							<Badge class="bg-{getStatusColor(repair.status)}">
@@ -129,12 +139,12 @@
 			</CardHeader>
 			<CardContent>
 				<div class="space-y-3">
-					{#each activeRepairs as repair}
+					{#each activeRepairs as repair (repair.id)}
 						<div class="flex items-center justify-between p-3 border rounded-lg">
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
-									{repair.car?.brand} {repair.car?.model} - {repair.car?.licensePlate}
+									{carLabel(repair)}
 								</div>
 								<div class="text-sm text-muted-foreground">
 									{#if repair.assignedMechanicId}
@@ -166,12 +176,12 @@
 			</CardHeader>
 			<CardContent>
 				<div class="space-y-3">
-					{#each completedRepairs as repair}
+					{#each completedRepairs as repair (repair.id)}
 						<div class="flex items-center justify-between p-3 border rounded-lg">
 							<div class="flex-1">
 								<div class="font-medium">{repair.title}</div>
 								<div class="text-sm text-muted-foreground">
-									{repair.car?.brand} {repair.car?.model} - {repair.car?.licensePlate}
+									{carLabel(repair)}
 								</div>
 								<div class="text-sm text-muted-foreground">
 									Completed {formatDate(repair.completedDate)}

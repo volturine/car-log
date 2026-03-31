@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
-	import { Card, CardHeader, CardTitle, CardContent } from '$lib/components/ui/card';
+	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
 	import { ChevronLeftIcon, ChevronRightIcon } from '@lucide/svelte';
 	import { fly } from 'svelte/transition';
+
+	import { REPAIR_STATUS } from '$lib/constants';
+	import type { RepairStatus } from '$lib/types.js';
 
 	const repairs = useRepairs();
 	let currentDate = $state(new Date());
@@ -86,10 +88,13 @@
 		);
 	};
 
-	const statusColors = {
-		pending: 'bg-yellow-500/20 border-yellow-500/50',
-		'in-progress': 'bg-blue-500/20 border-blue-500/50',
-		completed: 'bg-green-500/20 border-green-500/50'
+	const statusColors: Record<RepairStatus, string> = {
+		[REPAIR_STATUS.PENDING]: 'bg-yellow-500/20 border-yellow-500/50',
+		[REPAIR_STATUS.ESTIMATE_PENDING]: 'bg-yellow-500/20 border-yellow-500/50',
+		[REPAIR_STATUS.ESTIMATE_APPROVED]: 'bg-blue-500/20 border-blue-500/50',
+		[REPAIR_STATUS.IN_PROGRESS]: 'bg-blue-500/20 border-blue-500/50',
+		[REPAIR_STATUS.COMPLETED]: 'bg-green-500/20 border-green-500/50',
+		[REPAIR_STATUS.PAID]: 'bg-green-500/20 border-green-500/50'
 	};
 </script>
 
@@ -117,7 +122,7 @@
 	<Card>
 		<CardContent class="p-4">
 			<div class="grid grid-cols-7 gap-2">
-				{#each dayNames as dayName}
+				{#each dayNames as dayName (dayName)}
 					<div class="text-center font-semibold text-sm p-2 text-muted-foreground">
 						{dayName}
 					</div>
@@ -172,15 +177,15 @@
 	<div class="flex items-center gap-4 text-sm">
 		<span class="font-medium">Legend:</span>
 		<div class="flex items-center gap-2">
-			<div class="size-4 rounded border {statusColors.pending}"></div>
+			<div class="size-4 rounded border {statusColors[REPAIR_STATUS.PENDING]}"></div>
 			<span>Pending</span>
 		</div>
 		<div class="flex items-center gap-2">
-			<div class="size-4 rounded border {statusColors['in-progress']}"></div>
+			<div class="size-4 rounded border {statusColors[REPAIR_STATUS.IN_PROGRESS]}"></div>
 			<span>In Progress</span>
 		</div>
 		<div class="flex items-center gap-2">
-			<div class="size-4 rounded border {statusColors.completed}"></div>
+			<div class="size-4 rounded border {statusColors[REPAIR_STATUS.COMPLETED]}"></div>
 			<span>Completed</span>
 		</div>
 	</div>

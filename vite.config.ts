@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const hmrHost = process.env.HMR_HOST;
 const hmrProtocol = (process.env.HMR_PROTOCOL as 'ws' | 'wss' | undefined) || 'ws';
@@ -14,7 +15,7 @@ const hmr = hmrHost
 		}
 	: undefined;
 
-export default {
+export default defineConfig({
 	plugins: [
 		sveltekit(),
 		VitePWA({
@@ -23,9 +24,9 @@ export default {
 				globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest,json,xml}']
 			},
 			manifest: {
-				name: 'Myy app',
-				short_name: 'My app',
-				description: 'description',
+				name: 'Car Repair Log',
+				short_name: 'CarLog',
+				description: 'Track and manage car repairs',
 				start_url: '/',
 				display: 'standalone',
 				background_color: '#ffffff',
@@ -35,18 +36,15 @@ export default {
 				id: '/?source=pwa',
 				lang: 'en',
 				dir: 'ltr',
-				categories: ['games', 'education'],
-				icons: [],
+				categories: ['utilities', 'productivity'],
+				icons: []
 			}
 		})
 	],
 	server: {
 		host: '0.0.0.0',
 		port: 3000,
-		allowedHosts: [
-			"localhost",
-			"code-server.bee-justice.ts.net"
-		],
+		allowedHosts: ['localhost', 'code-server.bee-justice.ts.net'],
 		...(hmr ? { hmr } : {})
-	},
-};
+	}
+});

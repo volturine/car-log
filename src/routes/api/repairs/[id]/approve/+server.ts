@@ -32,11 +32,7 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 			updatedAt: new Date()
 		};
 
-		tx
-			.update(schema.repairs)
-			.set(updatedRepair)
-			.where(eq(schema.repairs.id, params.id))
-			.run();
+		tx.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)).run();
 
 		return { ...repair, ...updatedRepair };
 	});

@@ -12,22 +12,25 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { toast } from 'svelte-sonner';
+	import { untrack } from 'svelte';
 	import type { Car } from '$lib/types.js';
 
 	let { car, onCancel, onSuccess }: Props = $props();
 
 	const repairs = useRepairs();
 	let isSubmitting = $state(false);
-	let formData = $derived({
-		brand: car?.brand || '',
-		model: car?.model || '',
-		year: car?.year || new Date().getFullYear(),
-		vin: car?.vin || '',
-		licensePlate: car?.licensePlate || '',
-		ownerName: car?.ownerName || '',
-		ownerPhone: car?.ownerPhone || '',
-		color: car?.color || ''
-	});
+	let formData = $state(
+		untrack(() => ({
+			brand: car?.brand || '',
+			model: car?.model || '',
+			year: car?.year || new Date().getFullYear(),
+			vin: car?.vin || '',
+			licensePlate: car?.licensePlate || '',
+			ownerName: car?.ownerName || '',
+			ownerPhone: car?.ownerPhone || '',
+			color: car?.color || ''
+		}))
+	);
 
 	const handleSubmit = async (e: Event) => {
 		e.preventDefault();
@@ -136,7 +139,13 @@
 				{isSubmitting ? 'Saving...' : car ? 'Update' : 'Add'} Car
 			</Button>
 			{#if onCancel}
-				<Button type="button" variant="outline" class="flex-1" onclick={onCancel} disabled={isSubmitting}>
+				<Button
+					type="button"
+					variant="outline"
+					class="flex-1"
+					onclick={onCancel}
+					disabled={isSubmitting}
+				>
 					Cancel
 				</Button>
 			{/if}

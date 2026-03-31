@@ -2,10 +2,17 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
-import { requireAuth, validateBody, successResponse, transaction, isShopMember } from '$lib/server/api-utils';
+import {
+	requireAuth,
+	validateBody,
+	successResponse,
+	transaction,
+	isShopMember
+} from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
-import { REPAIR_STATUS, PAYMENT_STATUS } from '$lib/constants';
+import { REPAIR_STATUS, PAYMENT_STATUS, type PaymentStatus } from '$lib/constants';
 import { notifyPaymentReceived } from '$lib/server/notifications';
+import { memberWhere } from '$lib/server/predicates';
 import { z } from 'zod';
 
 const logger = apiLogger.child('payments');
@@ -45,10 +52,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		const [membership] = await db
 			.select()
 			.from(schema.shopMembers)
-			.where(
-				eq(schema.shopMembers.shopId, repair.shopId) &&
-					eq(schema.shopMembers.userId, user.id)
-			)
+			.where(memberWhere(repair.shopId, user.id))
 			.limit(1);
 
 		if (!membership && user.role !== 'admin') {
@@ -66,10 +70,12 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	// Update payment in transaction
 	const result = transaction((tx) => {
-		const newAmountPaid = repair.amountPaid + amount;
-		const remainingBalance = repair.totalCost - newAmountPaid;
+		const amountPaid = repair.amountPaid ?? 0;
+		const totalCost = repair.totalCost ?? 0;
+		const newAmountPaid = amountPaid + amount;
+		const remainingBalance = totalCost - newAmountPaid;
 
-		let paymentStatus = PAYMENT_STATUS.PARTIAL;
+		let paymentStatus: PaymentStatus = PAYMENT_STATUS.PARTIAL;
 		let repairStatus = repair.status;
 
 		if (remainingBalance <= 0) {
@@ -89,11 +95,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			updatedAt: new Date()
 		};
 
-		tx
-			.update(schema.repairs)
-			.set(updatedRepair)
-			.where(eq(schema.repairs.id, params.id))
-			.run();
+		tx.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)).run();
 
 		logger.info('Payment recorded', {
 			repairId: params.id,
@@ -124,12 +126,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			.limit(1);
 
 		if (shop) {
-			await notifyPaymentReceived(
-				shop.ownerId,
-				params.id,
-				amount,
-				user.name || 'Customer'
-			);
+			await notifyPaymentReceived(shop.ownerId, params.id, amount, user.name || 'Customer');
 		}
 	}
 

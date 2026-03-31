@@ -5,13 +5,23 @@
 import { error, type NumericRange } from '@sveltejs/kit';
 import { db, schema } from './db';
 import { eq, and } from 'drizzle-orm';
+import type { AnySQLiteColumn, AnySQLiteTable } from 'drizzle-orm/sqlite-core';
 import { API_ERRORS } from '$lib/constants';
 import { z } from 'zod';
+
+type User = NonNullable<App.Locals['user']>;
+type IdTable = AnySQLiteTable<{ columns: { id: AnySQLiteColumn } }> & { id: AnySQLiteColumn };
+type OwnedTable = AnySQLiteTable<{ columns: { id: AnySQLiteColumn; userId: AnySQLiteColumn } }> & {
+	id: AnySQLiteColumn;
+	userId: AnySQLiteColumn;
+};
+type Row<TTable extends AnySQLiteTable> = TTable['$inferSelect'];
+type Tx = Parameters<typeof db.transaction>[0] extends (tx: infer TTx) => unknown ? TTx : never;
 
 /**
  * Require authentication - throws 401 if user not authenticated
  */
-export function requireAuth(locals: App.Locals) {
+export function requireAuth(locals: App.Locals): User {
 	if (!locals.user) {
 		throw error(API_ERRORS.UNAUTHORIZED.status, API_ERRORS.UNAUTHORIZED.message);
 	}
@@ -21,7 +31,7 @@ export function requireAuth(locals: App.Locals) {
 /**
  * Require specific role - throws 403 if user doesn't have required role
  */
-export function requireRole(locals: App.Locals, allowedRoles: string[]) {
+export function requireRole(locals: App.Locals, allowedRoles: string[]): User {
 	const user = requireAuth(locals);
 
 	if (!allowedRoles.includes(user.role || 'customer')) {
@@ -34,19 +44,19 @@ export function requireRole(locals: App.Locals, allowedRoles: string[]) {
 /**
  * Check if user is shop owner or mechanic
  */
-export function isShopMember(user: any): boolean {
+export function isShopMember(user: User): boolean {
 	return user.role === 'shop_owner' || user.role === 'mechanic';
 }
 
 /**
  * Fetch single record by ID - returns undefined if not found
  */
-export async function fetchById<T extends { id: any }>(
-	table: any,
-	id: string
-): Promise<T | undefined> {
+export async function fetchById<TTable extends IdTable>(
+	table: TTable,
+	id: Row<TTable>['id']
+): Promise<Row<TTable> | undefined> {
 	const [record] = await db.select().from(table).where(eq(table.id, id)).limit(1);
-	return record as T | undefined;
+	return record;
 }
 
 /**
@@ -73,13 +83,13 @@ export async function verifyShopAccess(shopId: string, userId: string, userRole:
 /**
  * Verify resource ownership - throws 404 if not found or not owned by user
  */
-export async function verifyOwnership<T extends Record<string, any>>(
-	table: any,
-	resourceId: string,
-	userId: string,
+export async function verifyOwnership<TTable extends OwnedTable>(
+	table: TTable,
+	resourceId: Row<TTable>['id'],
+	userId: Row<TTable>['userId'],
 	resourceName: string = 'Resource'
-): Promise<T> {
-	const record = await fetchById<T>(table, resourceId);
+): Promise<Row<TTable>> {
+	const record = await fetchById(table, resourceId);
 	if (!record || record.userId !== userId) {
 		throw error(API_ERRORS.NOT_FOUND.status, `${resourceName} not found`);
 	}
@@ -122,7 +132,7 @@ export function errorResponse(
 	code: string,
 	message: string,
 	status: NumericRange<400, 599>,
-	details?: any
+	details?: unknown
 ) {
 	return {
 		success: false as const,
@@ -139,7 +149,7 @@ export function errorResponse(
  * Execute database transaction
  * The callback receives the transaction object (tx) to use for database operations
  */
-export function transaction<T>(callback: (tx: typeof db) => T): T {
+export function transaction<T>(callback: (tx: Tx) => T): T {
 	return db.transaction((tx) => {
 		return callback(tx);
 	});
@@ -148,7 +158,9 @@ export function transaction<T>(callback: (tx: typeof db) => T): T {
 /**
  * Map photos to URL format
  */
-export function formatPhotosForResponse(photos: Array<{ id: string }>): Array<{ id: string; url: string }> {
+export function formatPhotosForResponse(
+	photos: Array<{ id: string }>
+): Array<{ id: string; url: string }> {
 	return photos.map((p) => ({
 		id: p.id,
 		url: `/api/photos/${p.id}`
@@ -158,10 +170,10 @@ export function formatPhotosForResponse(photos: Array<{ id: string }>): Array<{ 
 /**
  * Safe async handler with error logging
  */
-export function catchAsync(
-	handler: (context: any) => Promise<Response>
-): (context: any) => Promise<Response> {
-	return async (context: any) => {
+export function catchAsync<T>(
+	handler: (context: T) => Promise<Response>
+): (context: T) => Promise<Response> {
+	return async (context: T) => {
 		try {
 			return await handler(context);
 		} catch (err) {

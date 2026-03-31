@@ -16,7 +16,7 @@
 	import { toast } from 'svelte-sonner';
 	import { PlusIcon, Trash2Icon, ImageIcon, XIcon, ExternalLinkIcon } from '@lucide/svelte';
 	import { REPAIR_STATUS, USER_ROLE } from '$lib/constants';
-	import type { Repair, RepairPart, RepairStatus } from '$lib/types.js';
+	import type { Repair, RepairPart } from '$lib/types.js';
 
 	let { carId, repair, onCancel, onSuccess, user }: Props = $props();
 
@@ -31,8 +31,7 @@
 			title: repair?.title || '',
 			description: repair?.description || '',
 			status:
-				repair?.status ||
-				(isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : ('pending' as RepairStatus)),
+				repair?.status || (isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : REPAIR_STATUS.PENDING),
 			shopId: repair?.shopId || '',
 			assignedMechanicId: repair?.assignedMechanicId || '',
 			// Estimate fields
@@ -59,7 +58,7 @@
 
 	$effect(() => {
 		parts = repair?.parts ? [...repair.parts] : [];
-		photos = repair?.photos ? repair.photos.map((p: any) => ({ url: p.url || p })) : [];
+		photos = repair?.photos ? repair.photos.map((p) => ({ url: p.url })) : [];
 	});
 
 	const addPart = () => {
@@ -218,9 +217,9 @@
 								<SelectItem value={REPAIR_STATUS.COMPLETED}>Completed</SelectItem>
 								<SelectItem value={REPAIR_STATUS.PAID}>Paid</SelectItem>
 							{:else}
-								<SelectItem value="pending">Pending</SelectItem>
-								<SelectItem value="in_progress">In Progress</SelectItem>
-								<SelectItem value="completed">Completed</SelectItem>
+								<SelectItem value={REPAIR_STATUS.PENDING}>Pending</SelectItem>
+								<SelectItem value={REPAIR_STATUS.IN_PROGRESS}>In Progress</SelectItem>
+								<SelectItem value={REPAIR_STATUS.COMPLETED}>Completed</SelectItem>
 							{/if}
 						</SelectContent>
 					</Select>
@@ -357,6 +356,7 @@
 								</Button>
 							</div>
 							{#if part.sourceUrl}
+								<!-- eslint-disable svelte/no-navigation-without-resolve -- external URL -->
 								<a
 									href={part.sourceUrl}
 									target="_blank"
@@ -366,6 +366,7 @@
 									<ExternalLinkIcon class="size-3" />
 									View source
 								</a>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							{/if}
 						</div>
 					{/each}

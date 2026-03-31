@@ -27,14 +27,16 @@ export const REPAIR_STATUS = {
 export type RepairStatus = (typeof REPAIR_STATUS)[keyof typeof REPAIR_STATUS];
 
 // UI Constants for Repair Status
-export const STATUS_COLORS: Record<RepairStatus, string> = {
+export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
+
+export const STATUS_COLORS = {
 	[REPAIR_STATUS.ESTIMATE_PENDING]: 'secondary',
 	[REPAIR_STATUS.ESTIMATE_APPROVED]: 'default',
 	[REPAIR_STATUS.IN_PROGRESS]: 'default',
 	[REPAIR_STATUS.COMPLETED]: 'outline',
 	[REPAIR_STATUS.PAID]: 'outline',
 	[REPAIR_STATUS.PENDING]: 'secondary'
-};
+} as const satisfies Record<RepairStatus, BadgeVariant>;
 
 export const STATUS_LABELS: Record<RepairStatus, string> = {
 	[REPAIR_STATUS.ESTIMATE_PENDING]: 'Estimate Pending',

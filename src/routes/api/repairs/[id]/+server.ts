@@ -65,7 +65,9 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		...repair,
 		...validatedData,
 		startDate: validatedData.startDate ? new Date(validatedData.startDate) : repair.startDate,
-		completedDate: validatedData.completedDate ? new Date(validatedData.completedDate) : repair.completedDate,
+		completedDate: validatedData.completedDate
+			? new Date(validatedData.completedDate)
+			: repair.completedDate,
 		updatedAt: new Date()
 	};
 
@@ -75,14 +77,16 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		// Update parts if provided
 		if (validatedData.parts?.length) {
 			tx.delete(schema.repairParts).where(eq(schema.repairParts.repairId, params.id)).run();
-			validatedData.parts.forEach(part => {
-				tx.insert(schema.repairParts).values({
-					id: generateId(),
-					repairId: params.id,
-					...part,
-					totalCost: part.totalCost || part.quantity * part.unitCost,
-					createdAt: new Date()
-				}).run();
+			validatedData.parts.forEach((part) => {
+				tx.insert(schema.repairParts)
+					.values({
+						id: generateId(),
+						repairId: params.id,
+						...part,
+						totalCost: part.totalCost || part.quantity * part.unitCost,
+						createdAt: new Date()
+					})
+					.run();
 			});
 		}
 
@@ -103,7 +107,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 // DELETE /api/repairs/[id] - Delete a repair
 export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const user = requireAuth(locals);
-	const repair = await verifyOwnership(schema.repairs, params.id, user.id, 'Repair');
+	await verifyOwnership(schema.repairs, params.id, user.id, 'Repair');
 
 	logger.info('Deleting repair', { repairId: params.id, userId: user.id });
 
@@ -132,7 +136,11 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	// Wait for all file deletions (but don't fail if some fail)
 	await Promise.allSettled(fileCleanupPromises);
 
-	logger.info('Repair deleted', { repairId: params.id, userId: user.id, photosCleaned: photos.length });
+	logger.info('Repair deleted', {
+		repairId: params.id,
+		userId: user.id,
+		photosCleaned: photos.length
+	});
 
 	return json(successResponse({ deleted: true }));
 };

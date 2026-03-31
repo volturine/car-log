@@ -29,16 +29,19 @@ A secure, multi-user car repair tracking application with authentication, databa
 ### Installation
 
 1. Navigate to the project root:
+
 ```bash
 cd car-log
 ```
 
 2. Install dependencies:
+
 ```bash
 bun install
 ```
 
 3. The database is already initialized. If you need to reset it:
+
 ```bash
 bunx drizzle-kit push
 ```
@@ -46,11 +49,12 @@ bunx drizzle-kit push
 ### Running the Application
 
 1. Start the development server:
+
 ```bash
 bun run dev
 ```
 
-2. Open your browser to `http://localhost:5173`
+2. Open your browser to `http://localhost:3000`
 
 3. You'll be redirected to the login page. Create a new account by clicking "Register"
 
@@ -142,7 +146,7 @@ Create a `.env` file in the project root:
 
 ```env
 BETTER_AUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars
-BETTER_AUTH_URL=http://localhost:5173
+BETTER_AUTH_URL=http://localhost:3000
 ```
 
 ## Building for Production
@@ -155,6 +159,7 @@ bun run preview
 ## Testing Scenarios
 
 ### Scenario 1: Basic User Flow
+
 1. Register new user
 2. Add 2-3 cars
 3. Add repairs to each car
@@ -164,6 +169,7 @@ bun run preview
 7. Check calendar view
 
 ### Scenario 2: Multi-User Isolation
+
 1. User A: Create account, add car "Toyota Camry"
 2. User A: Add repair with photos
 3. Sign out
@@ -173,6 +179,7 @@ bun run preview
 7. Verify photos are isolated by user
 
 ### Scenario 3: Data Persistence
+
 1. Add cars and repairs
 2. Sign out
 3. Close browser

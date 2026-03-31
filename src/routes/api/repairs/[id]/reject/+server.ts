@@ -2,7 +2,13 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
-import { requireAuth, verifyOwnership, validateBody, successResponse, transaction } from '$lib/server/api-utils';
+import {
+	requireAuth,
+	verifyOwnership,
+	validateBody,
+	successResponse,
+	transaction
+} from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { REPAIR_STATUS } from '$lib/constants';
 import { notifyEstimateRejected } from '$lib/server/notifications';
@@ -30,36 +36,31 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	logger.info('Rejecting estimate', { repairId: params.id, userId: user.id, reason });
 
-	const result = await transaction(async () => {
-		// Update repair status back to pending or add a rejected status
-		// For now, let's add notes about rejection
-		const updatedRepair = {
+	const updatedRepair = transaction((tx) => {
+		const repairUpdate = {
 			estimateNotes: reason ? `Rejected: ${reason}` : 'Estimate rejected by customer',
 			customerApproved: false,
 			updatedAt: new Date()
 		};
 
-		await db
-			.update(schema.repairs)
-			.set(updatedRepair)
-			.where(eq(schema.repairs.id, params.id));
+		tx.update(schema.repairs).set(repairUpdate).where(eq(schema.repairs.id, params.id)).run();
 
-		// Get shop info to notify
-		if (repair.shopId) {
-			const [shop] = await db
-				.select()
-				.from(schema.shops)
-				.where(eq(schema.shops.id, repair.shopId))
-				.limit(1);
-
-			if (shop) {
-				// Notify shop owner
-				await notifyEstimateRejected(shop.ownerId, params.id, user.name || 'Customer');
-			}
-		}
-
-		return { ...repair, ...updatedRepair };
+		return repairUpdate;
 	});
+
+	const result = { ...repair, ...updatedRepair };
+
+	if (repair.shopId) {
+		const [shop] = await db
+			.select()
+			.from(schema.shops)
+			.where(eq(schema.shops.id, repair.shopId))
+			.limit(1);
+
+		if (shop) {
+			await notifyEstimateRejected(shop.ownerId, params.id, user.name || 'Customer');
+		}
+	}
 
 	logger.info('Estimate rejected', { repairId: params.id, userId: user.id });
 

@@ -1,10 +1,16 @@
 <script lang="ts">
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
-	import { CheckCircle2, XCircle, Clock, DollarSign } from '@lucide/svelte';
+	import { CheckCircle2, XCircle, Clock } from '@lucide/svelte';
 	import { formatCurrency } from '$lib/utils/helpers';
 	import { toast } from 'svelte-sonner';
 	import type { Repair } from '$lib/types';
@@ -126,7 +132,7 @@
 			<div>
 				<h4 class="text-sm font-medium mb-2">Parts Breakdown:</h4>
 				<div class="space-y-2">
-					{#each repair.parts as part}
+					{#each repair.parts as part (part.name)}
 						<div class="flex items-center justify-between text-sm">
 							<span class="text-muted-foreground">
 								{part.quantity}× {part.name}
@@ -145,7 +151,12 @@
 					<CheckCircle2 class="h-4 w-4 mr-2" />
 					{isApproving ? 'Approving...' : 'Approve Estimate'}
 				</Button>
-				<Button variant="outline" onclick={() => (showRejectForm = true)} disabled={isApproving} class="flex-1">
+				<Button
+					variant="outline"
+					onclick={() => (showRejectForm = true)}
+					disabled={isApproving}
+					class="flex-1"
+				>
 					<XCircle class="h-4 w-4 mr-2" />
 					Reject
 				</Button>

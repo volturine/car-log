@@ -53,7 +53,10 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		logger.info('Photo file deleted', { photoId: params.id, path: photo.path });
 	} catch (err) {
 		// Log but don't fail if file doesn't exist or can't be deleted
-		logger.warn('Failed to delete photo file', { photoId: params.id, error: (err as Error).message });
+		logger.warn('Failed to delete photo file', {
+			photoId: params.id,
+			error: (err as Error).message
+		});
 	}
 
 	return json(successResponse({ deleted: true }));

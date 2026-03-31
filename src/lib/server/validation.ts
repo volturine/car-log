@@ -4,7 +4,11 @@ import { z } from 'zod';
 export const carSchema = z.object({
 	brand: z.string().min(1, 'Brand is required').max(100),
 	model: z.string().min(1, 'Model is required').max(100),
-	year: z.number().int().min(1900).max(new Date().getFullYear() + 2),
+	year: z
+		.number()
+		.int()
+		.min(1900)
+		.max(new Date().getFullYear() + 2),
 	vin: z.string().max(17).optional().nullable(),
 	licensePlate: z.string().min(1).max(20).optional().nullable(),
 	ownerName: z.string().min(1).max(200).optional().nullable(),
@@ -33,14 +37,7 @@ export const repairSchema = z.object({
 	title: z.string().min(1, 'Title is required').max(200),
 	description: z.string().max(5000).optional().nullable(),
 	status: z
-		.enum([
-			'estimate_pending',
-			'estimate_approved',
-			'in_progress',
-			'completed',
-			'paid',
-			'pending'
-		])
+		.enum(['estimate_pending', 'estimate_approved', 'in_progress', 'completed', 'paid', 'pending'])
 		.default('estimate_pending'),
 	// Estimate fields
 	estimatedCost: z.number().min(0).max(1000000).default(0),

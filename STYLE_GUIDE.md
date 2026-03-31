@@ -72,7 +72,7 @@ const result = await fetchData();
 // result type is inferred
 
 // Bad
-const result = await fetchData() as any;
+const result = (await fetchData()) as any;
 ```
 
 ## File Naming

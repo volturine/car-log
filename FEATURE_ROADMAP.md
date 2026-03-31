@@ -3,6 +3,7 @@
 ## 🎯 Current State Assessment
 
 **What We Have:**
+
 - ✅ User authentication
 - ✅ Car management (CRUD)
 - ✅ Repair tracking with parts and photos
@@ -19,9 +20,11 @@
 ### **TIER 1: CRITICAL (Implement First)**
 
 #### 1. **Multi-Role System** ⭐⭐⭐⭐⭐
+
 **Problem:** Currently, users create their own repairs. In reality, repair shops create repairs for customer cars.
 
 **Solution:**
+
 ```typescript
 // Add user roles
 enum UserRole {
@@ -37,6 +40,7 @@ enum UserRole {
 ```
 
 **User Stories:**
+
 - As a **customer**, I want to add my cars and view repairs done by shops
 - As a **shop owner**, I want to create repairs for customer cars
 - As a **mechanic**, I want to update repair status and add parts/photos
@@ -44,38 +48,41 @@ enum UserRole {
 ---
 
 #### 2. **Repair Shop Profiles** ⭐⭐⭐⭐⭐
+
 **Problem:** No concept of a "shop" entity
 
 **Solution:**
+
 ```typescript
 interface RepairShop {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  city: string;
-  state: string;
-  zipCode: string;
-  businessHours: string;
-  specialties: string[];      // "Brakes", "Engine", "Electrical"
-  logo?: string;
-  rating: number;             // Average rating
-  totalReviews: number;
-  ownerId: string;            // User who owns the shop
-  createdAt: Date;
+	id: string;
+	name: string;
+	email: string;
+	phone: string;
+	address: string;
+	city: string;
+	state: string;
+	zipCode: string;
+	businessHours: string;
+	specialties: string[]; // "Brakes", "Engine", "Electrical"
+	logo?: string;
+	rating: number; // Average rating
+	totalReviews: number;
+	ownerId: string; // User who owns the shop
+	createdAt: Date;
 }
 
 // Shop team members
 interface ShopMember {
-  userId: string;
-  shopId: string;
-  role: 'owner' | 'mechanic';
-  joinedAt: Date;
+	userId: string;
+	shopId: string;
+	role: 'owner' | 'mechanic';
+	joinedAt: Date;
 }
 ```
 
 **Features:**
+
 - Shop registration workflow
 - Shop profile page (visible to customers)
 - Team management (add/remove mechanics)
@@ -84,30 +91,33 @@ interface ShopMember {
 ---
 
 #### 3. **Customer-Shop Relationship** ⭐⭐⭐⭐⭐
+
 **Problem:** No way to link customers to shops or track which shop is working on which car
 
 **Solution:**
+
 ```typescript
 // Add to repairs table
 interface Repair {
-  // ... existing fields
-  shopId: string;             // Shop performing the repair
-  assignedMechanicId?: string; // Specific mechanic
-  customerNotified: boolean;   // Has customer been notified
-  customerApproved: boolean;   // Has customer approved estimate
+	// ... existing fields
+	shopId: string; // Shop performing the repair
+	assignedMechanicId?: string; // Specific mechanic
+	customerNotified: boolean; // Has customer been notified
+	customerApproved: boolean; // Has customer approved estimate
 }
 
 // Customer-shop relationship
 interface CustomerShop {
-  customerId: string;
-  shopId: string;
-  firstVisit: Date;
-  totalVisits: number;
-  totalSpent: number;
+	customerId: string;
+	shopId: string;
+	firstVisit: Date;
+	totalVisits: number;
+	totalSpent: number;
 }
 ```
 
 **Workflows:**
+
 1. **Shop creates repair for customer car:**
    - Shop selects customer
    - Shop selects customer's car
@@ -122,33 +132,36 @@ interface CustomerShop {
 ---
 
 #### 4. **Estimates & Approval Workflow** ⭐⭐⭐⭐⭐
+
 **Problem:** No way to provide estimates before starting work (legal requirement in many places)
 
 **Solution:**
+
 ```typescript
 enum RepairStatus {
-  ESTIMATE_PENDING = 'estimate_pending',     // Shop created, waiting for approval
-  ESTIMATE_APPROVED = 'estimate_approved',   // Customer approved
-  ESTIMATE_REJECTED = 'estimate_rejected',   // Customer declined
-  IN_PROGRESS = 'in_progress',               // Work started
-  COMPLETED = 'completed',                    // Work done
-  PAID = 'paid',                             // Payment received
-  PICKED_UP = 'picked_up'                    // Customer picked up car
+	ESTIMATE_PENDING = 'estimate_pending', // Shop created, waiting for approval
+	ESTIMATE_APPROVED = 'estimate_approved', // Customer approved
+	ESTIMATE_REJECTED = 'estimate_rejected', // Customer declined
+	IN_PROGRESS = 'in_progress', // Work started
+	COMPLETED = 'completed', // Work done
+	PAID = 'paid', // Payment received
+	PICKED_UP = 'picked_up' // Customer picked up car
 }
 
 interface Repair {
-  // ... existing fields
-  estimatedCost: number;      // Initial estimate
-  estimatedHours: number;     // Estimated time
-  actualCost: number;         // Final cost (may differ)
-  actualHours: number;        // Actual time spent
-  estimateNotes: string;      // Why this price
-  approvedAt?: Date;
-  approvedBy?: string;        // Customer user ID
+	// ... existing fields
+	estimatedCost: number; // Initial estimate
+	estimatedHours: number; // Estimated time
+	actualCost: number; // Final cost (may differ)
+	actualHours: number; // Actual time spent
+	estimateNotes: string; // Why this price
+	approvedAt?: Date;
+	approvedBy?: string; // Customer user ID
 }
 ```
 
 **Customer Workflow:**
+
 1. Shop creates estimate
 2. Customer receives notification
 3. Customer reviews estimate
@@ -158,9 +171,11 @@ interface Repair {
 ---
 
 #### 5. **Notifications System** ⭐⭐⭐⭐
+
 **Problem:** No way to notify customers of status changes
 
 **Solution:**
+
 ```typescript
 interface Notification {
   id: string;
@@ -183,6 +198,7 @@ interface Notification {
 ```
 
 **Implementation:**
+
 - In-app notifications (bell icon)
 - Email notifications (optional, requires email service)
 - SMS notifications (optional, requires Twilio/similar)
@@ -192,44 +208,47 @@ interface Notification {
 ### **TIER 2: IMPORTANT (Implement Next)**
 
 #### 6. **Payment Tracking** ⭐⭐⭐⭐
+
 ```typescript
 interface Payment {
-  id: string;
-  repairId: string;
-  amount: number;
-  method: 'cash' | 'card' | 'check' | 'insurance';
-  status: 'pending' | 'paid' | 'refunded';
-  paidAt?: Date;
-  notes?: string;
+	id: string;
+	repairId: string;
+	amount: number;
+	method: 'cash' | 'card' | 'check' | 'insurance';
+	status: 'pending' | 'paid' | 'refunded';
+	paidAt?: Date;
+	notes?: string;
 }
 
 // Add to Repair
 interface Repair {
-  // ... existing
-  totalCost: number;
-  amountPaid: number;
-  amountDue: number;  // Calculated: totalCost - amountPaid
-  paymentStatus: 'unpaid' | 'partial' | 'paid';
+	// ... existing
+	totalCost: number;
+	amountPaid: number;
+	amountDue: number; // Calculated: totalCost - amountPaid
+	paymentStatus: 'unpaid' | 'partial' | 'paid';
 }
 ```
 
 ---
 
 #### 7. **Communication/Messaging** ⭐⭐⭐⭐
+
 ```typescript
 interface Message {
-  id: string;
-  repairId: string;
-  senderId: string;
-  recipientId: string;
-  message: string;
-  attachments?: string[];  // Photo URLs
-  read: boolean;
-  createdAt: Date;
+	id: string;
+	repairId: string;
+	senderId: string;
+	recipientId: string;
+	message: string;
+	attachments?: string[]; // Photo URLs
+	read: boolean;
+	createdAt: Date;
 }
 ```
 
 **Features:**
+
 - Chat between customer and shop about specific repair
 - Attach photos/documents
 - Read receipts
@@ -238,21 +257,23 @@ interface Message {
 ---
 
 #### 8. **Appointment Scheduling** ⭐⭐⭐⭐
+
 ```typescript
 interface Appointment {
-  id: string;
-  customerId: string;
-  shopId: string;
-  carId: string;
-  scheduledDate: Date;
-  duration: number;  // minutes
-  serviceType: string;  // "Oil Change", "Inspection"
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
-  notes?: string;
+	id: string;
+	customerId: string;
+	shopId: string;
+	carId: string;
+	scheduledDate: Date;
+	duration: number; // minutes
+	serviceType: string; // "Oil Change", "Inspection"
+	status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+	notes?: string;
 }
 ```
 
 **Features:**
+
 - Calendar view for shops to manage appointments
 - Customers can request appointments
 - Shops confirm/reject appointments
@@ -261,6 +282,7 @@ interface Appointment {
 ---
 
 #### 9. **Service History** ⭐⭐⭐⭐
+
 **What:** Complete repair history for a car across ALL shops
 
 **Current:** Cars only show repairs from one user
@@ -270,25 +292,26 @@ interface Appointment {
 // When a customer adds a car that already exists (by VIN),
 // link to existing service history
 interface Car {
-  // ... existing
-  vin: string;  // Make required, unique
-  serviceHistoryId?: string;  // Links to global history
+	// ... existing
+	vin: string; // Make required, unique
+	serviceHistoryId?: string; // Links to global history
 }
 ```
 
 ---
 
 #### 10. **Reviews & Ratings** ⭐⭐⭐
+
 ```typescript
 interface Review {
-  id: string;
-  shopId: string;
-  customerId: string;
-  repairId: string;
-  rating: number;  // 1-5
-  comment: string;
-  response?: string;  // Shop response
-  createdAt: Date;
+	id: string;
+	shopId: string;
+	customerId: string;
+	repairId: string;
+	rating: number; // 1-5
+	comment: string;
+	response?: string; // Shop response
+	createdAt: Date;
 }
 ```
 
@@ -297,34 +320,41 @@ interface Review {
 ### **TIER 3: NICE TO HAVE (Future)**
 
 #### 11. **Invoicing & Receipts**
+
 - Generate PDF invoices
 - Email invoices to customers
 - Receipt printing
 
 #### 12. **Inventory Management** (for shops)
+
 - Track parts inventory
 - Reorder alerts
 - Supplier management
 
 #### 13. **Multi-location Support**
+
 - Chain shops with multiple locations
 - Location-specific inventory and staff
 
 #### 14. **Analytics Dashboard** (enhanced)
+
 - For shops: Revenue trends, popular services, customer retention
 - For customers: Maintenance costs over time, service reminders
 
 #### 15. **Integration with Parts Suppliers**
+
 - Order parts directly from app
 - Real-time pricing
 - Delivery tracking
 
 #### 16. **Service Reminders**
+
 - Based on mileage or time
 - "Oil change due in 500 miles"
 - Automatic reminders to customers
 
 #### 17. **Insurance Integration**
+
 - Submit claims
 - Track insurance payments
 - Collision repair workflow
@@ -334,6 +364,7 @@ interface Review {
 ## 📊 Database Schema Changes Required
 
 ### New Tables:
+
 ```sql
 -- Shops
 CREATE TABLE shops (
@@ -426,6 +457,7 @@ CREATE TABLE reviews (
 ```
 
 ### Modified Tables:
+
 ```sql
 -- Add to users
 ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'customer';
@@ -483,6 +515,7 @@ ALTER TABLE repairs ADD COLUMN amount_paid REAL DEFAULT 0;
 ## 🔄 Implementation Priority
 
 ### Phase 1: Core Multi-Role (2-3 weeks)
+
 1. Add user roles
 2. Create shops table and basic CRUD
 3. Modify repairs to include shopId
@@ -490,26 +523,31 @@ ALTER TABLE repairs ADD COLUMN amount_paid REAL DEFAULT 0;
 5. Shop creates repair for customer workflow
 
 ### Phase 2: Estimates & Approval (1 week)
+
 6. Add estimate fields to repairs
 7. Approval workflow UI
 8. Status transitions
 
 ### Phase 3: Notifications (1 week)
+
 9. Notifications table and API
 10. In-app notification center
 11. Email notifications (optional)
 
 ### Phase 4: Communication (1 week)
+
 12. Messages table and API
 13. Chat interface
 14. Real-time updates (WebSockets or polling)
 
 ### Phase 5: Scheduling (1 week)
+
 15. Appointments table and API
 16. Calendar interface for shops
 17. Booking interface for customers
 
 ### Phase 6: Enhancements (ongoing)
+
 18. Payment tracking
 19. Reviews & ratings
 20. Analytics improvements
@@ -520,6 +558,7 @@ ALTER TABLE repairs ADD COLUMN amount_paid REAL DEFAULT 0;
 ## 🔍 Example User Flows
 
 ### **Flow 1: Customer visits shop**
+
 1. Customer drives car to shop
 2. Shop employee finds customer in system (or creates account)
 3. Shop creates new repair with estimate
@@ -533,6 +572,7 @@ ALTER TABLE repairs ADD COLUMN amount_paid REAL DEFAULT 0;
 11. Customer leaves review
 
 ### **Flow 2: Customer books appointment**
+
 1. Customer searches for shops nearby
 2. Customer views shop profile and reviews
 3. Customer requests appointment
@@ -558,11 +598,13 @@ ALTER TABLE repairs ADD COLUMN amount_paid REAL DEFAULT 0;
 ## 📝 Current vs Future Architecture
 
 **Current:**
+
 ```
 User → Creates own cars → Creates own repairs
 ```
 
 **Future:**
+
 ```
 Customer → Owns cars → Views repairs from shops
                      → Books appointments with shops

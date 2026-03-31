@@ -35,8 +35,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const memberUser = await fetchById(schema.users, userId);
 	if (!memberUser) throw error(API_ERRORS.NOT_FOUND.status, 'User not found');
 
-	const validRoles = [USER_ROLE.MECHANIC, USER_ROLE.SHOP_OWNER, USER_ROLE.ADMIN];
-	if (!validRoles.includes(memberUser.role as any)) {
+	const validRoles: Array<string> = [USER_ROLE.MECHANIC, USER_ROLE.SHOP_OWNER, USER_ROLE.ADMIN];
+	if (!validRoles.includes(memberUser.role)) {
 		throw error(API_ERRORS.VALIDATION_ERROR.status, 'User must be mechanic or shop owner');
 	}
 

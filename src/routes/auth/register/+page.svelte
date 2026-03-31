@@ -1,10 +1,17 @@
 <script lang="ts">
 	import { signUp } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
 	import { USER_ROLE } from '$lib/constants';
@@ -35,18 +42,23 @@
 		loading = true;
 
 		try {
-			const result = await signUp.email({
-				email,
-				password,
-				name,
-				callbackURL: '/'
-			});
+			const result = await signUp.email(
+				{
+					email,
+					password,
+					name,
+					callbackURL: '/'
+				},
+				{
+					body: { role }
+				}
+			);
 
 			if (result.error) {
 				toast.error(result.error.message || 'Failed to register');
 			} else {
 				toast.success('Account created successfully');
-				goto('/');
+				goto(resolve('/'));
 			}
 		} catch (error) {
 			toast.error('An error occurred during registration');
@@ -158,7 +170,7 @@
 			</form>
 			<div class="mt-4 text-center text-sm">
 				Already have an account?
-				<a href="/auth/login" class="text-primary hover:underline">Sign in</a>
+				<a href={resolve('/auth/login')} class="text-primary hover:underline">Sign in</a>
 			</div>
 		</CardContent>
 	</Card>

@@ -21,6 +21,7 @@
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
+	import { STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
 	import type { Repair } from '$lib/types.js';
 
 	let { repair }: Props = $props();
@@ -35,12 +36,6 @@
 			toast.success('Repair deleted successfully');
 		}
 	};
-
-	const statusColors = {
-		pending: 'secondary',
-		'in-progress': 'default',
-		completed: 'outline'
-	} as const;
 
 	const formatDate = (date: Date) => {
 		return new Date(date).toLocaleDateString('en-US', {
@@ -73,7 +68,7 @@
 				<div class="flex-1">
 					<div class="flex items-center gap-2 mb-2">
 						<CardTitle>{repair.title}</CardTitle>
-						<Badge variant={statusColors[repair.status]}>{repair.status}</Badge>
+						<Badge variant={STATUS_COLORS[repair.status]}>{STATUS_LABELS[repair.status]}</Badge>
 					</div>
 					<CardDescription>{repair.description}</CardDescription>
 				</div>
@@ -137,6 +132,7 @@
 								<div class="flex items-center justify-between text-xs text-muted-foreground">
 									<span>{part.quantity} × ${part.unitCost.toFixed(2)}</span>
 									{#if part.sourceUrl}
+										<!-- eslint-disable svelte/no-navigation-without-resolve -- external URL -->
 										<a
 											href={part.sourceUrl}
 											target="_blank"
@@ -146,6 +142,7 @@
 											<ExternalLinkIcon class="size-3" />
 											Source
 										</a>
+										<!-- eslint-enable svelte/no-navigation-without-resolve -->
 									{/if}
 								</div>
 							</div>

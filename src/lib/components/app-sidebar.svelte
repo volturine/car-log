@@ -2,6 +2,7 @@
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
 	import { signOut } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
 	import {
 		Sidebar,
@@ -28,7 +29,7 @@
 
 	const repairs = useRepairs();
 
-	let { user }: { user?: { name: string; email: string; role?: string } } = $props();
+	let { user }: { user?: { name: string; email: string; role?: string | null } } = $props();
 
 	let isShopUser = $derived(
 		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
@@ -36,7 +37,7 @@
 
 	async function handleSignOut() {
 		await signOut();
-		goto('/auth/login');
+		goto(resolve('/auth/login'));
 	}
 </script>
 

@@ -9,11 +9,11 @@ Analyze the current session and distill non-obvious learnings into AGENTS.md fil
 
 AGENTS.md files can exist at any directory level. When an agent reads a file, any AGENTS.md in parent directories is automatically loaded into context. Placement matters — put learnings as close to the relevant code as possible.
 
-| Scope | Location |
-|-------|----------|
-| Project-wide | `AGENTS.md` (root) |
-| Package or module | `transforms-python/AGENTS.md` |
-| Feature-specific | `src/myproject/datasets/AGENTS.md` |
+| Scope             | Location                           |
+| ----------------- | ---------------------------------- |
+| Project-wide      | `AGENTS.md` (root)                 |
+| Package or module | `transforms-python/AGENTS.md`      |
+| Feature-specific  | `src/myproject/datasets/AGENTS.md` |
 
 ## What to capture
 

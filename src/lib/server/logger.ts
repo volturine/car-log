@@ -9,7 +9,7 @@ interface LogEntry {
 	context: string;
 	message: string;
 	timestamp: string;
-	data?: any;
+	data?: unknown;
 	error?: {
 		message: string;
 		stack?: string;
@@ -22,20 +22,22 @@ interface LogEntry {
 class Logger {
 	constructor(private context: string) {}
 
-	private log(level: LogLevel, message: string, data?: any, error?: Error) {
+	private log(level: LogLevel, message: string, data?: unknown, error?: Error) {
 		const entry: LogEntry = {
 			level,
 			context: this.context,
 			message,
 			timestamp: new Date().toISOString(),
-			...(data && { data }),
-			...(error && {
-				error: {
-					message: error.message,
-					stack: error.stack,
-					name: error.name
-				}
-			})
+			...(data ? { data } : {}),
+			...(error
+				? {
+						error: {
+							message: error.message,
+							stack: error.stack,
+							name: error.name
+						}
+					}
+				: {})
 		};
 
 		const output = JSON.stringify(entry);
@@ -56,21 +58,21 @@ class Logger {
 		}
 	}
 
-	debug(message: string, data?: any) {
+	debug(message: string, data?: unknown) {
 		if (process.env.NODE_ENV === 'development') {
 			this.log('DEBUG', message, data);
 		}
 	}
 
-	info(message: string, data?: any) {
+	info(message: string, data?: unknown) {
 		this.log('INFO', message, data);
 	}
 
-	warn(message: string, data?: any) {
+	warn(message: string, data?: unknown) {
 		this.log('WARN', message, data);
 	}
 
-	error(message: string, error?: Error, data?: any) {
+	error(message: string, error?: Error, data?: unknown) {
 		this.log('ERROR', message, data, error);
 	}
 

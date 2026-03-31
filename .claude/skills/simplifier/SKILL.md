@@ -42,11 +42,13 @@ Refactor code to be clearer, more general, and easier to maintain. Simplificatio
 Assessment: The three handler functions share 80% of their logic but each reimplements it with slight variations. The error handling is correct and should be preserved.
 
 Refactoring opportunities:
+
 - Extract shared logic into a generic handler parameterized by the varying parts
 - Keep the per-handler error recovery paths intact
 - Use a typed config dict instead of positional args for clarity
 
 Improved version:
+
 ```python
 def handle(source: Source, *, mode: Mode) -> Result:
     data = load(source)
@@ -55,6 +57,7 @@ def handle(source: Source, *, mode: Mode) -> Result:
 ```
 
 What changed and why:
+
 - Merged three near-identical functions into one parameterized function (reduces duplication, single place to fix bugs)
 - Kept all error handling paths (no robustness regression)
 - Added `mode` parameter so it handles all current cases and is trivially extensible for new ones

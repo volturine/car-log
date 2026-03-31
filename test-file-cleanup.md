@@ -12,12 +12,14 @@ This document outlines how to test the file cleanup integrity features.
 ## Test 1: Photo Deletion on Repair Deletion
 
 ### Setup
+
 1. Navigate to a car's repair list
 2. Create a new repair
 3. Upload 2-3 photos to the repair
 4. Note the repair ID from the URL or browser dev tools
 
 ### Test Steps
+
 1. Open the server logs to monitor file deletion
 2. Delete the repair from the UI
 3. Check the server logs for:
@@ -32,6 +34,7 @@ This document outlines how to test the file cleanup integrity features.
    ```
 
 ### Expected Results
+
 ✅ Repair deleted from database
 ✅ Photos deleted from database
 ✅ Physical photo files deleted from disk
@@ -41,11 +44,13 @@ This document outlines how to test the file cleanup integrity features.
 ## Test 2: Photo Deletion on Car Deletion
 
 ### Setup
+
 1. Create a car with 2-3 repairs
 2. Upload photos to each repair
 3. Note the car ID and repair IDs
 
 ### Test Steps
+
 1. Open the server logs
 2. Delete the car from the UI
 3. Check the server logs for:
@@ -65,6 +70,7 @@ This document outlines how to test the file cleanup integrity features.
    ```
 
 ### Expected Results
+
 ✅ Car deleted from database
 ✅ All repairs deleted (cascade)
 ✅ All photos deleted (cascade)
@@ -74,6 +80,7 @@ This document outlines how to test the file cleanup integrity features.
 ## Test 3: Partial Failure Handling
 
 ### Setup
+
 1. Create a repair with photos
 2. Manually delete one photo file from disk (simulating corruption)
    ```bash
@@ -81,6 +88,7 @@ This document outlines how to test the file cleanup integrity features.
    ```
 
 ### Test Steps
+
 1. Delete the repair from the UI
 2. Check the server logs for warnings:
    ```
@@ -93,6 +101,7 @@ This document outlines how to test the file cleanup integrity features.
 3. Verify the repair is still deleted despite file error
 
 ### Expected Results
+
 ✅ Repair deleted successfully
 ✅ Warning logged for missing file
 ✅ Deletion doesn't fail due to missing file
@@ -101,11 +110,14 @@ This document outlines how to test the file cleanup integrity features.
 ## Test 4: Cascade Behavior
 
 ### Setup
+
 1. Create car → repair → photos chain
 2. Note all IDs
 
 ### Test Steps
+
 1. Query the database before deletion:
+
    ```bash
    # Use DB browser or query tool
    SELECT COUNT(*) FROM photos WHERE repair_id = '[repair-id]';
@@ -125,6 +137,7 @@ This document outlines how to test the file cleanup integrity features.
    ```
 
 ### Expected Results
+
 ✅ All related records deleted (cascade working)
 ✅ No orphaned records in database
 ✅ All physical files cleaned up
@@ -133,6 +146,7 @@ This document outlines how to test the file cleanup integrity features.
 ## Test 5: Error Recovery
 
 ### Setup
+
 1. Create a repair with photos
 2. Make the uploads directory read-only:
    ```bash
@@ -140,6 +154,7 @@ This document outlines how to test the file cleanup integrity features.
    ```
 
 ### Test Steps
+
 1. Try to delete the repair
 2. Check that database deletion succeeds
 3. Check logs for file deletion warnings
@@ -149,6 +164,7 @@ This document outlines how to test the file cleanup integrity features.
    ```
 
 ### Expected Results
+
 ✅ Database deletion succeeds
 ✅ Warnings logged for file deletion failures
 ✅ Application doesn't crash
@@ -222,17 +238,17 @@ Add this to your monitoring dashboard:
 ```javascript
 // Check for orphaned files
 const findOrphaned = async () => {
-  // Get all photo paths from database
-  const dbPhotos = await db.select({ path: photos.path }).from(photos);
-  const dbPaths = new Set(dbPhotos.map(p => p.path));
+	// Get all photo paths from database
+	const dbPhotos = await db.select({ path: photos.path }).from(photos);
+	const dbPaths = new Set(dbPhotos.map((p) => p.path));
 
-  // Get all files from disk
-  const diskFiles = await getAllFilesRecursive('uploads/');
+	// Get all files from disk
+	const diskFiles = await getAllFilesRecursive('uploads/');
 
-  // Find orphans
-  const orphans = diskFiles.filter(f => !dbPaths.has(f));
+	// Find orphans
+	const orphans = diskFiles.filter((f) => !dbPaths.has(f));
 
-  console.log(`Found ${orphans.length} orphaned files`);
-  return orphans;
+	console.log(`Found ${orphans.length} orphaned files`);
+	return orphans;
 };
 ```

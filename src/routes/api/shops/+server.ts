@@ -1,13 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { eq } from 'drizzle-orm';
-import {
-	requireAuth,
-	requireRole,
-	validateBody,
-	successResponse
-} from '$lib/server/api-utils';
+import { requireRole, validateBody, successResponse } from '$lib/server/api-utils';
 import { shopSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils/helpers';
@@ -47,9 +41,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		state: validatedData.state || null,
 		zipCode: validatedData.zipCode || null,
 		businessHours: validatedData.businessHours || null,
-		specialties: validatedData.specialties
-			? JSON.stringify(validatedData.specialties)
-			: null,
+		specialties: validatedData.specialties ? JSON.stringify(validatedData.specialties) : null,
 		logo: null,
 		rating: 0,
 		totalReviews: 0,

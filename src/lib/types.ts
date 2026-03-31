@@ -1,4 +1,6 @@
-export type RepairStatus = "pending" | "in-progress" | "completed";
+import type { RepairStatus } from '$lib/constants';
+
+export type { RepairStatus };
 
 export interface Car {
 	id: string;
@@ -36,6 +38,15 @@ export interface Repair {
 	status: RepairStatus;
 	photos?: Photo[];
 	parts: RepairPart[];
+	shopId?: string;
+	assignedMechanicId?: string;
+	estimatedCost?: number;
+	estimatedHours?: number;
+	estimateNotes?: string;
+	customerApproved?: boolean;
+	approvedAt?: Date;
+	paymentStatus?: string;
+	amountPaid?: number;
 	laborCost: number;
 	laborHours: number;
 	totalCost: number;

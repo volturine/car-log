@@ -1,10 +1,17 @@
 <script lang="ts">
 	import { signIn } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardDescription,
+		CardHeader,
+		CardTitle
+	} from '$lib/components/ui/card';
 	import { toast } from 'svelte-sonner';
 
 	let email = $state('');
@@ -30,7 +37,7 @@
 				toast.error(result.error.message || 'Failed to sign in');
 			} else {
 				toast.success('Signed in successfully');
-				goto('/');
+				goto(resolve('/'));
 			}
 		} catch (error) {
 			toast.error('An error occurred during sign in');
@@ -83,7 +90,7 @@
 			</form>
 			<div class="mt-4 text-center text-sm">
 				Don't have an account?
-				<a href="/auth/register" class="text-primary hover:underline">Register</a>
+				<a href={resolve('/auth/register')} class="text-primary hover:underline">Register</a>
 			</div>
 		</CardContent>
 	</Card>
