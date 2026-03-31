@@ -1,32 +1,52 @@
+import { REPAIR_STATUS_VALUES, VALIDATION_LIMITS } from '$lib/constants';
 import { z } from 'zod';
 
 // Car validation schema
 export const carSchema = z.object({
-	brand: z.string().min(1, 'Brand is required').max(100),
-	model: z.string().min(1, 'Model is required').max(100),
-	year: z
-		.number()
-		.int()
-		.min(1900)
-		.max(new Date().getFullYear() + 2),
-	vin: z.string().max(17).optional().nullable(),
-	licensePlate: z.string().min(1).max(20).optional().nullable(),
-	ownerName: z.string().min(1).max(200).optional().nullable(),
-	ownerPhone: z.string().max(20).optional().nullable(),
-	color: z.string().max(50).optional().nullable()
+	brand: z.string().min(1, 'Brand is required').max(VALIDATION_LIMITS.CAR.BRAND_MAX_LENGTH),
+	model: z.string().min(1, 'Model is required').max(VALIDATION_LIMITS.CAR.MODEL_MAX_LENGTH),
+	year: z.number().int().min(VALIDATION_LIMITS.CAR.YEAR_MIN).max(VALIDATION_LIMITS.CAR.YEAR_MAX),
+	vin: z.string().max(VALIDATION_LIMITS.CAR.VIN_MAX_LENGTH).optional().nullable(),
+	licensePlate: z
+		.string()
+		.min(1)
+		.max(VALIDATION_LIMITS.CAR.LICENSE_PLATE_MAX_LENGTH)
+		.optional()
+		.nullable(),
+	ownerName: z
+		.string()
+		.min(1)
+		.max(VALIDATION_LIMITS.CAR.OWNER_NAME_MAX_LENGTH)
+		.optional()
+		.nullable(),
+	ownerPhone: z.string().max(VALIDATION_LIMITS.CAR.OWNER_PHONE_MAX_LENGTH).optional().nullable(),
+	color: z.string().max(VALIDATION_LIMITS.CAR.COLOR_MAX_LENGTH).optional().nullable()
 });
 
 // Shop validation schema
 export const shopSchema = z.object({
-	name: z.string().min(1, 'Shop name is required').max(200),
-	email: z.string().email('Invalid email').optional().nullable(),
-	phone: z.string().max(20).optional().nullable(),
-	address: z.string().max(500).optional().nullable(),
-	city: z.string().max(100).optional().nullable(),
-	state: z.string().max(50).optional().nullable(),
-	zipCode: z.string().max(10).optional().nullable(),
-	businessHours: z.string().optional().nullable(), // JSON string
-	specialties: z.array(z.string()).optional().default([])
+	name: z.string().min(1, 'Shop name is required').max(VALIDATION_LIMITS.SHOP.NAME_MAX_LENGTH),
+	email: z
+		.string()
+		.email('Invalid email')
+		.max(VALIDATION_LIMITS.SHOP.EMAIL_MAX_LENGTH)
+		.optional()
+		.nullable(),
+	phone: z.string().max(VALIDATION_LIMITS.SHOP.PHONE_MAX_LENGTH).optional().nullable(),
+	address: z.string().max(VALIDATION_LIMITS.SHOP.ADDRESS_MAX_LENGTH).optional().nullable(),
+	city: z.string().max(VALIDATION_LIMITS.SHOP.CITY_MAX_LENGTH).optional().nullable(),
+	state: z.string().max(VALIDATION_LIMITS.SHOP.STATE_MAX_LENGTH).optional().nullable(),
+	zipCode: z.string().max(VALIDATION_LIMITS.SHOP.ZIP_CODE_MAX_LENGTH).optional().nullable(),
+	businessHours: z
+		.string()
+		.max(VALIDATION_LIMITS.SHOP.BUSINESS_HOURS_MAX_LENGTH)
+		.optional()
+		.nullable(),
+	specialties: z
+		.array(z.string().max(VALIDATION_LIMITS.SHOP.SPECIALTY_MAX_LENGTH))
+		.max(VALIDATION_LIMITS.SHOP.MAX_SPECIALTIES)
+		.optional()
+		.default([])
 });
 
 // Repair validation schema
@@ -34,19 +54,21 @@ export const repairSchema = z.object({
 	carId: z.string().uuid('Invalid car ID'),
 	shopId: z.string().uuid('Invalid shop ID').optional().nullable(),
 	assignedMechanicId: z.string().uuid('Invalid mechanic ID').optional().nullable(),
-	title: z.string().min(1, 'Title is required').max(200),
-	description: z.string().max(5000).optional().nullable(),
-	status: z
-		.enum(['estimate_pending', 'estimate_approved', 'in_progress', 'completed', 'paid', 'pending'])
-		.default('estimate_pending'),
+	title: z.string().min(1, 'Title is required').max(VALIDATION_LIMITS.REPAIR.TITLE_MAX_LENGTH),
+	description: z
+		.string()
+		.max(VALIDATION_LIMITS.REPAIR.DESCRIPTION_MAX_LENGTH)
+		.optional()
+		.nullable(),
+	status: z.enum(REPAIR_STATUS_VALUES).default('estimate_pending'),
 	// Estimate fields
-	estimatedCost: z.number().min(0).max(1000000).default(0),
-	estimatedHours: z.number().min(0).max(10000).default(0),
+	estimatedCost: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_COST).default(0),
+	estimatedHours: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_HOURS).default(0),
 	estimateNotes: z.string().max(2000).optional().nullable(),
 	// Actual fields
-	laborCost: z.number().min(0).max(1000000).default(0),
-	laborHours: z.number().min(0).max(10000).default(0),
-	totalCost: z.number().min(0).max(1000000).default(0),
+	laborCost: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_COST).default(0),
+	laborHours: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_HOURS).default(0),
+	totalCost: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_COST).default(0),
 	// Dates
 	startDate: z.string().datetime().optional().nullable(),
 	completedDate: z.string().datetime().optional().nullable(),
@@ -54,12 +76,21 @@ export const repairSchema = z.object({
 	parts: z
 		.array(
 			z.object({
-				name: z.string().min(1).max(200),
-				description: z.string().max(1000).optional().nullable(),
-				quantity: z.number().int().min(1).max(10000).default(1),
-				unitCost: z.number().min(0).max(1000000),
-				totalCost: z.number().min(0).max(1000000),
-				sourceUrl: z.string().url().max(500).optional().nullable()
+				name: z.string().min(1).max(VALIDATION_LIMITS.PART.NAME_MAX_LENGTH),
+				description: z
+					.string()
+					.max(VALIDATION_LIMITS.PART.DESCRIPTION_MAX_LENGTH)
+					.optional()
+					.nullable(),
+				quantity: z.number().int().min(1).max(VALIDATION_LIMITS.PART.MAX_QUANTITY).default(1),
+				unitCost: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_COST),
+				totalCost: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_COST),
+				sourceUrl: z
+					.string()
+					.url()
+					.max(VALIDATION_LIMITS.PART.SOURCE_URL_MAX_LENGTH)
+					.optional()
+					.nullable()
 			})
 		)
 		.optional()

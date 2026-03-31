@@ -94,6 +94,7 @@
 		[REPAIR_STATUS.PENDING]: 'bg-yellow-500/20 border-yellow-500/50',
 		[REPAIR_STATUS.ESTIMATE_PENDING]: 'bg-yellow-500/20 border-yellow-500/50',
 		[REPAIR_STATUS.ESTIMATE_APPROVED]: 'bg-blue-500/20 border-blue-500/50',
+		[REPAIR_STATUS.ESTIMATE_REJECTED]: 'bg-red-500/20 border-red-500/50',
 		[REPAIR_STATUS.IN_PROGRESS]: 'bg-blue-500/20 border-blue-500/50',
 		[REPAIR_STATUS.COMPLETED]: 'bg-green-500/20 border-green-500/50',
 		[REPAIR_STATUS.PAID]: 'bg-green-500/20 border-green-500/50'

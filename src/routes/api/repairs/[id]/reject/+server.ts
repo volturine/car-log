@@ -38,8 +38,10 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	const updatedRepair = transaction((tx) => {
 		const repairUpdate = {
+			status: REPAIR_STATUS.ESTIMATE_REJECTED,
 			estimateNotes: reason ? `Rejected: ${reason}` : 'Estimate rejected by customer',
 			customerApproved: false,
+			approvedAt: null,
 			updatedAt: new Date()
 		};
 

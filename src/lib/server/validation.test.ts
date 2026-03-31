@@ -27,6 +27,55 @@ vi.mock('zod', () => {
 	};
 });
 
+vi.mock('$lib/constants', () => ({
+	REPAIR_STATUS_VALUES: [
+		'estimate_pending',
+		'estimate_approved',
+		'estimate_rejected',
+		'in_progress',
+		'completed',
+		'paid',
+		'pending'
+	],
+	VALIDATION_LIMITS: {
+		CAR: {
+			BRAND_MAX_LENGTH: 100,
+			MODEL_MAX_LENGTH: 100,
+			YEAR_MIN: 1900,
+			YEAR_MAX: 2100,
+			VIN_MAX_LENGTH: 17,
+			LICENSE_PLATE_MAX_LENGTH: 20,
+			OWNER_NAME_MAX_LENGTH: 200,
+			OWNER_PHONE_MAX_LENGTH: 20,
+			COLOR_MAX_LENGTH: 50
+		},
+		SHOP: {
+			NAME_MAX_LENGTH: 200,
+			EMAIL_MAX_LENGTH: 320,
+			PHONE_MAX_LENGTH: 20,
+			ADDRESS_MAX_LENGTH: 500,
+			CITY_MAX_LENGTH: 100,
+			STATE_MAX_LENGTH: 50,
+			ZIP_CODE_MAX_LENGTH: 10,
+			BUSINESS_HOURS_MAX_LENGTH: 5000,
+			SPECIALTY_MAX_LENGTH: 100,
+			MAX_SPECIALTIES: 25
+		},
+		REPAIR: {
+			TITLE_MAX_LENGTH: 200,
+			DESCRIPTION_MAX_LENGTH: 5000,
+			MAX_COST: 1000000,
+			MAX_HOURS: 10000
+		},
+		PART: {
+			NAME_MAX_LENGTH: 200,
+			DESCRIPTION_MAX_LENGTH: 1000,
+			MAX_QUANTITY: 10000,
+			SOURCE_URL_MAX_LENGTH: 500
+		}
+	}
+}));
+
 describe('validateEnv', () => {
 	beforeEach(() => {
 		vi.resetModules();

@@ -115,7 +115,10 @@
 		{#if repairs.carRepairs.length === 0}
 			<Card class="border-dashed">
 				<CardContent class="flex flex-col items-center justify-center py-12">
-					<p class="text-muted-foreground">No repairs recorded yet</p>
+					<p class="text-lg font-medium text-muted-foreground">No repairs recorded yet</p>
+					<p class="mt-1 text-sm text-muted-foreground">
+						Add your first repair to start tracking service history.
+					</p>
 					{#if !showAddRepair}
 						<Button variant="outline" class="mt-4" onclick={() => (showAddRepair = true)}>
 							<PlusIcon />
@@ -125,9 +128,9 @@
 				</CardContent>
 			</Card>
 		{:else}
-			<div class="flex flex-col gap-4">
+			<div class="flex flex-col gap-6">
 				{#each repairs.carRepairs as repair (repair.id)}
-					<div transition:fly={{ y: 20, duration: 300 }}>
+					<div class="flex flex-col gap-3" transition:fly={{ y: 20, duration: 300 }}>
 						<RepairCard {repair} />
 					</div>
 				{/each}

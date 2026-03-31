@@ -2,7 +2,7 @@ import { error, type NumericRange } from '@sveltejs/kit';
 import { db, schema } from './db';
 import { eq, and } from 'drizzle-orm';
 import type { AnySQLiteColumn, AnySQLiteTable } from 'drizzle-orm/sqlite-core';
-import { API_ERRORS } from '$lib/constants';
+import { API_ERRORS, USER_ROLE } from '$lib/constants';
 import { z } from 'zod';
 
 type User = NonNullable<App.Locals['user']>;
@@ -33,7 +33,7 @@ export function requireRole(locals: App.Locals, allowedRoles: string[]): User {
 }
 
 export function isShopMember(user: User): boolean {
-	return user.role === 'shop_owner' || user.role === 'mechanic';
+	return user.role === USER_ROLE.SHOP_OWNER || user.role === USER_ROLE.MECHANIC;
 }
 
 export async function fetchById<TTable extends IdTable>(
@@ -49,8 +49,9 @@ export async function verifyShopAccess(shopId: string, userId: string, userRole:
 	if (!shop) throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
 
 	if (shop.ownerId === userId) return shop;
+	if (userRole === USER_ROLE.ADMIN) return shop;
 
-	if (userRole === 'mechanic') {
+	if (userRole === USER_ROLE.MECHANIC || userRole === USER_ROLE.SHOP_OWNER) {
 		const [membership] = await db
 			.select()
 			.from(schema.shopMembers)
@@ -60,6 +61,86 @@ export async function verifyShopAccess(shopId: string, userId: string, userRole:
 	}
 
 	throw error(API_ERRORS.FORBIDDEN.status, 'You do not have access to this shop');
+}
+
+export async function findUserShop(user: User): Promise<typeof schema.shops.$inferSelect | null> {
+	if (!isShopMember(user)) {
+		return null;
+	}
+
+	if (user.shopId) {
+		const shop = await fetchById(schema.shops, user.shopId);
+		if (shop) {
+			return shop;
+		}
+	}
+
+	const [member] = await db
+		.select({ shopId: schema.shopMembers.shopId })
+		.from(schema.shopMembers)
+		.where(eq(schema.shopMembers.userId, user.id))
+		.limit(1);
+
+	if (member) {
+		const shop = await fetchById(schema.shops, member.shopId);
+		if (shop) {
+			return shop;
+		}
+	}
+
+	if (user.role !== USER_ROLE.SHOP_OWNER) {
+		return null;
+	}
+
+	const [shop] = await db
+		.select()
+		.from(schema.shops)
+		.where(eq(schema.shops.ownerId, user.id))
+		.limit(1);
+
+	return shop ?? null;
+}
+
+export async function verifyRepairAccess(
+	repairId: string,
+	user: User
+): Promise<typeof schema.repairs.$inferSelect> {
+	const repair = await fetchById(schema.repairs, repairId);
+
+	if (!repair) {
+		throw error(API_ERRORS.NOT_FOUND.status, 'Repair not found');
+	}
+
+	if (repair.userId === user.id || user.role === USER_ROLE.ADMIN) {
+		return repair;
+	}
+
+	if (!repair.shopId || !isShopMember(user)) {
+		throw error(API_ERRORS.NOT_FOUND.status, 'Repair not found');
+	}
+
+	await verifyShopAccess(repair.shopId, user.id, user.role || USER_ROLE.CUSTOMER);
+
+	return repair;
+}
+
+export async function verifyPhotoAccess(
+	photoId: string,
+	user: User
+): Promise<typeof schema.photos.$inferSelect> {
+	const photo = await fetchById(schema.photos, photoId);
+
+	if (!photo) {
+		throw error(API_ERRORS.NOT_FOUND.status, 'Photo not found');
+	}
+
+	if (photo.userId === user.id || user.role === USER_ROLE.ADMIN) {
+		return photo;
+	}
+
+	await verifyRepairAccess(photo.repairId, user);
+
+	return photo;
 }
 
 export async function verifyOwnership<TTable extends OwnedTable>(

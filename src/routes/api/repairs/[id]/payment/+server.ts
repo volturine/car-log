@@ -10,7 +10,7 @@ import {
 	isShopMember
 } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
-import { REPAIR_STATUS, PAYMENT_STATUS, type PaymentStatus } from '$lib/constants';
+import { REPAIR_STATUS, PAYMENT_STATUS, USER_ROLE, type PaymentStatus } from '$lib/constants';
 import { notifyPaymentReceived } from '$lib/server/notifications';
 import { memberWhere } from '$lib/server/predicates';
 import { z } from 'zod';
@@ -40,10 +40,15 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	// Only shop members or the repair owner can record payments
 	// Typically shops record payments when customers pay
+	const isAdmin = user.role === USER_ROLE.ADMIN;
 	const isShop = isShopMember(user);
 	const isOwner = repair.userId === user.id;
 
-	if (!isShop && !isOwner) {
+	if (!isShop && !isOwner && !isAdmin) {
+		throw error(403, 'You do not have permission to record payments for this repair');
+	}
+
+	if (!repair.shopId && !isOwner && !isAdmin) {
 		throw error(403, 'You do not have permission to record payments for this repair');
 	}
 
@@ -55,7 +60,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			.where(memberWhere(repair.shopId, user.id))
 			.limit(1);
 
-		if (!membership && user.role !== 'admin') {
+		if (!membership && !isAdmin) {
 			throw error(403, 'You do not have access to this shop');
 		}
 	}

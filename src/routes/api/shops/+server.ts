@@ -1,10 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { requireRole, validateBody, successResponse } from '$lib/server/api-utils';
+import { requireRole, validateBody, successResponse, transaction } from '$lib/server/api-utils';
 import { shopSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
+import { eq } from 'drizzle-orm';
 
 const logger = apiLogger.child('shops');
 
@@ -29,6 +30,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	logger.info('Creating shop', { userId: user.id, shopName: validatedData.name });
 
 	const shopId = generateId();
+	const now = new Date();
 
 	const newShop = {
 		id: shopId,
@@ -45,18 +47,22 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		logo: null,
 		rating: 0,
 		totalReviews: 0,
-		createdAt: new Date(),
-		updatedAt: new Date()
+		createdAt: now,
+		updatedAt: now
 	};
 
-	await db.insert(schema.shops).values(newShop);
+	transaction((tx) => {
+		tx.insert(schema.shops).values(newShop).run();
+		tx.update(schema.users).set({ shopId }).where(eq(schema.users.id, user.id)).run();
 
-	// Add owner as shop member
-	await db.insert(schema.shopMembers).values({
-		userId: user.id,
-		shopId: shopId,
-		role: 'owner',
-		joinedAt: new Date()
+		tx.insert(schema.shopMembers)
+			.values({
+				userId: user.id,
+				shopId,
+				role: 'owner',
+				joinedAt: now
+			})
+			.run();
 	});
 
 	logger.info('Shop created', { shopId, userId: user.id });

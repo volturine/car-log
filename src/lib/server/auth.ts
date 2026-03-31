@@ -96,6 +96,25 @@ export const auth = betterAuth({
 			maxAge: SESSION_CONFIG.COOKIE_CACHE_SECONDS
 		}
 	},
+	databaseHooks: {
+		user: {
+			create: {
+				before: async (user, context) => {
+					if (context?.path.startsWith('/admin/')) {
+						return;
+					}
+
+					return {
+						data: {
+							...user,
+							role: USER_ROLE.CUSTOMER,
+							shopId: null
+						}
+					};
+				}
+			}
+		}
+	},
 	user: {
 		additionalFields: {
 			role: {

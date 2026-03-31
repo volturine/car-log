@@ -1,12 +1,21 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { eq } from 'drizzle-orm';
-import { requireAuth, verifyOwnership, validateBody, successResponse } from '$lib/server/api-utils';
+import { and, eq, or } from 'drizzle-orm';
+import {
+	requireAuth,
+	verifyOwnership,
+	validateBody,
+	successResponse,
+	isShopMember,
+	findUserShop,
+	fetchById
+} from '$lib/server/api-utils';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { getFilePath } from '$lib/server/storage';
 import { unlink } from 'fs/promises';
+import { USER_ROLE } from '$lib/constants';
 
 const logger = apiLogger.child('cars');
 
@@ -15,6 +24,41 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	const user = requireAuth(locals);
 
 	logger.debug('Fetching car', { carId: params.id, userId: user.id });
+
+	if (user.role === USER_ROLE.ADMIN) {
+		const car = await fetchById(schema.cars, params.id);
+
+		if (!car) {
+			throw error(404, 'Car not found');
+		}
+
+		return json(successResponse(car));
+	}
+
+	if (isShopMember(user)) {
+		const shop = await findUserShop(user);
+
+		if (shop) {
+			const [car] = await db
+				.select()
+				.from(schema.cars)
+				.leftJoin(schema.repairs, eq(schema.repairs.carId, schema.cars.id))
+				.where(
+					and(
+						eq(schema.cars.id, params.id),
+						or(eq(schema.repairs.shopId, shop.id), eq(schema.repairs.assignedMechanicId, user.id))
+					)
+				)
+				.limit(1);
+
+			if (car?.cars.id === params.id) {
+				return json(successResponse(car.cars));
+			}
+		}
+
+		const owned = await verifyOwnership(schema.cars, params.id, user.id, 'Car');
+		return json(successResponse(owned));
+	}
 
 	const car = await verifyOwnership(schema.cars, params.id, user.id, 'Car');
 

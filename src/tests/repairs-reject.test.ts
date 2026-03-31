@@ -111,11 +111,20 @@ describe('POST /api/repairs/[id]/reject', () => {
 		expect(state.transactionResult.value).not.toBeInstanceOf(Promise);
 		expect(state.txUpdate).toHaveBeenCalledOnce();
 		expect(state.txWhere).toHaveBeenCalledOnce();
+		expect(state.txSet).toHaveBeenCalledWith(
+			expect.objectContaining({
+				status: 'estimate_rejected',
+				approvedAt: null,
+				customerApproved: false,
+				estimateNotes: 'Rejected: Too expensive'
+			})
+		);
 		expect(state.notify).toHaveBeenCalledWith('owner-1', 'repair-1', 'Casey');
 		expect(state.order).toEqual(['transaction', 'run', 'transaction:done', 'shop', 'notify']);
 		expect(body).toMatchObject({
 			success: true,
 			data: {
+				status: 'estimate_rejected',
 				customerApproved: false,
 				estimateNotes: 'Rejected: Too expensive'
 			}

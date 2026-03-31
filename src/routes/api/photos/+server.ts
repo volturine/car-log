@@ -2,7 +2,12 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { schema } from '$lib/server/db';
 import { saveFile } from '$lib/server/storage';
-import { requireAuth, verifyOwnership, successResponse, transaction } from '$lib/server/api-utils';
+import {
+	requireAuth,
+	verifyRepairAccess,
+	successResponse,
+	transaction
+} from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
 import { FILE_UPLOAD } from '$lib/constants';
@@ -25,8 +30,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		throw error(400, 'At least one file is required');
 	}
 
-	// Verify repair belongs to user
-	await verifyOwnership(schema.repairs, repairId, user.id, 'Repair');
+	// Verify repair access
+	await verifyRepairAccess(repairId, user);
 
 	logger.info('Uploading photos', { repairId, userId: user.id, fileCount: files.length });
 

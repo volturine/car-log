@@ -110,4 +110,77 @@ describe('auth config', () => {
 
 		await expect(import('./auth')).rejects.toThrow('BETTER_AUTH_URL must use https in production.');
 	});
+
+	it('forces self-signup users into the customer role', async () => {
+		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
+		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
+
+		await import('./auth');
+
+		const config = state.betterAuth.mock.calls[0]?.[0] as {
+			databaseHooks?: {
+				user?: {
+					create?: {
+						before?: (user: unknown, context: unknown) => Promise<unknown>;
+					};
+				};
+			};
+		};
+		const hook = config.databaseHooks?.user?.create?.before;
+
+		expect(hook).toBeTypeOf('function');
+
+		const result = await hook?.(
+			{
+				email: 'owner@test.com',
+				name: 'Owner',
+				role: 'admin',
+				shopId: 'shop-1'
+			} as never,
+			{
+				path: '/sign-up/email'
+			} as never
+		);
+
+		expect(result).toEqual({
+			data: {
+				email: 'owner@test.com',
+				name: 'Owner',
+				role: 'customer',
+				shopId: null
+			}
+		});
+	});
+
+	it('leaves admin-created roles untouched', async () => {
+		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
+		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
+
+		await import('./auth');
+
+		const config = state.betterAuth.mock.calls[0]?.[0] as {
+			databaseHooks?: {
+				user?: {
+					create?: {
+						before?: (user: unknown, context: unknown) => Promise<unknown>;
+					};
+				};
+			};
+		};
+		const hook = config.databaseHooks?.user?.create?.before;
+
+		const result = await hook?.(
+			{
+				email: 'owner@test.com',
+				name: 'Owner',
+				role: 'shop_owner',
+				shopId: 'shop-1'
+			} as never,
+			{
+				path: '/admin/create-user'
+			} as never
+		);
+
+		expect(result).toBeUndefined();
+	});
 });

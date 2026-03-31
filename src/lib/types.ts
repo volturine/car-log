@@ -69,3 +69,13 @@ export interface ModelStats {
 	totalCost: number;
 	averageCost: number;
 }
+
+export interface Shop {
+	id: string;
+	name: string;
+	email?: string | null;
+	phone?: string | null;
+	address?: string | null;
+	city?: string | null;
+	state?: string | null;
+}

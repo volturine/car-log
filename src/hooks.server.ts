@@ -12,6 +12,21 @@ type Entry = {
 };
 
 const limits = new Map<string, Entry>();
+let lastSweep = 0;
+
+function sweep(now: number): void {
+	if (now - lastSweep < RATE_LIMITS.WINDOW_MS) {
+		return;
+	}
+
+	lastSweep = now;
+
+	for (const [key, entry] of limits) {
+		if (entry.resetAt <= now) {
+			limits.delete(key);
+		}
+	}
+}
 
 const authHandle: Handle = async ({ event, resolve }) => {
 	const session = await auth.api.getSession({
@@ -46,6 +61,7 @@ const rateLimitHandle: Handle = async ({ event, resolve }) => {
 
 	const key = `${event.getClientAddress()}:${event.url.pathname}`;
 	const now = Date.now();
+	sweep(now);
 	const entry = limits.get(key);
 
 	if (!entry || now > entry.resetAt) {

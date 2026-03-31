@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { Bell } from '@lucide/svelte';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { Bell, ExternalLinkIcon, CheckIcon, XIcon } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import {
@@ -22,6 +24,7 @@
 		createdAt: string;
 		relatedId?: string;
 		relatedType?: string;
+		carId?: string | null;
 	};
 
 	let notifications = $state<Notification[]>([]);
@@ -31,72 +34,57 @@
 
 	async function loadNotifications() {
 		loading = true;
-		try {
-			const response = await fetch('/api/notifications');
-			if (response.ok) {
-				const result = await response.json();
-				notifications = result.data || result;
-			}
-		} catch (error) {
-			console.error('Failed to load notifications:', error);
-		} finally {
-			loading = false;
+		const response = await fetch('/api/notifications').catch(() => null);
+		if (response?.ok) {
+			const result = await response.json();
+			notifications = result.data || result;
 		}
+		loading = false;
 	}
 
 	async function markAsRead(id: string) {
-		try {
-			const response = await fetch(`/api/notifications/${id}`, {
-				method: 'PUT'
-			});
-
-			if (response.ok) {
-				notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
-			}
-		} catch (error) {
-			console.error('Failed to mark notification as read:', error);
+		const response = await fetch(`/api/notifications/${id}`, { method: 'PUT' }).catch(() => null);
+		if (response?.ok) {
+			notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
 		}
 	}
 
 	async function deleteNotification(id: string) {
-		try {
-			const response = await fetch(`/api/notifications/${id}`, {
-				method: 'DELETE'
-			});
-
-			if (response.ok) {
-				notifications = notifications.filter((n) => n.id !== id);
-			}
-		} catch (error) {
-			console.error('Failed to delete notification:', error);
+		const response = await fetch(`/api/notifications/${id}`, { method: 'DELETE' }).catch(
+			() => null
+		);
+		if (response?.ok) {
+			notifications = notifications.filter((n) => n.id !== id);
 		}
 	}
 
-	function getNotificationColor(type: string): string {
-		switch (type) {
-			case 'estimate_ready':
-				return 'bg-blue-500';
-			case 'estimate_approved':
-				return 'bg-green-500';
-			case 'estimate_rejected':
-				return 'bg-red-500';
-			case 'repair_started':
-				return 'bg-yellow-500';
-			case 'repair_completed':
-				return 'bg-green-500';
-			case 'payment_received':
-				return 'bg-emerald-500';
-			default:
-				return 'bg-gray-500';
+	async function handleTap(notification: Notification) {
+		if (!notification.read) {
+			await markAsRead(notification.id);
+		}
+
+		if (notification.carId) {
+			open = false;
+			goto(resolve(`/app/cars/${notification.carId}`));
 		}
 	}
 
+	function getColor(type: string): string {
+		const colors: Record<string, string> = {
+			estimate_ready: 'bg-blue-500',
+			estimate_approved: 'bg-green-500',
+			estimate_rejected: 'bg-red-500',
+			repair_started: 'bg-yellow-500',
+			repair_completed: 'bg-green-500',
+			payment_received: 'bg-emerald-500'
+		};
+		return colors[type] ?? 'bg-gray-500';
+	}
+
+	// side effect: polling cannot be expressed as $derived — requires setInterval
 	onMount(() => {
 		loadNotifications();
-
-		// Poll for new notifications every 30 seconds
 		const interval = setInterval(loadNotifications, 30000);
-
 		return () => clearInterval(interval);
 	});
 </script>
@@ -128,7 +116,7 @@
 		</SheetHeader>
 
 		<div class="mt-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
-			{#if loading}
+			{#if loading && notifications.length === 0}
 				<div class="p-8 text-center text-muted-foreground">Loading...</div>
 			{:else if notifications.length === 0}
 				<div class="p-8 text-center text-muted-foreground">
@@ -138,47 +126,55 @@
 			{:else}
 				<div class="divide-y">
 					{#each notifications as notification (notification.id)}
+						<!-- svelte-ignore a11y_no_static_element_interactions -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="p-4 transition-colors hover:bg-accent/50 {notification.read
+							class="cursor-pointer p-4 transition-colors hover:bg-accent/50 {notification.read
 								? 'opacity-60'
 								: ''}"
+							onclick={() => handleTap(notification)}
 						>
 							<div class="flex gap-3">
 								<div class="mt-1 flex-shrink-0">
-									<div class="h-2 w-2 rounded-full {getNotificationColor(notification.type)}"></div>
+									<div class="h-2 w-2 rounded-full {getColor(notification.type)}"></div>
 								</div>
 								<div class="min-w-0 flex-1">
 									<div class="flex items-start justify-between gap-2">
 										<h4 class="text-sm font-medium">{notification.title}</h4>
-										<button
-											onclick={() => deleteNotification(notification.id)}
-											class="text-muted-foreground hover:text-foreground"
-											aria-label="Delete notification"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M6 18L18 6M6 6l12 12"
-												/>
-											</svg>
-										</button>
+										<div class="flex items-center gap-1">
+											{#if notification.carId}
+												<ExternalLinkIcon class="size-3 text-muted-foreground" />
+											{/if}
+											{#if !notification.read}
+												<button
+													type="button"
+													onclick={(e) => {
+														e.stopPropagation();
+														markAsRead(notification.id);
+													}}
+													class="rounded-full p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+													aria-label="Mark as read"
+												>
+													<CheckIcon class="size-3.5" />
+												</button>
+											{/if}
+											<button
+												type="button"
+												onclick={(e) => {
+													e.stopPropagation();
+													deleteNotification(notification.id);
+												}}
+												class="rounded-full p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+												aria-label="Delete notification"
+											>
+												<XIcon class="size-3.5" />
+											</button>
+										</div>
 									</div>
 									<p class="mt-1 text-sm text-muted-foreground">{notification.message}</p>
-									<div class="mt-2 flex items-center gap-2">
-										<span class="text-xs text-muted-foreground">
-											{formatDate(notification.createdAt)}
-										</span>
-										{#if !notification.read}
-											<button
-												onclick={() => markAsRead(notification.id)}
-												class="text-xs text-primary hover:underline"
-											>
-												Mark as read
-											</button>
-										{/if}
-									</div>
+									<span class="mt-2 block text-xs text-muted-foreground">
+										{formatDate(notification.createdAt)}
+									</span>
 								</div>
 							</div>
 						</div>

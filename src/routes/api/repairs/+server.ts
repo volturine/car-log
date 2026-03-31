@@ -17,6 +17,7 @@ import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
 import { error } from '@sveltejs/kit';
+import { REPAIR_STATUS } from '$lib/constants';
 
 const logger = apiLogger.child('repairs');
 
@@ -175,32 +176,46 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	// Use transaction to ensure atomicity
 	const result = transaction((tx) => {
 		const repairId = generateId();
+		const parts = isShopUser ? validatedData.parts : [];
+		const status = isShopUser ? validatedData.status : REPAIR_STATUS.PENDING;
+		const shopId = isShopUser ? validatedData.shopId || null : null;
+		const assignedMechanicId = isShopUser ? validatedData.assignedMechanicId || null : null;
+		const estimatedCost = isShopUser ? validatedData.estimatedCost : 0;
+		const estimatedHours = isShopUser ? validatedData.estimatedHours : 0;
+		const estimateNotes = isShopUser ? validatedData.estimateNotes || null : null;
+		const laborCost = isShopUser ? validatedData.laborCost : 0;
+		const laborHours = isShopUser ? validatedData.laborHours : 0;
+		const totalCost = isShopUser ? validatedData.totalCost : 0;
+		const startDate =
+			isShopUser && validatedData.startDate ? new Date(validatedData.startDate) : null;
+		const completedDate =
+			isShopUser && validatedData.completedDate ? new Date(validatedData.completedDate) : null;
 
 		const newRepair = {
 			id: repairId,
 			carId: validatedData.carId,
 			userId: carOwnerId, // Car owner, not necessarily the creator
-			shopId: validatedData.shopId || null,
-			assignedMechanicId: validatedData.assignedMechanicId || null,
+			shopId,
+			assignedMechanicId,
 			title: validatedData.title,
 			description: validatedData.description || null,
-			status: validatedData.status,
+			status,
 			// Estimate fields
-			estimatedCost: validatedData.estimatedCost,
-			estimatedHours: validatedData.estimatedHours,
-			estimateNotes: validatedData.estimateNotes || null,
+			estimatedCost,
+			estimatedHours,
+			estimateNotes,
 			// Actual fields
-			laborCost: validatedData.laborCost,
-			laborHours: validatedData.laborHours,
-			totalCost: validatedData.totalCost,
+			laborCost,
+			laborHours,
+			totalCost,
 			// Approval and payment
 			customerApproved: false,
 			approvedAt: null,
 			paymentStatus: 'unpaid',
 			amountPaid: 0,
 			// Dates
-			startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
-			completedDate: validatedData.completedDate ? new Date(validatedData.completedDate) : null,
+			startDate,
+			completedDate,
 			createdAt: new Date(),
 			updatedAt: new Date()
 		};
@@ -209,8 +224,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Add parts if provided
 		const insertedParts = [];
-		if (validatedData.parts && validatedData.parts.length > 0) {
-			for (const part of validatedData.parts) {
+		if (parts.length > 0) {
+			for (const part of parts) {
 				const partData = {
 					id: generateId(),
 					repairId,

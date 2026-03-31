@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { getFilePath } from '$lib/server/storage';
-import { requireAuth, verifyOwnership, successResponse } from '$lib/server/api-utils';
+import { requireAuth, verifyPhotoAccess, successResponse } from '$lib/server/api-utils';
 import { eq } from 'drizzle-orm';
 import { readFile, unlink } from 'fs/promises';
 import { fileLogger } from '$lib/server/logger';
@@ -13,7 +13,7 @@ const logger = fileLogger.child('photos');
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const user = requireAuth(locals);
 
-	const photo = await verifyOwnership(schema.photos, params.id, user.id, 'Photo');
+	const photo = await verifyPhotoAccess(params.id, user);
 
 	logger.debug('Serving photo', { photoId: params.id, userId: user.id });
 
@@ -39,7 +39,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 export const DELETE: RequestHandler = async ({ params, locals }) => {
 	const user = requireAuth(locals);
 
-	const photo = await verifyOwnership(schema.photos, params.id, user.id, 'Photo');
+	const photo = await verifyPhotoAccess(params.id, user);
 
 	logger.info('Deleting photo', { photoId: params.id, userId: user.id });
 

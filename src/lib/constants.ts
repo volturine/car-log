@@ -17,6 +17,7 @@ export type UserRole = (typeof USER_ROLE)[keyof typeof USER_ROLE];
 export const REPAIR_STATUS = {
 	ESTIMATE_PENDING: 'estimate_pending',
 	ESTIMATE_APPROVED: 'estimate_approved',
+	ESTIMATE_REJECTED: 'estimate_rejected',
 	IN_PROGRESS: 'in_progress',
 	COMPLETED: 'completed',
 	PAID: 'paid',
@@ -26,12 +27,23 @@ export const REPAIR_STATUS = {
 
 export type RepairStatus = (typeof REPAIR_STATUS)[keyof typeof REPAIR_STATUS];
 
+export const REPAIR_STATUS_VALUES = [
+	REPAIR_STATUS.ESTIMATE_PENDING,
+	REPAIR_STATUS.ESTIMATE_APPROVED,
+	REPAIR_STATUS.ESTIMATE_REJECTED,
+	REPAIR_STATUS.IN_PROGRESS,
+	REPAIR_STATUS.COMPLETED,
+	REPAIR_STATUS.PAID,
+	REPAIR_STATUS.PENDING
+] as const;
+
 // UI Constants for Repair Status
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 
 export const STATUS_COLORS = {
 	[REPAIR_STATUS.ESTIMATE_PENDING]: 'secondary',
 	[REPAIR_STATUS.ESTIMATE_APPROVED]: 'default',
+	[REPAIR_STATUS.ESTIMATE_REJECTED]: 'destructive',
 	[REPAIR_STATUS.IN_PROGRESS]: 'default',
 	[REPAIR_STATUS.COMPLETED]: 'outline',
 	[REPAIR_STATUS.PAID]: 'outline',
@@ -41,6 +53,7 @@ export const STATUS_COLORS = {
 export const STATUS_LABELS: Record<RepairStatus, string> = {
 	[REPAIR_STATUS.ESTIMATE_PENDING]: 'Estimate Pending',
 	[REPAIR_STATUS.ESTIMATE_APPROVED]: 'Estimate Approved',
+	[REPAIR_STATUS.ESTIMATE_REJECTED]: 'Estimate Rejected',
 	[REPAIR_STATUS.IN_PROGRESS]: 'In Progress',
 	[REPAIR_STATUS.COMPLETED]: 'Completed',
 	[REPAIR_STATUS.PAID]: 'Paid',
@@ -89,6 +102,18 @@ export const VALIDATION_LIMITS = {
 		OWNER_NAME_MAX_LENGTH: 200,
 		OWNER_PHONE_MAX_LENGTH: 20,
 		COLOR_MAX_LENGTH: 50
+	},
+	SHOP: {
+		NAME_MAX_LENGTH: 200,
+		EMAIL_MAX_LENGTH: 320,
+		PHONE_MAX_LENGTH: 20,
+		ADDRESS_MAX_LENGTH: 500,
+		CITY_MAX_LENGTH: 100,
+		STATE_MAX_LENGTH: 50,
+		ZIP_CODE_MAX_LENGTH: 10,
+		BUSINESS_HOURS_MAX_LENGTH: 5000,
+		SPECIALTY_MAX_LENGTH: 100,
+		MAX_SPECIALTIES: 25
 	},
 	REPAIR: {
 		TITLE_MAX_LENGTH: 200,

@@ -10,6 +10,8 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import RepairForm from './repair-form.svelte';
+	import EstimateApprovalCard from './estimate-approval-card.svelte';
+	import PaymentForm from './payment-form.svelte';
 	import {
 		EditIcon,
 		Trash2Icon,
@@ -21,7 +23,7 @@
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
-	import { STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
+	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
 	import type { Repair } from '$lib/types.js';
 
 	let { repair }: Props = $props();
@@ -37,6 +39,10 @@
 		}
 	};
 
+	function handleWorkflowAction() {
+		repairs.loadData();
+	}
+
 	const formatDate = (date: Date) => {
 		return new Date(date).toLocaleDateString('en-US', {
 			year: 'numeric',
@@ -46,6 +52,13 @@
 	};
 
 	const hourlyRate = $derived(repair.laborHours > 0 ? repair.laborCost / repair.laborHours : 0);
+
+	const showEstimate = $derived(
+		repair.status === REPAIR_STATUS.ESTIMATE_PENDING ||
+			repair.status === REPAIR_STATUS.ESTIMATE_APPROVED
+	);
+
+	const showPayment = $derived(repair.status === REPAIR_STATUS.COMPLETED && repair.totalCost > 0);
 
 	type Props = {
 		repair: Repair;
@@ -178,3 +191,11 @@
 		</CardContent>
 	{/if}
 </Card>
+
+{#if showEstimate}
+	<EstimateApprovalCard {repair} onApprove={handleWorkflowAction} />
+{/if}
+
+{#if showPayment}
+	<PaymentForm {repair} onPaymentRecorded={handleWorkflowAction} />
+{/if}

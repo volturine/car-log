@@ -1,8 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { eq } from 'drizzle-orm';
-import { requireAuth, validateBody, successResponse } from '$lib/server/api-utils';
+import { eq, inArray } from 'drizzle-orm';
+import {
+	requireAuth,
+	validateBody,
+	successResponse,
+	isShopMember,
+	findUserShop
+} from '$lib/server/api-utils';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
@@ -14,6 +20,34 @@ export const GET: RequestHandler = async ({ locals }) => {
 	const user = requireAuth(locals);
 
 	logger.info('Fetching cars', { userId: user.id });
+
+	if (isShopMember(user)) {
+		const shop = await findUserShop(user);
+
+		if (!shop) {
+			return json(successResponse([]));
+		}
+
+		const repairs = await db
+			.select({ carId: schema.repairs.carId })
+			.from(schema.repairs)
+			.where(eq(schema.repairs.shopId, shop.id));
+
+		const carIds = [...new Set(repairs.map((repair) => repair.carId))];
+
+		if (carIds.length === 0) {
+			return json(successResponse([]));
+		}
+
+		const cars = await db
+			.select()
+			.from(schema.cars)
+			.where(carIds.length === 1 ? eq(schema.cars.id, carIds[0]) : inArray(schema.cars.id, carIds));
+
+		logger.debug('Shop cars fetched', { count: cars.length, userId: user.id, shopId: shop.id });
+
+		return json(successResponse(cars));
+	}
 
 	const cars = await db.select().from(schema.cars).where(eq(schema.cars.userId, user.id));
 

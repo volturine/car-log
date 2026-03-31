@@ -14,7 +14,14 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
 	import { toast } from 'svelte-sonner';
-	import { PlusIcon, Trash2Icon, ImageIcon, XIcon, ExternalLinkIcon } from '@lucide/svelte';
+	import {
+		PlusIcon,
+		Trash2Icon,
+		ImageIcon,
+		XIcon,
+		ExternalLinkIcon,
+		CameraIcon
+	} from '@lucide/svelte';
 	import { REPAIR_STATUS, USER_ROLE } from '$lib/constants';
 	import { untrack } from 'svelte';
 	import type { Repair, RepairPart } from '$lib/types.js';
@@ -315,8 +322,21 @@
 					<label
 						class="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors hover:bg-accent"
 					>
-						<ImageIcon class="mb-2 size-8 text-muted-foreground" />
-						<span class="text-sm text-muted-foreground">Add Photo</span>
+						<CameraIcon class="mb-1 size-8 text-muted-foreground" />
+						<span class="text-xs text-muted-foreground">Camera</span>
+						<input
+							type="file"
+							accept="image/*"
+							capture="environment"
+							onchange={handlePhotoUpload}
+							class="hidden"
+						/>
+					</label>
+					<label
+						class="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors hover:bg-accent"
+					>
+						<ImageIcon class="mb-1 size-8 text-muted-foreground" />
+						<span class="text-xs text-muted-foreground">Gallery</span>
 						<input
 							type="file"
 							accept="image/*"
@@ -378,18 +398,25 @@
 							rows={2}
 						/>
 						<Input bind:value={newPart.sourceUrl} placeholder="Source URL (optional)" type="url" />
-						<div class="grid grid-cols-3 gap-2">
-							<Input type="number" bind:value={newPart.quantity} min="1" placeholder="Qty" />
+						<div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+							<Input
+								type="number"
+								bind:value={newPart.quantity}
+								min="1"
+								placeholder="Qty"
+								inputmode="numeric"
+							/>
 							<Input
 								type="number"
 								bind:value={newPart.unitCost}
 								min="0"
 								step="0.01"
 								placeholder="Unit cost"
+								inputmode="decimal"
 							/>
-							<Button type="button" onclick={addPart} class="w-full">
+							<Button type="button" onclick={addPart} class="col-span-2 w-full sm:col-span-1">
 								<PlusIcon />
-								Add
+								Add Part
 							</Button>
 						</div>
 					</div>
