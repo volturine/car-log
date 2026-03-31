@@ -12,6 +12,7 @@
 	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
 	import { USER_ROLE } from '$lib/constants';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { ShopMember } from '$lib/types';
 
 	let {
@@ -65,7 +66,39 @@
 	const totalCost = $derived(repairs.carRepairs.reduce((sum, r) => sum + r.totalCost, 0));
 </script>
 
-{#if repairs.selectedCar}
+{#if repairs.loading}
+	<div class="space-y-6 p-6">
+		<div class="flex items-center gap-4">
+			<Button variant="ghost" size="icon" onclick={() => goto(resolve('/app/cars'))}>
+				<ArrowLeftIcon />
+			</Button>
+			<div class="flex-1">
+				<Skeleton class="h-8 w-48" />
+				<Skeleton class="mt-2 h-4 w-32" />
+			</div>
+		</div>
+		<Card>
+			<CardHeader>
+				<Skeleton class="h-6 w-40" />
+			</CardHeader>
+			<CardContent class="grid gap-4 md:grid-cols-2">
+				<div>
+					<Skeleton class="h-4 w-16" />
+					<Skeleton class="mt-1 h-5 w-32" />
+				</div>
+				<div>
+					<Skeleton class="h-4 w-16" />
+					<Skeleton class="mt-1 h-5 w-24" />
+				</div>
+			</CardContent>
+		</Card>
+		<div class="space-y-4">
+			{#each Array(2) as _, i (i)}
+				<Skeleton class="h-32 w-full rounded-lg" />
+			{/each}
+		</div>
+	</div>
+{:else if repairs.selectedCar}
 	<div class="space-y-6 p-6">
 		<div class="flex items-center gap-4">
 			<Button variant="ghost" size="icon" onclick={() => goto(resolve('/app/cars'))}>
@@ -172,5 +205,16 @@
 				{/each}
 			</div>
 		{/if}
+	</div>
+{:else}
+	<div class="flex flex-col items-center justify-center gap-4 p-12 text-center">
+		<p class="text-lg font-medium text-muted-foreground">Car not found</p>
+		<p class="text-sm text-muted-foreground">
+			The vehicle you're looking for doesn't exist or has been removed.
+		</p>
+		<Button variant="outline" onclick={() => goto(resolve('/app/cars'))}>
+			<ArrowLeftIcon class="size-4" />
+			Back to Cars
+		</Button>
 	</div>
 {/if}

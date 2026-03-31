@@ -1,4 +1,4 @@
-import { json } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { getFilePath } from '$lib/server/storage';
@@ -6,6 +6,7 @@ import { requireAuth, verifyPhotoAccess, successResponse } from '$lib/server/api
 import { eq } from 'drizzle-orm';
 import { readFile, unlink } from 'fs/promises';
 import { fileLogger } from '$lib/server/logger';
+import { toError } from '$lib/utils';
 
 const logger = fileLogger.child('photos');
 
@@ -30,8 +31,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			}
 		});
 	} catch (err) {
-		logger.error('Failed to read photo file', err as Error, { photoId: params.id });
-		throw new Error('Failed to load photo');
+		logger.error('Failed to read photo file', toError(err), { photoId: params.id });
+		throw error(500, 'Failed to load photo');
 	}
 };
 
@@ -55,7 +56,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		// Log but don't fail if file doesn't exist or can't be deleted
 		logger.warn('Failed to delete photo file', {
 			photoId: params.id,
-			error: (err as Error).message
+			error: toError(err).message
 		});
 	}
 

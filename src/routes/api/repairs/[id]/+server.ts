@@ -10,11 +10,12 @@ import {
 	fetchById,
 	formatPhotosForResponse,
 	verifyRepairAccess,
-	isShopMember
+	isShopMember,
+	getMechanic
 } from '$lib/server/api-utils';
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { generateId } from '$lib/utils';
+import { generateId, toError } from '$lib/utils';
 import { getFilePath } from '$lib/server/storage';
 import { unlink } from 'fs/promises';
 import { USER_ROLE } from '$lib/constants';
@@ -33,34 +34,6 @@ type RepairUpdate = Partial<typeof schema.repairs.$inferInsert> & {
 
 function hasKey<T extends object>(obj: T, key: PropertyKey): boolean {
 	return Object.prototype.hasOwnProperty.call(obj, key);
-}
-
-type Mechanic = {
-	id: string;
-	name: string | null;
-	email: string;
-};
-
-async function getMechanic(id: string | null): Promise<Mechanic | null> {
-	if (!id) {
-		return null;
-	}
-
-	const [user] = await db
-		.select({
-			id: schema.users.id,
-			name: schema.users.name,
-			email: schema.users.email
-		})
-		.from(schema.users)
-		.where(eq(schema.users.id, id))
-		.limit(1);
-
-	if (!user) {
-		return null;
-	}
-
-	return user;
 }
 
 // GET /api/repairs/[id] - Get a specific repair
@@ -193,7 +166,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 			logger.warn('Failed to delete photo file', {
 				photoId: photo.id,
 				path: photo.path,
-				error: (err as Error).message
+				error: toError(err).message
 			});
 		}
 	});

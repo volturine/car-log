@@ -16,6 +16,7 @@ import { apiLogger } from '$lib/server/logger';
 import { getFilePath } from '$lib/server/storage';
 import { unlink } from 'fs/promises';
 import { USER_ROLE } from '$lib/constants';
+import { toError } from '$lib/utils';
 
 const logger = apiLogger.child('cars');
 
@@ -125,7 +126,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 			logger.warn('Failed to delete photo file', {
 				photoId: photo.id,
 				path: photo.path,
-				error: (err as Error).message
+				error: toError(err).message
 			});
 		}
 	});

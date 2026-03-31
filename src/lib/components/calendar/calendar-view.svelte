@@ -9,6 +9,7 @@
 	import { fly } from 'svelte/transition';
 
 	import { REPAIR_STATUS } from '$lib/constants';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import type { RepairStatus } from '$lib/types.js';
 
 	const repairs = useRepairs();
@@ -149,126 +150,143 @@
 		</div>
 	</div>
 
-	{#if monthAppointments > 0 || monthActive > 0}
-		<div class="flex flex-wrap gap-3">
-			{#if monthAppointments > 0}
-				<Badge variant="outline" class="gap-1.5 px-3 py-1">
-					<CalendarClockIcon class="size-3.5" />
-					{monthAppointments} scheduled appointment{monthAppointments === 1 ? '' : 's'}
-				</Badge>
-			{/if}
-			{#if monthActive > 0}
-				<Badge variant="outline" class="gap-1.5 px-3 py-1">
-					<WrenchIcon class="size-3.5" />
-					{monthActive} active repair{monthActive === 1 ? '' : 's'}
-				</Badge>
-			{/if}
+	{#if repairs.loading}
+		<Card>
+			<CardContent class="p-4">
+				<div class="grid grid-cols-7 gap-2">
+					{#each dayNames as dayName (dayName)}
+						<div class="p-2 text-center text-sm font-semibold text-muted-foreground">
+							{dayName}
+						</div>
+					{/each}
+					{#each Array(35) as _, i (i)}
+						<Skeleton class="aspect-square rounded-lg" />
+					{/each}
+				</div>
+			</CardContent>
+		</Card>
+	{:else}
+		{#if monthAppointments > 0 || monthActive > 0}
+			<div class="flex flex-wrap gap-3">
+				{#if monthAppointments > 0}
+					<Badge variant="outline" class="gap-1.5 px-3 py-1">
+						<CalendarClockIcon class="size-3.5" />
+						{monthAppointments} scheduled appointment{monthAppointments === 1 ? '' : 's'}
+					</Badge>
+				{/if}
+				{#if monthActive > 0}
+					<Badge variant="outline" class="gap-1.5 px-3 py-1">
+						<WrenchIcon class="size-3.5" />
+						{monthActive} active repair{monthActive === 1 ? '' : 's'}
+					</Badge>
+				{/if}
+			</div>
+		{/if}
+
+		<Card>
+			<CardContent class="p-4">
+				<div class="grid grid-cols-7 gap-2">
+					{#each dayNames as dayName (dayName)}
+						<div class="p-2 text-center text-sm font-semibold text-muted-foreground">
+							{dayName}
+						</div>
+					{/each}
+
+					{#each calendarDays as day, index (index)}
+						{#if day === null}
+							<div class="aspect-square"></div>
+						{:else}
+							{@const dayRepairs = getRepairsForDay(day)}
+							{@const apptCount = dayRepairs.filter((r) => r.appointmentAt).length}
+							<div
+								class="flex aspect-square flex-col gap-1 overflow-hidden rounded-lg border p-2 transition-shadow hover:shadow-md {isToday(
+									day
+								)
+									? 'border-2 border-primary'
+									: ''}"
+								transition:fly={{ y: 10, duration: 200, delay: index * 5 }}
+							>
+								<div class="flex items-center justify-between">
+									<span class="text-sm font-medium {isToday(day) ? 'text-primary' : ''}">
+										{day}
+									</span>
+									{#if apptCount > 0}
+										<span
+											class="flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400"
+											title="{apptCount} appointment{apptCount === 1 ? '' : 's'}"
+										>
+											<CalendarClockIcon class="size-3" />
+											{apptCount}
+										</span>
+									{/if}
+								</div>
+								<div class="flex-1 space-y-1 overflow-y-auto">
+									{#each dayRepairs.slice(0, 3) as repair (repair.id)}
+										{@const car = repairs.cars.find((c) => c.id === repair.carId)}
+										{@const hasAppt = Boolean(repair.appointmentAt)}
+										{@const apptTime = hasAppt
+											? new Date(repair.appointmentAt!).toLocaleTimeString('en-US', {
+													hour: 'numeric',
+													minute: '2-digit'
+												})
+											: ''}
+										<button
+											type="button"
+											onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+											class="w-full text-left"
+										>
+											<div
+												class="rounded border p-1 text-xs {statusColors[
+													repair.status
+												]} truncate transition-transform hover:scale-105"
+												title={buildTooltip(
+													car,
+													hasAppt,
+													apptTime,
+													repair.assignedMechanic,
+													repair.title
+												)}
+											>
+												{#if hasAppt}
+													<span class="font-semibold">{apptTime}</span>
+													&nbsp;
+												{/if}
+												{car ? `${car.brand} ${car.model}` : 'Unknown'}
+											</div>
+										</button>
+									{/each}
+									{#if dayRepairs.length > 3}
+										<div class="text-center text-xs text-muted-foreground">
+											+{dayRepairs.length - 3} more
+										</div>
+									{/if}
+								</div>
+							</div>
+						{/if}
+					{/each}
+				</div>
+			</CardContent>
+		</Card>
+
+		<div class="flex flex-wrap items-center gap-4 text-sm">
+			<span class="font-medium">Legend:</span>
+			<div class="flex items-center gap-2">
+				<div class="size-4 rounded border {statusColors[REPAIR_STATUS.PENDING]}"></div>
+				<span>Pending</span>
+			</div>
+			<div class="flex items-center gap-2">
+				<div class="size-4 rounded border {statusColors[REPAIR_STATUS.IN_PROGRESS]}"></div>
+				<span>In Progress</span>
+			</div>
+			<div class="flex items-center gap-2">
+				<div class="size-4 rounded border {statusColors[REPAIR_STATUS.COMPLETED]}"></div>
+				<span>Completed</span>
+			</div>
+			<span class="text-muted-foreground">•</span>
+			<div class="flex items-center gap-1 text-muted-foreground">
+				<CalendarClockIcon class="size-3.5" />
+				<span>Scheduled appointments show time</span>
+			</div>
 		</div>
 	{/if}
-
-	<Card>
-		<CardContent class="p-4">
-			<div class="grid grid-cols-7 gap-2">
-				{#each dayNames as dayName (dayName)}
-					<div class="p-2 text-center text-sm font-semibold text-muted-foreground">
-						{dayName}
-					</div>
-				{/each}
-
-				{#each calendarDays as day, index (index)}
-					{#if day === null}
-						<div class="aspect-square"></div>
-					{:else}
-						{@const dayRepairs = getRepairsForDay(day)}
-						{@const apptCount = dayRepairs.filter((r) => r.appointmentAt).length}
-						<div
-							class="flex aspect-square flex-col gap-1 overflow-hidden rounded-lg border p-2 transition-shadow hover:shadow-md {isToday(
-								day
-							)
-								? 'border-2 border-primary'
-								: ''}"
-							transition:fly={{ y: 10, duration: 200, delay: index * 5 }}
-						>
-							<div class="flex items-center justify-between">
-								<span class="text-sm font-medium {isToday(day) ? 'text-primary' : ''}">
-									{day}
-								</span>
-								{#if apptCount > 0}
-									<span
-										class="flex items-center gap-0.5 text-[10px] text-blue-600 dark:text-blue-400"
-										title="{apptCount} appointment{apptCount === 1 ? '' : 's'}"
-									>
-										<CalendarClockIcon class="size-3" />
-										{apptCount}
-									</span>
-								{/if}
-							</div>
-							<div class="flex-1 space-y-1 overflow-y-auto">
-								{#each dayRepairs.slice(0, 3) as repair (repair.id)}
-									{@const car = repairs.cars.find((c) => c.id === repair.carId)}
-									{@const hasAppt = Boolean(repair.appointmentAt)}
-									{@const apptTime = hasAppt
-										? new Date(repair.appointmentAt!).toLocaleTimeString('en-US', {
-												hour: 'numeric',
-												minute: '2-digit'
-											})
-										: ''}
-									<button
-										type="button"
-										onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
-										class="w-full text-left"
-									>
-										<div
-											class="rounded border p-1 text-xs {statusColors[
-												repair.status
-											]} truncate transition-transform hover:scale-105"
-											title={buildTooltip(
-												car,
-												hasAppt,
-												apptTime,
-												repair.assignedMechanic,
-												repair.title
-											)}
-										>
-											{#if hasAppt}
-												<span class="font-semibold">{apptTime}</span>
-												&nbsp;
-											{/if}
-											{car ? `${car.brand} ${car.model}` : 'Unknown'}
-										</div>
-									</button>
-								{/each}
-								{#if dayRepairs.length > 3}
-									<div class="text-center text-xs text-muted-foreground">
-										+{dayRepairs.length - 3} more
-									</div>
-								{/if}
-							</div>
-						</div>
-					{/if}
-				{/each}
-			</div>
-		</CardContent>
-	</Card>
-
-	<div class="flex flex-wrap items-center gap-4 text-sm">
-		<span class="font-medium">Legend:</span>
-		<div class="flex items-center gap-2">
-			<div class="size-4 rounded border {statusColors[REPAIR_STATUS.PENDING]}"></div>
-			<span>Pending</span>
-		</div>
-		<div class="flex items-center gap-2">
-			<div class="size-4 rounded border {statusColors[REPAIR_STATUS.IN_PROGRESS]}"></div>
-			<span>In Progress</span>
-		</div>
-		<div class="flex items-center gap-2">
-			<div class="size-4 rounded border {statusColors[REPAIR_STATUS.COMPLETED]}"></div>
-			<span>Completed</span>
-		</div>
-		<span class="text-muted-foreground">•</span>
-		<div class="flex items-center gap-1 text-muted-foreground">
-			<CalendarClockIcon class="size-3.5" />
-			<span>Scheduled appointments show time</span>
-		</div>
-	</div>
 </div>

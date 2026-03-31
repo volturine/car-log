@@ -45,7 +45,7 @@
 		shopMembers
 	}: Props = $props();
 
-	let isShopUser = $derived(
+	const isShopUser = $derived(
 		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
 	);
 

@@ -23,6 +23,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	return {
 		shop,
-		isOwner: shop.ownerId === user.id
+		isOwner: shop.ownerId === user.id,
+		isMechanic: user.role === USER_ROLE.MECHANIC,
+		userId: user.id
 	};
 };

@@ -13,6 +13,7 @@
 	import { CheckCircle2, XCircle, Clock } from '@lucide/svelte';
 	import { formatCurrency } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
+	import { REPAIR_STATUS } from '$lib/constants';
 	import type { Repair } from '$lib/types';
 
 	let { repair, onApprove }: { repair: Repair; onApprove?: () => void } = $props();
@@ -22,8 +23,10 @@
 	let showRejectForm = $state(false);
 	let rejectReason = $state('');
 
-	let isPending = $derived(repair.status === 'estimate_pending');
-	let isApproved = $derived(repair.status === 'estimate_approved' || repair.customerApproved);
+	const isPending = $derived(repair.status === REPAIR_STATUS.ESTIMATE_PENDING);
+	const isApproved = $derived(
+		repair.status === REPAIR_STATUS.ESTIMATE_APPROVED || repair.customerApproved
+	);
 
 	async function approveEstimate() {
 		isApproving = true;

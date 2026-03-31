@@ -5,9 +5,9 @@ vi.mock('$app/paths', () => ({
 }));
 
 const state = vi.hoisted(() => ({
-	findUserShop: vi.fn<(...args: unknown[]) => Promise<{ id: string; name?: string } | null>>(
-		async () => null
-	)
+	findUserShop: vi.fn<
+		(...args: unknown[]) => Promise<{ id: string; name?: string; ownerId?: string } | null>
+	>(async () => null)
 }));
 
 vi.mock('$lib/server/api-utils', () => ({
@@ -41,7 +41,7 @@ describe('/app/shop server guard', () => {
 	});
 
 	it('allows mechanics through', async () => {
-		state.findUserShop.mockResolvedValue({ id: 'shop-1', name: 'Shop' });
+		state.findUserShop.mockResolvedValue({ id: 'shop-1', name: 'Shop', ownerId: 'owner-1' });
 
 		const { load } = await import('../routes/app/shop/+page.server');
 
@@ -55,8 +55,32 @@ describe('/app/shop server guard', () => {
 				}
 			} as never)
 		).resolves.toEqual({
-			shop: { id: 'shop-1', name: 'Shop' },
-			isOwner: false
+			shop: { id: 'shop-1', name: 'Shop', ownerId: 'owner-1' },
+			isOwner: false,
+			isMechanic: true,
+			userId: 'user-1'
+		});
+	});
+
+	it('marks shop owners in the shop load data', async () => {
+		state.findUserShop.mockResolvedValue({ id: 'shop-1', name: 'Shop', ownerId: 'user-1' });
+
+		const { load } = await import('../routes/app/shop/+page.server');
+
+		await expect(
+			load({
+				locals: {
+					user: {
+						id: 'user-1',
+						role: 'shop_owner'
+					}
+				}
+			} as never)
+		).resolves.toEqual({
+			shop: { id: 'shop-1', name: 'Shop', ownerId: 'user-1' },
+			isOwner: true,
+			isMechanic: false,
+			userId: 'user-1'
 		});
 	});
 

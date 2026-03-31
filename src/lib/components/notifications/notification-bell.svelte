@@ -28,7 +28,7 @@
 	};
 
 	let notifications = $state<Notification[]>([]);
-	let unreadCount = $derived(notifications.filter((n) => !n.read).length);
+	const unreadCount = $derived(notifications.filter((n) => !n.read).length);
 	let loading = $state(false);
 	let open = $state(false);
 

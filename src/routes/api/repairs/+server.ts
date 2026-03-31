@@ -11,7 +11,8 @@ import {
 	fetchById,
 	formatPhotosForResponse,
 	isShopMember,
-	verifyShopAccess
+	verifyShopAccess,
+	getMechanic
 } from '$lib/server/api-utils';
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
@@ -21,34 +22,6 @@ import { generateId } from '$lib/utils';
 import { error } from '@sveltejs/kit';
 
 const logger = apiLogger.child('repairs');
-
-type Mechanic = {
-	id: string;
-	name: string | null;
-	email: string;
-};
-
-async function getMechanic(id: string | null): Promise<Mechanic | null> {
-	if (!id) {
-		return null;
-	}
-
-	const [user] = await db
-		.select({
-			id: schema.users.id,
-			name: schema.users.name,
-			email: schema.users.email
-		})
-		.from(schema.users)
-		.where(eq(schema.users.id, id))
-		.limit(1);
-
-	if (!user) {
-		return null;
-	}
-
-	return user;
-}
 
 // GET /api/repairs - List all repairs for the authenticated user
 export const GET: RequestHandler = async ({ locals, url }) => {

@@ -9,13 +9,17 @@
 	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { TrendingUpIcon, DollarSignIcon, WrenchIcon, CarIcon } from '@lucide/svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton';
+	import { REPAIR_STATUS } from '$lib/constants';
 
 	const repairs = useRepairs();
 
 	const totalRepairs = $derived(repairs.repairs.length);
 	const totalRevenue = $derived(repairs.repairs.reduce((sum, r) => sum + r.totalCost, 0));
 	const averageRepairCost = $derived(totalRepairs > 0 ? totalRevenue / totalRepairs : 0);
-	const completedRepairs = $derived(repairs.repairs.filter((r) => r.status === 'completed').length);
+	const completedRepairs = $derived(
+		repairs.repairs.filter((r) => r.status === REPAIR_STATUS.COMPLETED).length
+	);
 </script>
 
 <div class="space-y-6 p-6">
@@ -25,49 +29,64 @@
 	</div>
 
 	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between pb-2">
-				<CardTitle class="text-sm font-medium">Total Repairs</CardTitle>
-				<WrenchIcon class="size-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">{totalRepairs}</div>
-				<p class="text-xs text-muted-foreground">{completedRepairs} completed</p>
-			</CardContent>
-		</Card>
+		{#if repairs.loading}
+			{#each Array(4) as _, i (i)}
+				<Card>
+					<CardHeader class="flex flex-row items-center justify-between pb-2">
+						<Skeleton class="h-4 w-24" />
+						<Skeleton class="size-4 rounded" />
+					</CardHeader>
+					<CardContent>
+						<Skeleton class="h-7 w-20" />
+						<Skeleton class="mt-1 h-3 w-16" />
+					</CardContent>
+				</Card>
+			{/each}
+		{:else}
+			<Card>
+				<CardHeader class="flex flex-row items-center justify-between pb-2">
+					<CardTitle class="text-sm font-medium">Total Repairs</CardTitle>
+					<WrenchIcon class="size-4 text-muted-foreground" />
+				</CardHeader>
+				<CardContent>
+					<div class="text-2xl font-bold">{totalRepairs}</div>
+					<p class="text-xs text-muted-foreground">{completedRepairs} completed</p>
+				</CardContent>
+			</Card>
 
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between pb-2">
-				<CardTitle class="text-sm font-medium">Total Revenue</CardTitle>
-				<DollarSignIcon class="size-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
-				<p class="text-xs text-muted-foreground">All time</p>
-			</CardContent>
-		</Card>
+			<Card>
+				<CardHeader class="flex flex-row items-center justify-between pb-2">
+					<CardTitle class="text-sm font-medium">Total Revenue</CardTitle>
+					<DollarSignIcon class="size-4 text-muted-foreground" />
+				</CardHeader>
+				<CardContent>
+					<div class="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
+					<p class="text-xs text-muted-foreground">All time</p>
+				</CardContent>
+			</Card>
 
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between pb-2">
-				<CardTitle class="text-sm font-medium">Average Cost</CardTitle>
-				<TrendingUpIcon class="size-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">${averageRepairCost.toFixed(2)}</div>
-				<p class="text-xs text-muted-foreground">Per repair</p>
-			</CardContent>
-		</Card>
+			<Card>
+				<CardHeader class="flex flex-row items-center justify-between pb-2">
+					<CardTitle class="text-sm font-medium">Average Cost</CardTitle>
+					<TrendingUpIcon class="size-4 text-muted-foreground" />
+				</CardHeader>
+				<CardContent>
+					<div class="text-2xl font-bold">${averageRepairCost.toFixed(2)}</div>
+					<p class="text-xs text-muted-foreground">Per repair</p>
+				</CardContent>
+			</Card>
 
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between pb-2">
-				<CardTitle class="text-sm font-medium">Total Cars</CardTitle>
-				<CarIcon class="size-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">{repairs.cars.length}</div>
-				<p class="text-xs text-muted-foreground">{repairs.brandStats.length} brands</p>
-			</CardContent>
-		</Card>
+			<Card>
+				<CardHeader class="flex flex-row items-center justify-between pb-2">
+					<CardTitle class="text-sm font-medium">Total Cars</CardTitle>
+					<CarIcon class="size-4 text-muted-foreground" />
+				</CardHeader>
+				<CardContent>
+					<div class="text-2xl font-bold">{repairs.cars.length}</div>
+					<p class="text-xs text-muted-foreground">{repairs.brandStats.length} brands</p>
+				</CardContent>
+			</Card>
+		{/if}
 	</div>
 
 	<div class="flex flex-col gap-4">

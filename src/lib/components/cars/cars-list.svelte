@@ -16,6 +16,7 @@
 	import { fly } from 'svelte/transition';
 	import CarForm from './car-form.svelte';
 	import { REPAIR_STATUS } from '$lib/constants';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 
 	const repairs = useRepairs();
 	let showAddForm = $state(false);
@@ -75,7 +76,23 @@
 		</div>
 	{/if}
 
-	{#if filteredCars.length === 0}
+	{#if repairs.loading}
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+			{#each Array(6) as _, i (i)}
+				<Card>
+					<CardHeader>
+						<Skeleton class="h-6 w-32" />
+						<Skeleton class="mt-1 h-4 w-24" />
+					</CardHeader>
+					<CardContent class="flex flex-col gap-2">
+						<Skeleton class="h-4 w-full" />
+						<Skeleton class="h-4 w-3/4" />
+						<Skeleton class="h-4 w-1/2" />
+					</CardContent>
+				</Card>
+			{/each}
+		</div>
+	{:else if filteredCars.length === 0}
 		<Card class="border-dashed">
 			<CardContent class="flex flex-col items-center justify-center py-12">
 				<CarIcon class="mb-4 size-12 text-muted-foreground" />
@@ -95,7 +112,7 @@
 			{#each filteredCars as car (car.id)}
 				<div transition:fly={{ y: 20, duration: 300 }}>
 					<Card
-						class="hover:shadow-lg-lg-lg hover:shadow-lg-lg-primary/10 cursor-pointer transition-all duration-200"
+						class="cursor-pointer transition-all duration-200 hover:shadow-lg hover:shadow-primary/10"
 						onclick={() => goto(resolve(`/app/cars/${car.id}`))}
 					>
 						<CardHeader>

@@ -33,3 +33,8 @@ export function formatCurrency(amount: number): string {
 export function generateId(): string {
 	return crypto.randomUUID();
 }
+
+export function toError(value: unknown): Error {
+	if (value instanceof Error) return value;
+	return new Error(String(value));
+}

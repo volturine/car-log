@@ -193,3 +193,27 @@ export function formatPhotosForResponse(
 		url: `/api/photos/${p.id}`
 	}));
 }
+
+export type Mechanic = {
+	id: string;
+	name: string | null;
+	email: string;
+};
+
+export async function getMechanic(id: string | null): Promise<Mechanic | null> {
+	if (!id) {
+		return null;
+	}
+
+	const [user] = await db
+		.select({
+			id: schema.users.id,
+			name: schema.users.name,
+			email: schema.users.email
+		})
+		.from(schema.users)
+		.where(eq(schema.users.id, id))
+		.limit(1);
+
+	return user ?? null;
+}

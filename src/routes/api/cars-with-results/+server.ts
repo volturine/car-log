@@ -3,7 +3,7 @@ import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { generateId } from '$lib/utils';
+import { generateId, toError } from '$lib/utils';
 import {
 	apiOk,
 	unauthorizedError,
@@ -54,7 +54,7 @@ async function fetchUserCars(
 
 		return apiOk(cars);
 	} catch (err) {
-		logger.error('Failed to fetch cars', err as Error, { userId });
+		logger.error('Failed to fetch cars', toError(err), { userId });
 		return errAsync(new Error('Failed to fetch cars')).mapErr(() => ({
 			type: 'internal' as const,
 			message: 'Failed to fetch cars',
@@ -85,7 +85,7 @@ async function createCar(
 
 		return apiOk(newCar, 201);
 	} catch (err) {
-		logger.error('Failed to create car', err as Error, { userId });
+		logger.error('Failed to create car', toError(err), { userId });
 		return errAsync(new Error('Failed to create car')).mapErr(() => ({
 			type: 'internal' as const,
 			message: 'Failed to create car',

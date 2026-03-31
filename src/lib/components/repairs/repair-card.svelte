@@ -23,9 +23,9 @@
 		CalendarClockIcon,
 		UserIcon
 	} from '@lucide/svelte';
-	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
+	import { formatDate } from '$lib/utils';
 	import type { Repair } from '$lib/types.js';
 
 	let { repair }: Props = $props();
@@ -37,21 +37,12 @@
 	const handleDelete = () => {
 		if (confirm('Are you sure you want to delete this repair?')) {
 			repairs.deleteRepair(repair.id);
-			toast.success('Repair deleted successfully');
 		}
 	};
 
 	function handleWorkflowAction() {
 		repairs.loadData();
 	}
-
-	const formatDate = (date: Date) => {
-		return new Date(date).toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric'
-		});
-	};
 
 	const hourlyRate = $derived(repair.laborHours > 0 ? repair.laborCost / repair.laborHours : 0);
 
