@@ -30,7 +30,9 @@
 		return {
 			title: repair?.title || '',
 			description: repair?.description || '',
-			status: repair?.status || (isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : 'pending' as RepairStatus),
+			status:
+				repair?.status ||
+				(isShopUser ? REPAIR_STATUS.ESTIMATE_PENDING : ('pending' as RepairStatus)),
 			shopId: repair?.shopId || '',
 			assignedMechanicId: repair?.assignedMechanicId || '',
 			// Estimate fields
@@ -50,12 +52,15 @@
 	}
 
 	let formData = $state(initFormData());
-	let parts = $state<RepairPart[]>(repair?.parts ? [...repair.parts] : []);
-	let photos = $state<{ url: string; file?: File }[]>(
-		repair?.photos ? repair.photos.map((p: any) => ({ url: p.url || p })) : []
-	);
+	let parts = $state<RepairPart[]>([]);
+	let photos = $state<{ url: string; file?: File }[]>([]);
 	let newPart = $state({ name: '', description: '', quantity: 1, unitCost: 0, sourceUrl: '' });
 	let isSubmitting = $state(false);
+
+	$effect(() => {
+		parts = repair?.parts ? [...repair.parts] : [];
+		photos = repair?.photos ? repair.photos.map((p: any) => ({ url: p.url || p })) : [];
+	});
 
 	const addPart = () => {
 		if (!newPart.name || newPart.unitCost <= 0) {
@@ -297,7 +302,11 @@
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 					{#each photos as photo, index (index)}
 						<div class="relative group aspect-square rounded-lg overflow-hidden border">
-							<img src={photo.url} alt="Repair photo {index + 1}" class="w-full h-full object-cover" />
+							<img
+								src={photo.url}
+								alt="Repair photo {index + 1}"
+								class="w-full h-full object-cover"
+							/>
 							<button
 								type="button"
 								onclick={() => removePhoto(index)}
@@ -414,7 +423,13 @@
 				{isSubmitting ? 'Saving...' : repair ? 'Update' : 'Add'} Repair
 			</Button>
 			{#if onCancel}
-				<Button type="button" variant="outline" class="flex-1" onclick={onCancel} disabled={isSubmitting}>
+				<Button
+					type="button"
+					variant="outline"
+					class="flex-1"
+					onclick={onCancel}
+					disabled={isSubmitting}
+				>
 					Cancel
 				</Button>
 			{/if}

@@ -102,17 +102,19 @@
 </script>
 
 <Sheet bind:open>
-	<SheetTrigger asChild let:builder>
-		<Button builders={[builder]} variant="ghost" size="icon" class="relative">
-			<Bell class="h-5 w-5" />
-			{#if unreadCount > 0}
-				<Badge
-					class="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500"
-				>
-					{unreadCount > 9 ? '9+' : unreadCount}
-				</Badge>
-			{/if}
-		</Button>
+	<SheetTrigger>
+		{#snippet child({ props })}
+			<Button {...props} variant="ghost" size="icon" class="relative">
+				<Bell class="h-5 w-5" />
+				{#if unreadCount > 0}
+					<Badge
+						class="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500"
+					>
+						{unreadCount > 9 ? '9+' : unreadCount}
+					</Badge>
+				{/if}
+			</Button>
+		{/snippet}
 	</SheetTrigger>
 	<SheetContent side="right" class="w-full sm:w-96">
 		<SheetHeader>
@@ -122,9 +124,7 @@
 					<Badge variant="secondary">{unreadCount} new</Badge>
 				{/if}
 			</div>
-			<SheetDescription>
-				Stay updated on your repair status and payments
-			</SheetDescription>
+			<SheetDescription>Stay updated on your repair status and payments</SheetDescription>
 		</SheetHeader>
 
 		<div class="mt-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
@@ -145,9 +145,7 @@
 						>
 							<div class="flex gap-3">
 								<div class="flex-shrink-0 mt-1">
-									<div
-										class="w-2 h-2 rounded-full {getNotificationColor(notification.type)}"
-									></div>
+									<div class="w-2 h-2 rounded-full {getNotificationColor(notification.type)}"></div>
 								</div>
 								<div class="flex-1 min-w-0">
 									<div class="flex items-start justify-between gap-2">
@@ -157,12 +155,7 @@
 											class="text-muted-foreground hover:text-foreground"
 											aria-label="Delete notification"
 										>
-											<svg
-												class="w-4 h-4"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 												<path
 													stroke-linecap="round"
 													stroke-linejoin="round"
