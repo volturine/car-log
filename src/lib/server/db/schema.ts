@@ -7,6 +7,7 @@ export const users = sqliteTable('users', {
 	email: text('email').notNull().unique(),
 	emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
 	name: text('name'),
+	image: text('image'),
 	role: text('role').notNull().default('customer'), // customer, shop_owner, mechanic, admin
 	shopId: text('shop_id'), // For mechanics - which shop they work for
 	phone: text('phone'),
@@ -47,6 +48,9 @@ export const accounts = sqliteTable('accounts', {
 	accessToken: text('access_token'),
 	refreshToken: text('refresh_token'),
 	idToken: text('id_token'),
+	accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp' }),
+	refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
+	scope: text('scope'),
 	expiresAt: integer('expires_at', { mode: 'timestamp' }),
 	password: text('password'),
 	createdAt: integer('created_at', { mode: 'timestamp' })

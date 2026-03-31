@@ -66,20 +66,63 @@ export const repairSchema = z.object({
 		.default([])
 });
 
+const devUrl = 'http://localhost:3000';
+
+function warn(msg: string): void {
+	console.warn(`Warning: ${msg}`);
+}
+
 // Environment variable validation
-export function validateEnv() {
-	const requiredEnvVars = ['BETTER_AUTH_SECRET'];
-	const missing = requiredEnvVars.filter((v) => !process.env[v]);
-
-	if (missing.length > 0) {
-		console.warn(
-			`Warning: Missing environment variables: ${missing.join(', ')}. Using fallback values.`
-		);
-	}
-
-	// Validate secret length
+export function validateEnv(): void {
+	const prod = process.env.NODE_ENV === 'production';
 	const secret = process.env.BETTER_AUTH_SECRET;
-	if (secret && secret.length < 32) {
-		console.warn('Warning: BETTER_AUTH_SECRET should be at least 32 characters long.');
+
+	if (!secret) {
+		if (prod) {
+			throw new Error('BETTER_AUTH_SECRET is required in production.');
+		}
+
+		warn('BETTER_AUTH_SECRET is missing. Using development fallback secret.');
 	}
+
+	if (secret && secret.length < 32) {
+		if (prod) {
+			throw new Error('BETTER_AUTH_SECRET must be at least 32 characters long in production.');
+		}
+
+		warn('BETTER_AUTH_SECRET should be at least 32 characters long.');
+	}
+
+	const url = process.env.BETTER_AUTH_URL;
+
+	if (!url) {
+		if (prod) {
+			throw new Error('BETTER_AUTH_URL is required in production.');
+		}
+
+		warn(`BETTER_AUTH_URL is missing. Using development fallback URL ${devUrl}.`);
+	}
+
+	if (url && !URL.canParse(url)) {
+		if (prod) {
+			throw new Error('BETTER_AUTH_URL must be a valid absolute URL in production.');
+		}
+
+		warn(`BETTER_AUTH_URL must be a valid absolute URL. Using development fallback URL ${devUrl}.`);
+	}
+
+	if (url && URL.canParse(url) && prod && new URL(url).protocol !== 'https:') {
+		throw new Error('BETTER_AUTH_URL must use https in production.');
+	}
+
+	const hasGoogleClientId = Boolean(process.env.GOOGLE_CLIENT_ID);
+	const hasGoogleClientSecret = Boolean(process.env.GOOGLE_CLIENT_SECRET);
+
+	if (hasGoogleClientId === hasGoogleClientSecret) {
+		return;
+	}
+
+	console.warn(
+		'Warning: GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be set to enable Google authentication.'
+	);
 }

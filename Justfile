@@ -45,5 +45,5 @@ verify:
 prod:
     @echo "Building app..."
     bun run build
-    @echo "Previewing production build..."
-    bun run preview
+    @echo "Starting production server..."
+    bun run start
