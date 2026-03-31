@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
-	import { WrenchIcon, ArrowRightIcon, CarIcon, BarChart3Icon, CalendarIcon } from '@lucide/svelte';
+	import { Separator } from '$lib/components/ui/separator';
+	import {
+		WrenchIcon,
+		ArrowRightIcon,
+		CarIcon,
+		BarChart3Icon,
+		CalendarIcon,
+		StoreIcon
+	} from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -71,6 +79,24 @@
 				</p>
 			</div>
 		</div>
+		{#if !data.user}
+			<Separator class="mx-auto max-w-3xl" />
+
+			<div class="flex max-w-2xl flex-col items-center gap-4 text-center">
+				<div class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+					<StoreIcon class="size-7 text-primary" />
+				</div>
+				<h2 class="text-2xl font-bold tracking-tight sm:text-3xl">Own a Repair Shop?</h2>
+				<p class="max-w-lg text-muted-foreground">
+					List your shop, manage repairs, invite mechanics, and grow your business — all from one
+					dashboard.
+				</p>
+				<Button size="lg" href="{resolve('/auth/register')}?intent=shop_owner">
+					Open Your Shop
+					<ArrowRightIcon class="ml-2 size-4" />
+				</Button>
+			</div>
+		{/if}
 	</main>
 
 	<footer class="border-t px-6 py-4 text-center text-sm text-muted-foreground">

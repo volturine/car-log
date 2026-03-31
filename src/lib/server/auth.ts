@@ -119,11 +119,13 @@ export const auth = betterAuth({
 		additionalFields: {
 			role: {
 				type: 'string',
+				input: false,
 				defaultValue: USER_ROLE.CUSTOMER,
 				required: false
 			},
 			shopId: {
 				type: 'string',
+				input: false,
 				required: false
 			},
 			phone: {

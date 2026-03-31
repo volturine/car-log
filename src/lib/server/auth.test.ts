@@ -183,4 +183,33 @@ describe('auth config', () => {
 
 		expect(result).toBeUndefined();
 	});
+
+	it('disables self-service role and shop assignment inputs', async () => {
+		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
+		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
+
+		await import('./auth');
+
+		const config = state.betterAuth.mock.calls[0]?.[0] as {
+			user?: {
+				additionalFields?: {
+					role?: {
+						input?: boolean;
+						defaultValue?: string;
+					};
+					shopId?: {
+						input?: boolean;
+					};
+				};
+			};
+		};
+
+		expect(config.user?.additionalFields?.role).toMatchObject({
+			input: false,
+			defaultValue: 'customer'
+		});
+		expect(config.user?.additionalFields?.shopId).toMatchObject({
+			input: false
+		});
+	});
 });

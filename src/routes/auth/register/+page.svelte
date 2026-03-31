@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { signUp } from '$lib/auth-client';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import { resolve } from '$app/paths';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -12,11 +13,14 @@
 		CardHeader,
 		CardTitle
 	} from '$lib/components/ui/card';
-	import { CarIcon } from '@lucide/svelte';
+	import { CarIcon, StoreIcon } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	const intent = $derived(page.url.searchParams.get('intent'));
+	const shop = $derived(intent === 'shop_owner');
 
 	let email = $state('');
 	let password = $state('');
@@ -56,6 +60,23 @@
 			return;
 		}
 
+		if (shop) {
+			const upgrade = await fetch('/api/users/become-shop-owner', {
+				method: 'POST'
+			}).catch(() => null);
+
+			if (!upgrade || !upgrade.ok) {
+				toast.error('Account created but shop upgrade failed — contact support');
+				loading = false;
+				goto(resolve('/app'));
+				return;
+			}
+
+			toast.success("Shop owner account created — let's set up your shop!");
+			goto(resolve('/app/shop/setup'));
+			return;
+		}
+
 		toast.success('Account created — welcome!');
 		goto(resolve('/app'));
 	}
@@ -67,11 +88,19 @@
 			<div
 				class="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10"
 			>
-				<CarIcon class="h-6 w-6 text-primary" />
+				{#if shop}
+					<StoreIcon class="h-6 w-6 text-primary" />
+				{:else}
+					<CarIcon class="h-6 w-6 text-primary" />
+				{/if}
 			</div>
-			<CardTitle class="text-2xl">Create Your Account</CardTitle>
+			<CardTitle class="text-2xl">
+				{shop ? 'Create Your Shop Account' : 'Create Your Account'}
+			</CardTitle>
 			<CardDescription>
-				Sign up to track your vehicles, repairs, and service history.
+				{shop
+					? 'Register as a shop owner to manage repairs, invite mechanics, and grow your business.'
+					: 'Sign up to track your vehicles, repairs, and service history.'}
 			</CardDescription>
 		</CardHeader>
 		<CardContent>
@@ -127,14 +156,31 @@
 					/>
 				</div>
 				<Button type="submit" class="w-full" disabled={loading}>
-					{loading ? 'Creating account...' : 'Create Customer Account'}
+					{#if loading}
+						{shop ? 'Setting up shop...' : 'Creating account...'}
+					{:else}
+						{shop ? 'Create Shop Owner Account' : 'Create Customer Account'}
+					{/if}
 				</Button>
 			</form>
 
-			<p class="mt-4 text-center text-xs text-muted-foreground">
-				This creates a <strong>customer</strong> account for managing your vehicles. Shop owners and mechanics
-				are provisioned by an administrator.
-			</p>
+			{#if shop}
+				<p class="mt-4 text-center text-xs text-muted-foreground">
+					This creates a <strong>shop owner</strong> account. After registration you'll set up your shop
+					profile.
+				</p>
+			{:else}
+				<p class="mt-4 text-center text-xs text-muted-foreground">
+					This creates a <strong>customer</strong> account for managing your vehicles. Want to
+					register a shop instead?
+					<a
+						href="{resolve('/auth/register')}?intent=shop_owner"
+						class="text-primary hover:underline"
+					>
+						Open a shop
+					</a>
+				</p>
+			{/if}
 
 			<div class="mt-3 text-center text-sm">
 				Already have an account?
