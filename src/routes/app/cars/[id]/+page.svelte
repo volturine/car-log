@@ -2,6 +2,9 @@
 	import CarDetails from '$lib/components/cars/car-details.svelte';
 	import { page } from '$app/state';
 	import { useRepairs } from '$lib/hooks/repairs.svelte.js';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
 
 	const repairs = useRepairs();
 
@@ -13,4 +16,4 @@
 	});
 </script>
 
-<CarDetails />
+<CarDetails user={data.user} />

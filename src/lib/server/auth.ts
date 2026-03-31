@@ -1,10 +1,10 @@
 import { SESSION_CONFIG, USER_ROLE } from '$lib/constants';
+import { getDevUrl } from '$lib/server/env';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { db } from './db';
 import * as schema from './db/schema';
 
-const devUrl = 'http://localhost:3000';
 const devSecret = 'default-secret-change-this-in-production-min-32-characters-long';
 const prod = process.env.NODE_ENV === 'production';
 
@@ -16,7 +16,7 @@ function getUrl(): string {
 			throw new Error('BETTER_AUTH_URL is required in production.');
 		}
 
-		return devUrl;
+		return getDevUrl();
 	}
 
 	if (!URL.canParse(url)) {
@@ -24,7 +24,7 @@ function getUrl(): string {
 			throw new Error('BETTER_AUTH_URL must be a valid absolute URL in production.');
 		}
 
-		return devUrl;
+		return getDevUrl();
 	}
 
 	if (prod && new URL(url).protocol !== 'https:') {

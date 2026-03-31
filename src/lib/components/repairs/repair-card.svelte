@@ -19,7 +19,9 @@
 		DollarSignIcon,
 		PackageIcon,
 		ClockIcon,
-		ExternalLinkIcon
+		ExternalLinkIcon,
+		CalendarClockIcon,
+		UserIcon
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
@@ -96,6 +98,39 @@
 			</div>
 		</CardHeader>
 		<CardContent class="flex flex-col gap-4">
+			{#if repair.appointmentAt || repair.assignedMechanicId}
+				<div class="flex flex-wrap gap-3 text-sm">
+					{#if repair.appointmentAt}
+						<div class="flex items-center gap-1.5 rounded-md bg-blue-50 px-2 py-1 dark:bg-blue-950">
+							<CalendarClockIcon class="size-4 text-blue-600 dark:text-blue-400" />
+							<span>
+								{new Date(repair.appointmentAt).toLocaleString('en-US', {
+									month: 'short',
+									day: 'numeric',
+									hour: 'numeric',
+									minute: '2-digit'
+								})}
+							</span>
+						</div>
+					{/if}
+					{#if repair.assignedMechanic}
+						<div
+							class="flex items-center gap-1.5 rounded-md bg-green-50 px-2 py-1 dark:bg-green-950"
+						>
+							<UserIcon class="size-4 text-green-600 dark:text-green-400" />
+							<span>{repair.assignedMechanic.name ?? repair.assignedMechanic.email}</span>
+						</div>
+					{:else if repair.assignedMechanicId}
+						<div
+							class="flex items-center gap-1.5 rounded-md bg-green-50 px-2 py-1 dark:bg-green-950"
+						>
+							<UserIcon class="size-4 text-green-600 dark:text-green-400" />
+							<span>Mechanic assigned</span>
+						</div>
+					{/if}
+				</div>
+			{/if}
+
 			{#if repair.photos && repair.photos.length > 0}
 				<div>
 					<button

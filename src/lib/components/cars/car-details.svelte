@@ -11,10 +11,43 @@
 	import { ArrowLeftIcon, PlusIcon, EditIcon, Trash2Icon } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { fly } from 'svelte/transition';
+	import { USER_ROLE } from '$lib/constants';
+	import type { ShopMember } from '$lib/types';
+
+	let {
+		user = undefined
+	}: {
+		user?: { id?: string; role?: string | null; shopId?: string | null } | null;
+	} = $props();
 
 	const repairs = useRepairs();
 	let showEditForm = $state(false);
 	let showAddRepair = $state(false);
+	let shopMembers = $state<Array<{ userId: string; userName: string | null; role: string }>>([]);
+
+	const isShopUser = $derived(
+		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
+	);
+	const userShopId = $derived(isShopUser ? (user?.shopId ?? '') : '');
+
+	// Side effect: fetch shop members when shop user opens form
+	$effect(() => {
+		if (isShopUser && userShopId) {
+			fetchShopMembers(userShopId);
+		}
+	});
+
+	async function fetchShopMembers(shopId: string) {
+		const response = await fetch(`/api/shops/${shopId}`).catch(() => null);
+		if (!response || !response.ok) return;
+		const result = await response.json();
+		const data = result.data ?? result;
+		shopMembers = (data.members ?? []).map((m: ShopMember) => ({
+			userId: m.userId,
+			userName: m.userName,
+			role: m.role
+		}));
+	}
 
 	const handleDelete = async () => {
 		if (!repairs.selectedCar) return;
@@ -108,6 +141,9 @@
 					carId={repairs.selectedCar.id}
 					onCancel={() => (showAddRepair = false)}
 					onSuccess={() => (showAddRepair = false)}
+					user={user ?? undefined}
+					shopId={userShopId}
+					{shopMembers}
 				/>
 			</div>
 		{/if}

@@ -2,7 +2,13 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq, and } from 'drizzle-orm';
-import { requireAuth, validateBody, successResponse, fetchById } from '$lib/server/api-utils';
+import {
+	requireAuth,
+	validateBody,
+	successResponse,
+	fetchById,
+	verifyShopAccess
+} from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { API_ERRORS, USER_ROLE } from '$lib/constants';
 import { z } from 'zod';
@@ -23,6 +29,28 @@ async function verifyShopOwner(shopId: string, userId: string, userRole: string)
 	}
 	return shop;
 }
+
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const user = requireAuth(locals);
+	await verifyShopAccess(params.id, user.id, user.role || USER_ROLE.CUSTOMER);
+
+	const members = await db
+		.select({
+			userId: schema.shopMembers.userId,
+			role: schema.shopMembers.role,
+			joinedAt: schema.shopMembers.joinedAt,
+			userName: schema.users.name,
+			userEmail: schema.users.email,
+			userImage: schema.users.image
+		})
+		.from(schema.shopMembers)
+		.leftJoin(schema.users, eq(schema.shopMembers.userId, schema.users.id))
+		.where(eq(schema.shopMembers.shopId, params.id));
+
+	logger.debug('Members fetched', { shopId: params.id, userId: user.id, count: members.length });
+
+	return json(successResponse(members));
+};
 
 // POST /api/shops/[id]/members - Add member to shop
 export const POST: RequestHandler = async ({ params, request, locals }) => {

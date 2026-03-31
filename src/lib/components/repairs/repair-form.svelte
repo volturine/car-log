@@ -26,7 +26,15 @@
 	import { untrack } from 'svelte';
 	import type { Repair, RepairPart } from '$lib/types.js';
 
-	let { carId, repair, onCancel, onSuccess, user }: Props = $props();
+	let {
+		carId,
+		repair,
+		onCancel,
+		onSuccess,
+		user,
+		shopId: propShopId,
+		shopMembers
+	}: Props = $props();
 
 	let isShopUser = $derived(
 		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
@@ -43,8 +51,11 @@
 				(user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
 					? REPAIR_STATUS.ESTIMATE_PENDING
 					: REPAIR_STATUS.PENDING),
-			shopId: repair?.shopId || '',
+			shopId: repair?.shopId || propShopId || '',
 			assignedMechanicId: repair?.assignedMechanicId || '',
+			appointmentAt: repair?.appointmentAt
+				? new Date(repair.appointmentAt).toISOString().slice(0, 16)
+				: '',
 			estimatedCost: repair?.estimatedCost || 0,
 			estimatedHours: repair?.estimatedHours || 0,
 			estimateNotes: repair?.estimateNotes || '',
@@ -129,6 +140,9 @@
 				// Shop fields
 				shopId: formData.shopId || undefined,
 				assignedMechanicId: formData.assignedMechanicId || undefined,
+				appointmentAt: formData.appointmentAt
+					? new Date(formData.appointmentAt).toISOString()
+					: undefined,
 				// Estimate fields
 				estimatedCost: formData.estimatedCost,
 				estimatedHours: formData.estimatedHours,
@@ -176,7 +190,9 @@
 		repair?: Repair;
 		onCancel?: () => void;
 		onSuccess?: () => void;
-		user?: { role?: string; id?: string };
+		user?: { role?: string | null; id?: string };
+		shopId?: string;
+		shopMembers?: Array<{ userId: string; userName: string | null; role: string }>;
 	};
 </script>
 
@@ -231,6 +247,46 @@
 			</div>
 
 			{#if isShopUser}
+				<!-- Scheduling & Assignment for Shops -->
+				<div class="space-y-4 rounded-lg bg-green-50 p-4 dark:bg-green-950">
+					<h3 class="text-sm font-semibold">Scheduling & Assignment</h3>
+					<div class="grid gap-4 md:grid-cols-2">
+						<div class="flex flex-col gap-2">
+							<Label for="appointmentAt">Appointment Date & Time</Label>
+							<Input id="appointmentAt" type="datetime-local" bind:value={formData.appointmentAt} />
+						</div>
+						<div class="flex flex-col gap-2">
+							<Label for="mechanicSelect">Assigned Mechanic</Label>
+							{#if shopMembers && shopMembers.length > 0}
+								<Select type="single" bind:value={formData.assignedMechanicId}>
+									<SelectTrigger id="mechanicSelect">
+										{#if formData.assignedMechanicId}
+											{shopMembers.find((m) => m.userId === formData.assignedMechanicId)
+												?.userName ?? 'Select mechanic'}
+										{:else}
+											Unassigned
+										{/if}
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="">Unassigned</SelectItem>
+										{#each shopMembers as member (member.userId)}
+											<SelectItem value={member.userId}>
+												{member.userName ?? member.userId} ({member.role})
+											</SelectItem>
+										{/each}
+									</SelectContent>
+								</Select>
+							{:else}
+								<Input
+									id="mechanicId"
+									bind:value={formData.assignedMechanicId}
+									placeholder="Mechanic user ID"
+								/>
+							{/if}
+						</div>
+					</div>
+				</div>
+
 				<!-- Estimate Section for Shops -->
 				<div class="space-y-4 rounded-lg bg-blue-50 p-4 dark:bg-blue-950">
 					<h3 class="text-sm font-semibold">Estimate Details</h3>

@@ -25,7 +25,14 @@ vite.config.ts.timestamp-*
 # Database
 sqlite.db
 sqlite.db-journal
-/drizzle
+sqlite.test.db
+sqlite.test.db-journal
+/drizzle/*
+!/drizzle/*.sql
 
 # Uploads
 /uploads
+
+# Test output
+/playwright-report
+/test-results

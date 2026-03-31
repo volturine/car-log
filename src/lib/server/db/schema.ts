@@ -165,6 +165,7 @@ export const repairs = sqliteTable('repairs', {
 	paymentStatus: text('payment_status').default('unpaid'), // unpaid, partial, paid
 	amountPaid: real('amount_paid').default(0),
 	// Dates
+	appointmentAt: integer('appointment_at', { mode: 'timestamp' }),
 	startDate: integer('start_date', { mode: 'timestamp' }),
 	completedDate: integer('completed_date', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' })

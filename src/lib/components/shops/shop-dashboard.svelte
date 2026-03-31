@@ -18,12 +18,15 @@
 		AlertCircleIcon,
 		CarIcon,
 		StoreIcon,
-		WrenchIcon
+		WrenchIcon,
+		SettingsIcon,
+		CalendarClockIcon,
+		UserIcon
 	} from '@lucide/svelte';
 	import PaymentForm from '$lib/components/repairs/payment-form.svelte';
 	import type { Repair, Shop } from '$lib/types';
 
-	let { shop }: { shop: Shop | null } = $props();
+	let { shop, isOwner = false }: { shop: Shop | null; isOwner?: boolean } = $props();
 
 	const repairsState = useRepairs();
 
@@ -86,6 +89,12 @@
 			<h1 class="text-3xl font-bold">{shop?.name ?? 'Shop Dashboard'}</h1>
 			<p class="text-muted-foreground">Manage repairs and track your shop's performance</p>
 		</div>
+		{#if isOwner}
+			<Button variant="outline" onclick={() => goto(resolve('/app/shop/settings'))}>
+				<SettingsIcon class="size-4" />
+				Settings
+			</Button>
+		{/if}
 	</div>
 
 	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -145,6 +154,17 @@
 								Estimated: {formatCurrency(repair.estimatedCost ?? 0)} — {formatDate(
 									repair.createdAt
 								)}
+								{#if repair.appointmentAt}
+									<span class="ml-1 inline-flex items-center gap-1">
+										<CalendarClockIcon class="size-3" />
+										{new Date(repair.appointmentAt).toLocaleString('en-US', {
+											month: 'short',
+											day: 'numeric',
+											hour: 'numeric',
+											minute: '2-digit'
+										})}
+									</span>
+								{/if}
 							</div>
 						</div>
 						<div class="flex items-center gap-2">
@@ -180,11 +200,32 @@
 							<div class="text-sm text-muted-foreground">
 								{carLabel(repair)}
 							</div>
-							<div class="text-sm text-muted-foreground">
-								{#if repair.assignedMechanicId}
-									Assigned mechanic • Started {formatDate(repair.startDate)}
+							<div class="flex flex-wrap gap-x-3 text-sm text-muted-foreground">
+								{#if repair.assignedMechanic}
+									<span class="flex items-center gap-1">
+										<UserIcon class="size-3" />
+										{repair.assignedMechanic.name ?? repair.assignedMechanic.email}
+									</span>
+								{:else if repair.assignedMechanicId}
+									<span class="flex items-center gap-1">
+										<UserIcon class="size-3" />
+										Mechanic assigned
+									</span>
 								{:else}
-									No mechanic assigned
+									<span>No mechanic assigned</span>
+								{/if}
+								{#if repair.appointmentAt}
+									<span class="flex items-center gap-1">
+										<CalendarClockIcon class="size-3" />
+										{new Date(repair.appointmentAt).toLocaleString('en-US', {
+											month: 'short',
+											day: 'numeric',
+											hour: 'numeric',
+											minute: '2-digit'
+										})}
+									</span>
+								{:else if repair.startDate}
+									<span>Started {formatDate(repair.startDate)}</span>
 								{/if}
 							</div>
 						</div>

@@ -73,6 +73,16 @@ bun run dev
 
 Then open `http://localhost:3000`.
 
+## Test Environment
+
+- `.env.test` uses an isolated port (`4173`) and isolated SQLite database (`./sqlite.test.db`)
+- E2E uses that environment so it does not boot against the default dev DB or port
+
+```bash
+bun run e2e:install
+bun run e2e
+```
+
 ## App Structure
 
 ```text
@@ -96,6 +106,7 @@ bun run start
 bun run db:push
 bun run lint
 bun run check
+bun run e2e
 ```
 
 ## Production

@@ -19,6 +19,7 @@ const logger = apiLogger.child('shops');
 // GET /api/shops/[id] - Get shop details with members
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const user = requireAuth(locals);
+	await verifyShopAccess(params.id, user.id, user.role || USER_ROLE.CUSTOMER);
 
 	logger.debug('Fetching shop details', { shopId: params.id, userId: user.id });
 

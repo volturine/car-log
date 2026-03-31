@@ -7,12 +7,8 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ locals }) => {
 	const user = locals.user;
 
-	if (!user) {
-		return { shop: null, isOwner: false };
-	}
-
-	if (user.role !== USER_ROLE.SHOP_OWNER && user.role !== USER_ROLE.MECHANIC) {
-		throw redirect(302, resolve('/app/cars'));
+	if (!user || user.role !== USER_ROLE.SHOP_OWNER) {
+		throw redirect(302, resolve('/app'));
 	}
 
 	const shop = await findUserShop(user);

@@ -1,6 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { getPort } from './src/lib/server/env';
 
 function getHmrProtocol(value: string | undefined): 'ws' | 'wss' {
 	if (value === 'wss') return 'wss';
@@ -8,7 +9,8 @@ function getHmrProtocol(value: string | undefined): 'ws' | 'wss' {
 }
 
 const hmrHost = process.env.HMR_HOST;
-const hmrClientPort = Number(process.env.HMR_CLIENT_PORT || '3000');
+const port = getPort();
+const hmrClientPort = getPort(process.env.HMR_CLIENT_PORT ?? String(port));
 const hmr =
 	hmrHost === undefined
 		? undefined
@@ -16,7 +18,7 @@ const hmr =
 				host: hmrHost,
 				protocol: getHmrProtocol(process.env.HMR_PROTOCOL),
 				clientPort: hmrClientPort,
-				port: 3000
+				port
 			};
 
 export default defineConfig({
@@ -61,7 +63,7 @@ export default defineConfig({
 	],
 	server: {
 		host: '0.0.0.0',
-		port: 3000,
+		port,
 		allowedHosts: ['localhost', 'code-server.bee-justice.ts.net'],
 		...(hmr ? { hmr } : {})
 	}

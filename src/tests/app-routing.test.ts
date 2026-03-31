@@ -55,7 +55,8 @@ describe('/app/shop server guard', () => {
 				}
 			} as never)
 		).resolves.toEqual({
-			shop: { id: 'shop-1', name: 'Shop' }
+			shop: { id: 'shop-1', name: 'Shop' },
+			isOwner: false
 		});
 	});
 

@@ -1,4 +1,5 @@
 import { REPAIR_STATUS_VALUES, VALIDATION_LIMITS } from '$lib/constants';
+import { getDevUrl } from '$lib/server/env';
 import { z } from 'zod';
 
 // Car validation schema
@@ -70,6 +71,7 @@ export const repairSchema = z.object({
 	laborHours: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_HOURS).default(0),
 	totalCost: z.number().min(0).max(VALIDATION_LIMITS.REPAIR.MAX_COST).default(0),
 	// Dates
+	appointmentAt: z.string().datetime().optional().nullable(),
 	startDate: z.string().datetime().optional().nullable(),
 	completedDate: z.string().datetime().optional().nullable(),
 	// Parts
@@ -96,8 +98,6 @@ export const repairSchema = z.object({
 		.optional()
 		.default([])
 });
-
-const devUrl = 'http://localhost:3000';
 
 function warn(msg: string): void {
 	console.warn(`Warning: ${msg}`);
@@ -131,7 +131,7 @@ export function validateEnv(): void {
 			throw new Error('BETTER_AUTH_URL is required in production.');
 		}
 
-		warn(`BETTER_AUTH_URL is missing. Using development fallback URL ${devUrl}.`);
+		warn(`BETTER_AUTH_URL is missing. Using development fallback URL ${getDevUrl()}.`);
 	}
 
 	if (url && !URL.canParse(url)) {
@@ -139,7 +139,9 @@ export function validateEnv(): void {
 			throw new Error('BETTER_AUTH_URL must be a valid absolute URL in production.');
 		}
 
-		warn(`BETTER_AUTH_URL must be a valid absolute URL. Using development fallback URL ${devUrl}.`);
+		warn(
+			`BETTER_AUTH_URL must be a valid absolute URL. Using development fallback URL ${getDevUrl()}.`
+		);
 	}
 
 	if (url && URL.canParse(url) && prod && new URL(url).protocol !== 'https:') {

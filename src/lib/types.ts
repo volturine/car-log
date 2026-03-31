@@ -40,6 +40,7 @@ export interface Repair {
 	parts: RepairPart[];
 	shopId?: string;
 	assignedMechanicId?: string;
+	appointmentAt?: string | Date | null;
 	estimatedCost?: number;
 	estimatedHours?: number;
 	estimateNotes?: string;
@@ -53,6 +54,11 @@ export interface Repair {
 	startDate: Date;
 	completedDate?: Date;
 	createdAt: Date;
+	assignedMechanic?: {
+		id: string;
+		name: string | null;
+		email: string;
+	} | null;
 }
 
 export interface BrandStats {
@@ -73,9 +79,20 @@ export interface ModelStats {
 export interface Shop {
 	id: string;
 	name: string;
+	ownerId: string;
 	email?: string | null;
 	phone?: string | null;
 	address?: string | null;
 	city?: string | null;
 	state?: string | null;
+	zipCode?: string | null;
+	specialties?: string | null;
+}
+
+export interface ShopMember {
+	userId: string;
+	role: string;
+	joinedAt: Date | string | null;
+	userName: string | null;
+	userEmail: string;
 }

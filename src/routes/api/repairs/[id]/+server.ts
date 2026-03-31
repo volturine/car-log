@@ -26,6 +26,38 @@ type RepairUpdate = Partial<typeof schema.repairs.$inferInsert> & {
 	parts?: RepairInput['parts'];
 };
 
+function hasKey<T extends object>(obj: T, key: PropertyKey): boolean {
+	return Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+type Mechanic = {
+	id: string;
+	name: string | null;
+	email: string;
+};
+
+async function getMechanic(id: string | null): Promise<Mechanic | null> {
+	if (!id) {
+		return null;
+	}
+
+	const [user] = await db
+		.select({
+			id: schema.users.id,
+			name: schema.users.name,
+			email: schema.users.email
+		})
+		.from(schema.users)
+		.where(eq(schema.users.id, id))
+		.limit(1);
+
+	if (!user) {
+		return null;
+	}
+
+	return user;
+}
+
 // GET /api/repairs/[id] - Get a specific repair
 export const GET: RequestHandler = async ({ params, locals }) => {
 	const user = requireAuth(locals);
@@ -45,6 +77,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 	// Get shop and car info
 	const shopInfo = repair.shopId ? await fetchById(schema.shops, repair.shopId) : null;
 	const car = await fetchById(schema.cars, repair.carId);
+	const assignedMechanic = await getMechanic(repair.assignedMechanicId);
 
 	return json(
 		successResponse({
@@ -52,7 +85,8 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			parts,
 			photos: formatPhotosForResponse(photos),
 			shop: shopInfo,
-			car: car || null
+			car: car || null,
+			assignedMechanic
 		})
 	);
 };
@@ -80,8 +114,6 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	const updatedRepair = {
 		...repair,
 		...repairUpdates,
-		startDate: repairUpdates.startDate ?? repair.startDate,
-		completedDate: repairUpdates.completedDate ?? repair.completedDate,
 		updatedAt: new Date()
 	};
 
@@ -168,16 +200,73 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 };
 
 function getShopRepairUpdate(data: RepairInput): RepairUpdate {
-	return {
-		...data,
-		shopId: data.shopId ?? undefined,
-		assignedMechanicId: data.assignedMechanicId ?? undefined,
-		estimateNotes: data.estimateNotes ?? undefined,
-		description: data.description ?? undefined,
-		completedDate: data.completedDate ? new Date(data.completedDate) : undefined,
-		startDate: data.startDate ? new Date(data.startDate) : undefined,
-		parts: data.parts
-	};
+	const next: RepairUpdate = {};
+
+	if (hasKey(data, 'carId') && typeof data.carId === 'string') {
+		next.carId = data.carId;
+	}
+
+	if (hasKey(data, 'shopId')) {
+		next.shopId = data.shopId ?? null;
+	}
+
+	if (hasKey(data, 'assignedMechanicId')) {
+		next.assignedMechanicId = data.assignedMechanicId ?? null;
+	}
+
+	if (hasKey(data, 'title') && typeof data.title === 'string') {
+		next.title = data.title;
+	}
+
+	if (hasKey(data, 'description')) {
+		next.description = data.description ?? null;
+	}
+
+	if (hasKey(data, 'status') && typeof data.status === 'string') {
+		next.status = data.status;
+	}
+
+	if (hasKey(data, 'estimatedCost') && typeof data.estimatedCost === 'number') {
+		next.estimatedCost = data.estimatedCost;
+	}
+
+	if (hasKey(data, 'estimatedHours') && typeof data.estimatedHours === 'number') {
+		next.estimatedHours = data.estimatedHours;
+	}
+
+	if (hasKey(data, 'estimateNotes')) {
+		next.estimateNotes = data.estimateNotes ?? null;
+	}
+
+	if (hasKey(data, 'laborCost') && typeof data.laborCost === 'number') {
+		next.laborCost = data.laborCost;
+	}
+
+	if (hasKey(data, 'laborHours') && typeof data.laborHours === 'number') {
+		next.laborHours = data.laborHours;
+	}
+
+	if (hasKey(data, 'totalCost') && typeof data.totalCost === 'number') {
+		next.totalCost = data.totalCost;
+	}
+
+	if (hasKey(data, 'appointmentAt')) {
+		next.appointmentAt = data.appointmentAt ? new Date(data.appointmentAt) : null;
+	}
+
+	if (hasKey(data, 'startDate')) {
+		next.startDate = data.startDate ? new Date(data.startDate) : null;
+	}
+
+	if (hasKey(data, 'completedDate')) {
+		next.completedDate = data.completedDate ? new Date(data.completedDate) : null;
+	}
+
+	if (hasKey(data, 'parts')) {
+		next.parts = data.parts;
+	}
+
+	return next;
 }
 
 function getCustomerRepairUpdate(data: RepairInput): RepairUpdate {

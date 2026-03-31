@@ -21,6 +21,34 @@ import { REPAIR_STATUS } from '$lib/constants';
 
 const logger = apiLogger.child('repairs');
 
+type Mechanic = {
+	id: string;
+	name: string | null;
+	email: string;
+};
+
+async function getMechanic(id: string | null): Promise<Mechanic | null> {
+	if (!id) {
+		return null;
+	}
+
+	const [user] = await db
+		.select({
+			id: schema.users.id,
+			name: schema.users.name,
+			email: schema.users.email
+		})
+		.from(schema.users)
+		.where(eq(schema.users.id, id))
+		.limit(1);
+
+	if (!user) {
+		return null;
+	}
+
+	return user;
+}
+
 // GET /api/repairs - List all repairs for the authenticated user
 export const GET: RequestHandler = async ({ locals, url }) => {
 	const user = requireAuth(locals);
@@ -117,12 +145,15 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 				.where(eq(schema.cars.id, repair.carId))
 				.limit(1);
 
+			const assignedMechanic = await getMechanic(repair.assignedMechanicId);
+
 			return {
 				...repair,
 				parts,
 				photos: formatPhotosForResponse(photos),
 				shop: shopInfo,
-				car: car || null
+				car: car || null,
+				assignedMechanic
 			};
 		})
 	);
@@ -186,6 +217,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const laborCost = isShopUser ? validatedData.laborCost : 0;
 		const laborHours = isShopUser ? validatedData.laborHours : 0;
 		const totalCost = isShopUser ? validatedData.totalCost : 0;
+		const appointmentAt =
+			isShopUser && validatedData.appointmentAt ? new Date(validatedData.appointmentAt) : null;
 		const startDate =
 			isShopUser && validatedData.startDate ? new Date(validatedData.startDate) : null;
 		const completedDate =
@@ -214,6 +247,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			paymentStatus: 'unpaid',
 			amountPaid: 0,
 			// Dates
+			appointmentAt,
 			startDate,
 			completedDate,
 			createdAt: new Date(),

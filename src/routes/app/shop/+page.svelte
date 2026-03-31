@@ -5,4 +5,4 @@
 	let { data }: { data: PageData } = $props();
 </script>
 
-<ShopDashboard shop={data.shop} />
+<ShopDashboard shop={data.shop} isOwner={data.isOwner} />
