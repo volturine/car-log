@@ -37,6 +37,39 @@ export const REPAIR_STATUS_VALUES = [
 	REPAIR_STATUS.PENDING
 ] as const;
 
+// Valid status transitions per role
+// Shop users advance the repair through the estimate→work→complete pipeline.
+// Customers track their own (non-shop) repairs through pending→in_progress→completed.
+// "paid" is set automatically by the payment endpoint, never selected manually.
+// "estimate_approved"/"estimate_rejected" are set via the approve/reject endpoints for customers.
+export const SHOP_STATUS_TRANSITIONS: Readonly<Record<RepairStatus, readonly RepairStatus[]>> = {
+	[REPAIR_STATUS.ESTIMATE_PENDING]: [REPAIR_STATUS.IN_PROGRESS],
+	[REPAIR_STATUS.ESTIMATE_APPROVED]: [REPAIR_STATUS.IN_PROGRESS],
+	[REPAIR_STATUS.ESTIMATE_REJECTED]: [REPAIR_STATUS.ESTIMATE_PENDING],
+	[REPAIR_STATUS.IN_PROGRESS]: [REPAIR_STATUS.COMPLETED],
+	[REPAIR_STATUS.COMPLETED]: [],
+	[REPAIR_STATUS.PAID]: [],
+	[REPAIR_STATUS.PENDING]: [REPAIR_STATUS.ESTIMATE_PENDING, REPAIR_STATUS.IN_PROGRESS]
+};
+
+export const CUSTOMER_STATUS_TRANSITIONS: Readonly<Record<RepairStatus, readonly RepairStatus[]>> =
+	{
+		[REPAIR_STATUS.PENDING]: [REPAIR_STATUS.IN_PROGRESS],
+		[REPAIR_STATUS.IN_PROGRESS]: [REPAIR_STATUS.COMPLETED],
+		[REPAIR_STATUS.COMPLETED]: [],
+		[REPAIR_STATUS.PAID]: [],
+		[REPAIR_STATUS.ESTIMATE_PENDING]: [],
+		[REPAIR_STATUS.ESTIMATE_APPROVED]: [],
+		[REPAIR_STATUS.ESTIMATE_REJECTED]: []
+	};
+
+export const SHOP_CREATE_STATUSES: readonly RepairStatus[] = [
+	REPAIR_STATUS.ESTIMATE_PENDING,
+	REPAIR_STATUS.IN_PROGRESS
+];
+
+export const CUSTOMER_CREATE_STATUSES: readonly RepairStatus[] = [REPAIR_STATUS.PENDING];
+
 // UI Constants for Repair Status
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
 

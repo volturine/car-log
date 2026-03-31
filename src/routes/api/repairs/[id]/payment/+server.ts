@@ -13,16 +13,14 @@ import {
 import {
 	PAYMENT_METHOD,
 	PAYMENT_METHOD_VALUES,
-	PAYMENT_STATUS,
-	REPAIR_STATUS,
 	USER_ROLE,
-	VALIDATION_LIMITS,
-	type PaymentStatus
+	VALIDATION_LIMITS
 } from '$lib/constants';
 import { apiLogger } from '$lib/server/logger';
 import { notifyPaymentReceived } from '$lib/server/notifications';
 import { listPayments } from '$lib/server/payments';
 import { memberWhere } from '$lib/server/predicates';
+import { canRecordRepairPayment, getRepairPaymentState } from '$lib/server/repair-workflow';
 import { generateId } from '$lib/utils';
 import { z } from 'zod';
 
@@ -92,28 +90,32 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const payMethod = method ?? PAYMENT_METHOD.CASH;
 	const payNotes = notes || null;
 	const isOwner = repair.userId === user.id;
+	const amountPaid = repair.amountPaid ?? 0;
+	const totalCost = repair.totalCost ?? 0;
+	const balance = totalCost - amountPaid;
 
 	logger.info('Recording payment', { repairId: params.id, userId: user.id, amount });
 
+	if (!canRecordRepairPayment(repair.status)) {
+		throw error(400, 'Payments can only be recorded for completed repairs');
+	}
+
+	if (totalCost <= 0) {
+		throw error(400, 'Payments cannot be recorded until the repair total is set');
+	}
+
+	if (balance <= 0) {
+		throw error(400, 'Repair is already fully paid');
+	}
+
+	if (amount > balance) {
+		throw error(400, 'Payment amount exceeds remaining balance');
+	}
+
 	const result = transaction((tx) => {
-		const amountPaid = repair.amountPaid ?? 0;
-		const totalCost = repair.totalCost ?? 0;
 		const newAmountPaid = amountPaid + amount;
-		const remainingBalance = totalCost - newAmountPaid;
 		const now = new Date();
-
-		let paymentStatus: PaymentStatus = PAYMENT_STATUS.PARTIAL;
-		let repairStatus = repair.status;
-
-		if (remainingBalance <= 0) {
-			paymentStatus = PAYMENT_STATUS.PAID;
-
-			if (repair.status === REPAIR_STATUS.COMPLETED) {
-				repairStatus = REPAIR_STATUS.PAID;
-			}
-		} else if (newAmountPaid <= 0) {
-			paymentStatus = PAYMENT_STATUS.UNPAID;
-		}
+		const next = getRepairPaymentState(totalCost, newAmountPaid);
 
 		const payment = {
 			id: generateId(),
@@ -128,8 +130,8 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 		const updatedRepair = {
 			amountPaid: newAmountPaid,
-			paymentStatus,
-			status: repairStatus,
+			paymentStatus: next.paymentStatus,
+			status: next.status,
 			updatedAt: now
 		} satisfies Partial<typeof schema.repairs.$inferInsert>;
 
@@ -140,7 +142,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			repairId: params.id,
 			amount,
 			newTotal: newAmountPaid,
-			paymentStatus
+			paymentStatus: next.paymentStatus
 		});
 
 		return {

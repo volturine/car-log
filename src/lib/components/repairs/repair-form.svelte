@@ -22,7 +22,16 @@
 		ExternalLinkIcon,
 		CameraIcon
 	} from '@lucide/svelte';
-	import { REPAIR_STATUS, USER_ROLE } from '$lib/constants';
+	import {
+		REPAIR_STATUS,
+		USER_ROLE,
+		STATUS_LABELS,
+		SHOP_STATUS_TRANSITIONS,
+		CUSTOMER_STATUS_TRANSITIONS,
+		SHOP_CREATE_STATUSES,
+		CUSTOMER_CREATE_STATUSES
+	} from '$lib/constants';
+	import type { RepairStatus } from '$lib/constants';
 	import { untrack } from 'svelte';
 	import type { Repair, RepairPart } from '$lib/types.js';
 
@@ -39,6 +48,22 @@
 	let isShopUser = $derived(
 		user?.role === USER_ROLE.SHOP_OWNER || user?.role === USER_ROLE.MECHANIC
 	);
+
+	const allowedStatuses = $derived.by((): readonly RepairStatus[] => {
+		if (!repair) {
+			return isShopUser ? SHOP_CREATE_STATUSES : CUSTOMER_CREATE_STATUSES;
+		}
+
+		const current = repair.status;
+		const transitions = isShopUser
+			? SHOP_STATUS_TRANSITIONS[current]
+			: CUSTOMER_STATUS_TRANSITIONS[current];
+
+		if (transitions.length === 0) return [current];
+		return [current, ...transitions];
+	});
+
+	const statusLocked = $derived(allowedStatuses.length <= 1);
 
 	const repairs = useRepairs();
 
@@ -227,20 +252,14 @@
 			<div class="grid gap-4 md:grid-cols-2">
 				<div class="flex flex-col gap-2">
 					<Label for="status">Status</Label>
-					<Select type="single" bind:value={formData.status}>
-						<SelectTrigger id="status">{formData.status}</SelectTrigger>
+					<Select type="single" bind:value={formData.status} disabled={statusLocked}>
+						<SelectTrigger id="status"
+							>{STATUS_LABELS[formData.status] ?? formData.status}</SelectTrigger
+						>
 						<SelectContent>
-							{#if isShopUser}
-								<SelectItem value={REPAIR_STATUS.ESTIMATE_PENDING}>Estimate Pending</SelectItem>
-								<SelectItem value={REPAIR_STATUS.ESTIMATE_APPROVED}>Estimate Approved</SelectItem>
-								<SelectItem value={REPAIR_STATUS.IN_PROGRESS}>In Progress</SelectItem>
-								<SelectItem value={REPAIR_STATUS.COMPLETED}>Completed</SelectItem>
-								<SelectItem value={REPAIR_STATUS.PAID}>Paid</SelectItem>
-							{:else}
-								<SelectItem value={REPAIR_STATUS.PENDING}>Pending</SelectItem>
-								<SelectItem value={REPAIR_STATUS.IN_PROGRESS}>In Progress</SelectItem>
-								<SelectItem value={REPAIR_STATUS.COMPLETED}>Completed</SelectItem>
-							{/if}
+							{#each allowedStatuses as status (status)}
+								<SelectItem value={status}>{STATUS_LABELS[status]}</SelectItem>
+							{/each}
 						</SelectContent>
 					</Select>
 				</div>

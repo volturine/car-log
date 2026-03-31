@@ -213,6 +213,55 @@ describe('/api/repairs/[id]/payment', () => {
 		});
 	});
 
+	it('rejects payments before a repair is completed', async () => {
+		state.repair.status = 'in_progress';
+		state.requireAuth.mockReturnValue({ id: 'admin-1', role: 'admin', name: 'Admin' });
+
+		const { POST } = await import('../routes/api/repairs/[id]/payment/+server');
+
+		await expect(
+			POST({
+				params: { id: 'repair-1' },
+				request: new Request('http://test.local/api/repairs/repair-1/payment', {
+					method: 'POST'
+				}),
+				locals: { user: { id: 'admin-1', role: 'admin' } }
+			} as never)
+		).rejects.toMatchObject({
+			status: 400,
+			body: { message: 'Payments can only be recorded for completed repairs' }
+		});
+
+		expect(state.transaction).not.toHaveBeenCalled();
+	});
+
+	it('marks completed repairs as paid when the last payment clears the balance', async () => {
+		state.repair.status = 'completed';
+		state.repair.amountPaid = 25;
+		state.repair.totalCost = 100;
+		state.requireAuth.mockReturnValue({ id: 'admin-1', role: 'admin', name: 'Admin' });
+		state.validateBody.mockResolvedValue({ amount: 75 });
+
+		const { POST } = await import('../routes/api/repairs/[id]/payment/+server');
+		const response = await POST({
+			params: { id: 'repair-1' },
+			request: new Request('http://test.local/api/repairs/repair-1/payment', {
+				method: 'POST'
+			}),
+			locals: { user: { id: 'admin-1', role: 'admin' } }
+		} as never);
+		const body = await response.json();
+
+		expect(body).toMatchObject({
+			success: true,
+			data: {
+				amountPaid: 100,
+				paymentStatus: 'paid',
+				status: 'paid'
+			}
+		});
+	});
+
 	it('returns payment history for authorized users', async () => {
 		state.requireAuth.mockReturnValue({ id: 'owner-1', role: 'customer', name: 'Owner' });
 

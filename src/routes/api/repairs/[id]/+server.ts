@@ -19,6 +19,10 @@ import { getFilePath } from '$lib/server/storage';
 import { unlink } from 'fs/promises';
 import { USER_ROLE } from '$lib/constants';
 import { listPayments } from '$lib/server/payments';
+import {
+	canTransitionRepairStatus,
+	listAllowedRepairTransitions
+} from '$lib/server/repair-workflow';
 import type { z } from 'zod';
 
 const logger = apiLogger.child('repairs');
@@ -107,6 +111,10 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	if (!isShop && repair.shopId) {
 		throw error(403, 'Only the shop can update this repair');
+	}
+
+	if (isShop) {
+		assertShopRepairTransition(repair.status, validatedData.status);
 	}
 
 	const updates = isShop
@@ -284,4 +292,19 @@ function getCustomerRepairUpdate(data: RepairInput): RepairUpdate {
 	}
 
 	return next;
+}
+
+function assertShopRepairTransition(current: string, next: RepairInput['status']): void {
+	if (typeof next !== 'string') {
+		return;
+	}
+
+	if (canTransitionRepairStatus(current, next)) {
+		return;
+	}
+
+	const allowed = listAllowedRepairTransitions(current);
+	const tail = allowed.length > 0 ? ` Allowed next statuses: ${allowed.join(', ')}.` : '';
+
+	throw error(400, `Invalid repair status transition from ${current} to ${next}.${tail}`);
 }
