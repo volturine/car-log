@@ -96,6 +96,43 @@ describe('/app/shop server guard', () => {
 		});
 	});
 
+	it('redirects /app to the shop dashboard for shop users with a shop', async () => {
+		state.findUserShop.mockResolvedValue({ id: 'shop-1' });
+
+		const { load } = await import('../routes/app/+page.server');
+
+		await expect(
+			load({
+				locals: {
+					user: {
+						id: 'user-1',
+						role: 'mechanic'
+					}
+				}
+			} as never)
+		).rejects.toMatchObject({
+			status: 302,
+			location: '/app/shop'
+		});
+	});
+
+	it('allows customers to stay on /app', async () => {
+		const { load } = await import('../routes/app/+page.server');
+
+		await expect(
+			load({
+				locals: {
+					user: {
+						id: 'user-1',
+						role: 'customer'
+					}
+				}
+			} as never)
+		).resolves.toEqual({});
+
+		expect(state.findUserShop).not.toHaveBeenCalled();
+	});
+
 	it('redirects shop users with a shop away from setup', async () => {
 		state.findUserShop.mockResolvedValue({ id: 'shop-1' });
 

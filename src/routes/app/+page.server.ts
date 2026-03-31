@@ -21,5 +21,5 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(302, resolve('/app/shop'));
 	}
 
-	throw redirect(302, resolve('/app/cars'));
+	return {};
 };

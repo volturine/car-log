@@ -15,6 +15,7 @@
 	import { CarIcon, PlusIcon, SearchIcon } from '@lucide/svelte';
 	import { fly } from 'svelte/transition';
 	import CarForm from './car-form.svelte';
+	import { REPAIR_STATUS } from '$lib/constants';
 
 	const repairs = useRepairs();
 	let showAddForm = $state(false);
@@ -35,6 +36,16 @@
 	const getCarRepairCount = (carId: string) => {
 		return repairs.repairs.filter((r) => r.carId === carId).length;
 	};
+
+	function getCarActionBadges(carId: string) {
+		const carRepairs = repairs.repairs.filter((r) => r.carId === carId);
+		const pending = carRepairs.filter((r) => r.status === REPAIR_STATUS.ESTIMATE_PENDING).length;
+		const active = carRepairs.filter(
+			(r) => r.status === REPAIR_STATUS.IN_PROGRESS || r.status === REPAIR_STATUS.PENDING
+		).length;
+		const unpaid = carRepairs.filter((r) => r.status === REPAIR_STATUS.COMPLETED).length;
+		return { pending, active, unpaid };
+	}
 </script>
 
 <div class="space-y-6 p-6">
@@ -97,6 +108,22 @@
 							</div>
 						</CardHeader>
 						<CardContent class="flex flex-col gap-2">
+							{@const badges = getCarActionBadges(car.id)}
+							{#if badges.pending > 0 || badges.active > 0 || badges.unpaid > 0}
+								<div class="flex flex-wrap gap-1.5">
+									{#if badges.pending > 0}
+										<Badge class="bg-blue-500 text-xs">{badges.pending} awaiting approval</Badge>
+									{/if}
+									{#if badges.active > 0}
+										<Badge variant="default" class="text-xs">{badges.active} in progress</Badge>
+									{/if}
+									{#if badges.unpaid > 0}
+										<Badge class="bg-yellow-500 text-xs text-foreground"
+											>{badges.unpaid} unpaid</Badge
+										>
+									{/if}
+								</div>
+							{/if}
 							<div class="flex items-center gap-2 text-sm">
 								<span class="font-medium">Plate:</span>
 								<span class="text-muted-foreground">{car.licensePlate}</span>

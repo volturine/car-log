@@ -24,7 +24,8 @@
 		WrenchIcon,
 		CalendarIcon,
 		LogOutIcon,
-		StoreIcon
+		StoreIcon,
+		LayoutDashboardIcon
 	} from '@lucide/svelte';
 	import { USER_ROLE } from '$lib/constants';
 
@@ -64,6 +65,17 @@
 									<a href={resolve('/app/shop')} {...props}>
 										<StoreIcon />
 										<span>Shop Dashboard</span>
+									</a>
+								{/snippet}
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+					{:else}
+						<SidebarMenuItem>
+							<SidebarMenuButton isActive={pathname === resolve('/app')}>
+								{#snippet child({ props })}
+									<a href={resolve('/app')} {...props}>
+										<LayoutDashboardIcon />
+										<span>Dashboard</span>
 									</a>
 								{/snippet}
 							</SidebarMenuButton>
