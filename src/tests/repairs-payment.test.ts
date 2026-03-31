@@ -7,6 +7,7 @@ type User = {
 };
 
 type Tx = {
+	insert: ReturnType<typeof vi.fn>;
 	update: ReturnType<typeof vi.fn>;
 };
 
@@ -24,10 +25,12 @@ const state = vi.hoisted(() => {
 	const repairFrom = vi.fn(() => ({ where: repairWhere }));
 	const dbSelect = vi.fn(() => ({ from: repairFrom }));
 	const txRun = vi.fn();
+	const txValues = vi.fn(() => ({ run: txRun }));
+	const txInsert = vi.fn(() => ({ values: txValues }));
 	const txWhere = vi.fn(() => ({ run: txRun }));
 	const txSet = vi.fn(() => ({ where: txWhere }));
 	const txUpdate = vi.fn(() => ({ set: txSet }));
-	const tx: Tx = { update: txUpdate };
+	const tx: Tx = { insert: txInsert, update: txUpdate };
 	const requireAuth = vi.fn<() => User>(() => ({ id: 'shop-1', role: 'shop_owner' }));
 	const validateBody = vi.fn(async () => ({ amount: 25 }));
 	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
@@ -35,6 +38,19 @@ const state = vi.hoisted(() => {
 	const isShopMember = vi.fn(
 		(user: { role?: string }) => user.role === 'shop_owner' || user.role === 'mechanic'
 	);
+	const verifyRepairAccess = vi.fn(async () => repair);
+	const listPayments = vi.fn(async () => [
+		{
+			id: 'payment-1',
+			repairId: 'repair-1',
+			amount: 25,
+			method: 'cash',
+			notes: null,
+			recordedBy: 'owner-1',
+			paidAt: new Date('2026-03-31T10:00:00.000Z'),
+			createdAt: new Date('2026-03-31T10:00:00.000Z')
+		}
+	]);
 	const notify = vi.fn(async () => undefined);
 	const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -45,6 +61,8 @@ const state = vi.hoisted(() => {
 		repairFrom,
 		dbSelect,
 		txRun,
+		txValues,
+		txInsert,
 		txWhere,
 		txSet,
 		txUpdate,
@@ -53,6 +71,8 @@ const state = vi.hoisted(() => {
 		successResponse,
 		transaction,
 		isShopMember,
+		verifyRepairAccess,
+		listPayments,
 		notify,
 		logger
 	};
@@ -61,8 +81,11 @@ const state = vi.hoisted(() => {
 vi.mock('zod', () => ({
 	z: {
 		object: vi.fn(() => ({})),
-		number: vi.fn(() => ({ min: vi.fn(() => ({})) })),
-		string: vi.fn(() => ({ optional: vi.fn(() => ({})) }))
+		number: vi.fn(() => ({ positive: vi.fn(() => ({ max: vi.fn(() => ({})) })) })),
+		enum: vi.fn(() => ({ optional: vi.fn(() => ({})) })),
+		string: vi.fn(() => ({
+			trim: vi.fn(() => ({ max: vi.fn(() => ({ optional: vi.fn(() => ({})) })) }))
+		}))
 	}
 }));
 
@@ -83,7 +106,8 @@ vi.mock('$lib/server/api-utils', () => ({
 	validateBody: state.validateBody,
 	successResponse: state.successResponse,
 	transaction: state.transaction,
-	isShopMember: state.isShopMember
+	isShopMember: state.isShopMember,
+	verifyRepairAccess: state.verifyRepairAccess
 }));
 
 vi.mock('$lib/server/logger', () => ({
@@ -96,7 +120,15 @@ vi.mock('$lib/server/notifications', () => ({
 	notifyPaymentReceived: state.notify
 }));
 
-describe('POST /api/repairs/[id]/payment', () => {
+vi.mock('$lib/server/payments', () => ({
+	listPayments: state.listPayments
+}));
+
+vi.mock('$lib/utils', () => ({
+	generateId: vi.fn(() => 'payment-1')
+}));
+
+describe('/api/repairs/[id]/payment', () => {
 	beforeEach(() => {
 		vi.resetModules();
 		state.repairLimit.mockClear();
@@ -104,6 +136,8 @@ describe('POST /api/repairs/[id]/payment', () => {
 		state.repairFrom.mockClear();
 		state.dbSelect.mockClear();
 		state.txRun.mockClear();
+		state.txValues.mockClear();
+		state.txInsert.mockClear();
 		state.txWhere.mockClear();
 		state.txSet.mockClear();
 		state.txUpdate.mockClear();
@@ -114,6 +148,8 @@ describe('POST /api/repairs/[id]/payment', () => {
 		state.successResponse.mockClear();
 		state.transaction.mockClear();
 		state.isShopMember.mockClear();
+		state.verifyRepairAccess.mockClear();
+		state.listPayments.mockClear();
 		state.notify.mockClear();
 		state.logger.info.mockClear();
 	});
@@ -138,7 +174,7 @@ describe('POST /api/repairs/[id]/payment', () => {
 		expect(state.notify).not.toHaveBeenCalled();
 	});
 
-	it('allows admins to record payments on shopless repairs', async () => {
+	it('allows admins to record payments on shopless repairs and persists a ledger row', async () => {
 		state.requireAuth.mockReturnValue({ id: 'admin-1', role: 'admin', name: 'Admin' });
 
 		const { POST } = await import('../routes/api/repairs/[id]/payment/+server');
@@ -152,13 +188,56 @@ describe('POST /api/repairs/[id]/payment', () => {
 		const body = await response.json();
 
 		expect(state.transaction).toHaveBeenCalledOnce();
+		expect(state.txInsert).toHaveBeenCalledOnce();
+		expect(state.txValues).toHaveBeenCalledWith(
+			expect.objectContaining({
+				id: 'payment-1',
+				repairId: 'repair-1',
+				amount: 25,
+				method: 'cash',
+				recordedBy: 'admin-1'
+			})
+		);
 		expect(state.txUpdate).toHaveBeenCalledOnce();
 		expect(body).toMatchObject({
 			success: true,
 			data: {
 				amountPaid: 25,
-				paymentStatus: 'partial'
+				paymentStatus: 'partial',
+				payment: {
+					id: 'payment-1',
+					amount: 25,
+					method: 'cash'
+				}
 			}
+		});
+	});
+
+	it('returns payment history for authorized users', async () => {
+		state.requireAuth.mockReturnValue({ id: 'owner-1', role: 'customer', name: 'Owner' });
+
+		const { GET } = await import('../routes/api/repairs/[id]/payment/+server');
+		const response = await GET({
+			params: { id: 'repair-1' },
+			locals: { user: { id: 'owner-1', role: 'customer' } }
+		} as never);
+		const body = await response.json();
+
+		expect(state.verifyRepairAccess).toHaveBeenCalledWith(
+			'repair-1',
+			expect.objectContaining({ id: 'owner-1' })
+		);
+		expect(state.listPayments).toHaveBeenCalledWith('repair-1');
+		expect(body).toMatchObject({
+			success: true,
+			data: [
+				{
+					id: 'payment-1',
+					repairId: 'repair-1',
+					amount: 25,
+					method: 'cash'
+				}
+			]
 		});
 	});
 });

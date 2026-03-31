@@ -1,45 +1,53 @@
-import { json, error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
+import { db, schema } from '$lib/server/db';
 import {
 	requireAuth,
-	validateBody,
+	isShopMember,
 	successResponse,
 	transaction,
-	isShopMember
+	validateBody,
+	verifyRepairAccess
 } from '$lib/server/api-utils';
+import {
+	PAYMENT_METHOD,
+	PAYMENT_METHOD_VALUES,
+	PAYMENT_STATUS,
+	REPAIR_STATUS,
+	USER_ROLE,
+	VALIDATION_LIMITS,
+	type PaymentStatus
+} from '$lib/constants';
 import { apiLogger } from '$lib/server/logger';
-import { REPAIR_STATUS, PAYMENT_STATUS, USER_ROLE, type PaymentStatus } from '$lib/constants';
 import { notifyPaymentReceived } from '$lib/server/notifications';
+import { listPayments } from '$lib/server/payments';
 import { memberWhere } from '$lib/server/predicates';
+import { generateId } from '$lib/utils';
 import { z } from 'zod';
 
 const logger = apiLogger.child('payments');
 
 const paymentSchema = z.object({
-	amount: z.number().min(0),
-	method: z.string().optional(), // cash, card, check, etc.
-	notes: z.string().optional()
+	amount: z.number().positive().max(VALIDATION_LIMITS.REPAIR.MAX_COST),
+	method: z.enum(PAYMENT_METHOD_VALUES).optional(),
+	notes: z.string().trim().max(VALIDATION_LIMITS.PAYMENT.NOTES_MAX_LENGTH).optional()
 });
 
-// POST /api/repairs/[id]/payment - Record a payment
-export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const user = requireAuth(locals);
-
-	// Get repair
+async function verifyPaymentWriteAccess(
+	repairId: string,
+	user: NonNullable<App.Locals['user']>
+): Promise<typeof schema.repairs.$inferSelect> {
 	const [repair] = await db
 		.select()
 		.from(schema.repairs)
-		.where(eq(schema.repairs.id, params.id))
+		.where(eq(schema.repairs.id, repairId))
 		.limit(1);
 
 	if (!repair) {
 		throw error(404, 'Repair not found');
 	}
 
-	// Only shop members or the repair owner can record payments
-	// Typically shops record payments when customers pay
 	const isAdmin = user.role === USER_ROLE.ADMIN;
 	const isShop = isShopMember(user);
 	const isOwner = repair.userId === user.id;
@@ -52,40 +60,54 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		throw error(403, 'You do not have permission to record payments for this repair');
 	}
 
-	// For shop users, verify they have access to the repair's shop
-	if (isShop && repair.shopId) {
-		const [membership] = await db
-			.select()
-			.from(schema.shopMembers)
-			.where(memberWhere(repair.shopId, user.id))
-			.limit(1);
-
-		if (!membership && !isAdmin) {
-			throw error(403, 'You do not have access to this shop');
-		}
+	if (!isShop || !repair.shopId) {
+		return repair;
 	}
 
+	const [membership] = await db
+		.select()
+		.from(schema.shopMembers)
+		.where(memberWhere(repair.shopId, user.id))
+		.limit(1);
+
+	if (!membership && !isAdmin) {
+		throw error(403, 'You do not have access to this shop');
+	}
+
+	return repair;
+}
+
+export const GET: RequestHandler = async ({ params, locals }) => {
+	const user = requireAuth(locals);
+
+	await verifyRepairAccess(params.id, user);
+
+	return json(successResponse(await listPayments(params.id)));
+};
+
+export const POST: RequestHandler = async ({ params, request, locals }) => {
+	const user = requireAuth(locals);
+	const repair = await verifyPaymentWriteAccess(params.id, user);
 	const { amount, method, notes } = await validateBody(request, paymentSchema);
-
-	if (amount <= 0) {
-		throw error(400, 'Payment amount must be greater than 0');
-	}
+	const payMethod = method ?? PAYMENT_METHOD.CASH;
+	const payNotes = notes || null;
+	const isOwner = repair.userId === user.id;
 
 	logger.info('Recording payment', { repairId: params.id, userId: user.id, amount });
 
-	// Update payment in transaction
 	const result = transaction((tx) => {
 		const amountPaid = repair.amountPaid ?? 0;
 		const totalCost = repair.totalCost ?? 0;
 		const newAmountPaid = amountPaid + amount;
 		const remainingBalance = totalCost - newAmountPaid;
+		const now = new Date();
 
 		let paymentStatus: PaymentStatus = PAYMENT_STATUS.PARTIAL;
 		let repairStatus = repair.status;
 
 		if (remainingBalance <= 0) {
 			paymentStatus = PAYMENT_STATUS.PAID;
-			// If fully paid and completed, mark as paid status
+
 			if (repair.status === REPAIR_STATUS.COMPLETED) {
 				repairStatus = REPAIR_STATUS.PAID;
 			}
@@ -93,13 +115,25 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			paymentStatus = PAYMENT_STATUS.UNPAID;
 		}
 
+		const payment = {
+			id: generateId(),
+			repairId: params.id,
+			amount,
+			method: payMethod,
+			notes: payNotes,
+			recordedBy: user.id,
+			paidAt: now,
+			createdAt: now
+		} satisfies typeof schema.payments.$inferInsert;
+
 		const updatedRepair = {
 			amountPaid: newAmountPaid,
 			paymentStatus,
 			status: repairStatus,
-			updatedAt: new Date()
-		};
+			updatedAt: now
+		} satisfies Partial<typeof schema.repairs.$inferInsert>;
 
+		tx.insert(schema.payments).values(payment).run();
 		tx.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)).run();
 
 		logger.info('Payment recorded', {
@@ -112,17 +146,10 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		return {
 			...repair,
 			...updatedRepair,
-			paymentDetails: {
-				amount,
-				method: method || 'not specified',
-				notes: notes || null,
-				recordedBy: user.id,
-				recordedAt: new Date()
-			}
+			payment
 		};
 	});
 
-	// Send notification after transaction (can be async)
 	if (repair.shopId && isOwner) {
 		const [shop] = await db
 			.select()

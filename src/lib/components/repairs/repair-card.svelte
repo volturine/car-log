@@ -60,7 +60,10 @@
 			repair.status === REPAIR_STATUS.ESTIMATE_APPROVED
 	);
 
-	const showPayment = $derived(repair.status === REPAIR_STATUS.COMPLETED && repair.totalCost > 0);
+	const showPayment = $derived(
+		(repair.status === REPAIR_STATUS.COMPLETED || repair.status === REPAIR_STATUS.PAID) &&
+			repair.totalCost > 0
+	);
 
 	type Props = {
 		repair: Repair;

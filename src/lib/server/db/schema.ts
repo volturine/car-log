@@ -193,6 +193,23 @@ export const repairParts = sqliteTable('repair_parts', {
 		.default(sql`CURRENT_TIMESTAMP`)
 });
 
+export const payments = sqliteTable('payments', {
+	id: text('id').primaryKey(),
+	repairId: text('repair_id')
+		.notNull()
+		.references(() => repairs.id, { onDelete: 'cascade' }),
+	amount: real('amount').notNull(),
+	method: text('method').notNull(),
+	notes: text('notes'),
+	recordedBy: text('recorded_by')
+		.notNull()
+		.references(() => users.id),
+	paidAt: integer('paid_at', { mode: 'timestamp' }).notNull(),
+	createdAt: integer('created_at', { mode: 'timestamp' })
+		.notNull()
+		.default(sql`CURRENT_TIMESTAMP`)
+});
+
 // Photos table
 export const photos = sqliteTable('photos', {
 	id: text('id').primaryKey(),

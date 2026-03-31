@@ -15,9 +15,10 @@ import {
 } from '$lib/server/api-utils';
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
+import { PAYMENT_STATUS, REPAIR_STATUS } from '$lib/constants';
+import { listPayments } from '$lib/server/payments';
 import { generateId } from '$lib/utils';
 import { error } from '@sveltejs/kit';
-import { REPAIR_STATUS } from '$lib/constants';
 
 const logger = apiLogger.child('repairs');
 
@@ -127,6 +128,8 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 				.from(schema.photos)
 				.where(eq(schema.photos.repairId, repair.id));
 
+			const payments = await listPayments(repair.id);
+
 			// Get shop info if shopId exists
 			let shopInfo = null;
 			if (repair.shopId) {
@@ -150,6 +153,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 			return {
 				...repair,
 				parts,
+				payments,
 				photos: formatPhotosForResponse(photos),
 				shop: shopInfo,
 				car: car || null,
@@ -244,7 +248,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 			// Approval and payment
 			customerApproved: false,
 			approvedAt: null,
-			paymentStatus: 'unpaid',
+			paymentStatus: PAYMENT_STATUS.UNPAID,
 			amountPaid: 0,
 			// Dates
 			appointmentAt,

@@ -11,20 +11,50 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
-	import { DollarSign, CreditCard } from '@lucide/svelte';
+	import { Separator } from '$lib/components/ui/separator';
+	import { Badge } from '$lib/components/ui/badge';
+	import { DollarSign, CreditCard, ReceiptText } from '@lucide/svelte';
 	import { formatCurrency } from '$lib/utils';
+	import { PAYMENT_METHOD, PAYMENT_METHOD_LABELS } from '$lib/constants';
 	import { toast } from 'svelte-sonner';
-	import type { Repair } from '$lib/types';
+	import type { Payment, PaymentMethod, Repair } from '$lib/types';
 
 	let { repair, onPaymentRecorded }: { repair: Repair; onPaymentRecorded?: () => void } = $props();
 
 	let amount = $state(0);
-	let method = $state('cash');
+	let method = $state<PaymentMethod>('cash');
 	let notes = $state('');
 	let isSubmitting = $state(false);
+	let recorded = $state<Payment[]>([]);
+	const localPayments = $derived([...(repair.payments ?? []), ...recorded]);
 
-	let remainingBalance = $derived(repair.totalCost - (repair.amountPaid || 0));
-	let isFullyPaid = $derived(remainingBalance <= 0);
+	const remainingBalance = $derived(repair.totalCost - (repair.amountPaid || 0));
+	const isFullyPaid = $derived(remainingBalance <= 0);
+
+	function formatMethodLabel(value: PaymentMethod): string {
+		return PAYMENT_METHOD_LABELS[value] ?? value;
+	}
+
+	function parsePaymentMethod(value: string): PaymentMethod | null {
+		if (value === PAYMENT_METHOD.CASH) return PAYMENT_METHOD.CASH;
+		if (value === PAYMENT_METHOD.CARD) return PAYMENT_METHOD.CARD;
+		if (value === PAYMENT_METHOD.CHECK) return PAYMENT_METHOD.CHECK;
+		if (value === PAYMENT_METHOD.TRANSFER) return PAYMENT_METHOD.TRANSFER;
+		if (value === PAYMENT_METHOD.OTHER) return PAYMENT_METHOD.OTHER;
+		return null;
+	}
+
+	function formatDateTime(date: string | Date): string {
+		const value = typeof date === 'string' ? new Date(date) : date;
+		if (Number.isNaN(value.getTime())) return '';
+		return value.toLocaleString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+	}
 
 	function setFullAmount() {
 		amount = remainingBalance;
@@ -53,6 +83,25 @@
 				throw new Error('Failed to record payment');
 			}
 
+			const result = await response.json();
+			const details = result.data?.payment ?? result.payment;
+
+			if (details) {
+				recorded = [
+					...recorded,
+					{
+						id: details.id,
+						repairId: repair.id,
+						amount: details.amount,
+						method: details.method,
+						notes: details.notes,
+						recordedBy: details.recordedBy,
+						paidAt: details.paidAt,
+						createdAt: details.createdAt
+					}
+				];
+			}
+
 			const newBalance = remainingBalance - amount;
 			toast.success(
 				newBalance <= 0
@@ -60,14 +109,13 @@
 					: `Payment recorded! Remaining: ${formatCurrency(newBalance)}`
 			);
 
-			// Reset form
 			amount = 0;
 			method = 'cash';
 			notes = '';
 
 			onPaymentRecorded?.();
-		} catch (error) {
-			console.error('Failed to record payment:', error);
+		} catch (err) {
+			console.error('Failed to record payment:', err);
 			toast.error('Failed to record payment');
 		} finally {
 			isSubmitting = false;
@@ -85,7 +133,6 @@
 	</CardHeader>
 
 	<CardContent class="space-y-4">
-		<!-- Payment Summary -->
 		<div class="grid gap-2 rounded-lg bg-muted/50 p-4">
 			<div class="flex items-center justify-between">
 				<span class="text-sm text-muted-foreground">Total Cost:</span>
@@ -117,8 +164,41 @@
 			</div>
 		</div>
 
+		{#if localPayments.length > 0}
+			<Separator />
+			<div class="space-y-3">
+				<div class="flex items-center gap-2 text-sm font-medium">
+					<ReceiptText class="size-4" />
+					<span>Payment History</span>
+					<Badge variant="secondary" class="ml-auto">{localPayments.length}</Badge>
+				</div>
+				<div class="flex flex-col gap-2">
+					{#each localPayments as entry, i (i)}
+						<div class="rounded-lg bg-muted p-3">
+							<div class="flex items-start justify-between">
+								<div class="flex flex-col gap-0.5">
+									<span class="text-sm font-medium">
+										{formatCurrency(entry.amount)}
+									</span>
+									<span class="text-xs text-muted-foreground">
+										{formatMethodLabel(entry.method)}
+									</span>
+								</div>
+								<span class="text-xs text-muted-foreground">
+									{formatDateTime(entry.paidAt)}
+								</span>
+							</div>
+							{#if entry.notes}
+								<p class="mt-1 text-xs text-muted-foreground">{entry.notes}</p>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 		{#if !isFullyPaid}
-			<!-- Payment Form -->
+			<Separator />
 			<form
 				onsubmit={(e: Event) => {
 					e.preventDefault();
@@ -155,22 +235,13 @@
 					<Select
 						type="single"
 						onValueChange={(value: string) => {
-							if (value) method = value;
+							const next = parsePaymentMethod(value);
+							if (next) method = next;
 						}}
 						value={method}
 					>
 						<SelectTrigger id="method">
-							{#if method === 'cash'}
-								Cash
-							{:else if method === 'card'}
-								Credit/Debit Card
-							{:else if method === 'check'}
-								Check
-							{:else if method === 'transfer'}
-								Bank Transfer
-							{:else}
-								Other
-							{/if}
+							{formatMethodLabel(method)}
 						</SelectTrigger>
 						<SelectContent>
 							<SelectItem value="cash">Cash</SelectItem>

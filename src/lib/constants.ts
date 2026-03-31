@@ -69,6 +69,32 @@ export const PAYMENT_STATUS = {
 
 export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS];
 
+export const PAYMENT_METHOD = {
+	CASH: 'cash',
+	CARD: 'card',
+	CHECK: 'check',
+	TRANSFER: 'transfer',
+	OTHER: 'other'
+} as const;
+
+export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD];
+
+export const PAYMENT_METHOD_VALUES = [
+	PAYMENT_METHOD.CASH,
+	PAYMENT_METHOD.CARD,
+	PAYMENT_METHOD.CHECK,
+	PAYMENT_METHOD.TRANSFER,
+	PAYMENT_METHOD.OTHER
+] as const;
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+	[PAYMENT_METHOD.CASH]: 'Cash',
+	[PAYMENT_METHOD.CARD]: 'Credit/Debit Card',
+	[PAYMENT_METHOD.CHECK]: 'Check',
+	[PAYMENT_METHOD.TRANSFER]: 'Bank Transfer',
+	[PAYMENT_METHOD.OTHER]: 'Other'
+};
+
 // Rate Limiting Constants
 export const RATE_LIMITS = {
 	REQUESTS_PER_MINUTE: 100,
@@ -126,6 +152,9 @@ export const VALIDATION_LIMITS = {
 		DESCRIPTION_MAX_LENGTH: 1000,
 		MAX_QUANTITY: 10000,
 		SOURCE_URL_MAX_LENGTH: 500
+	},
+	PAYMENT: {
+		NOTES_MAX_LENGTH: 2000
 	}
 } as const;
 

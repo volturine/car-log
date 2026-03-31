@@ -18,6 +18,7 @@ import { generateId } from '$lib/utils';
 import { getFilePath } from '$lib/server/storage';
 import { unlink } from 'fs/promises';
 import { USER_ROLE } from '$lib/constants';
+import { listPayments } from '$lib/server/payments';
 import type { z } from 'zod';
 
 const logger = apiLogger.child('repairs');
@@ -73,6 +74,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	// Get photos
 	const photos = await db.select().from(schema.photos).where(eq(schema.photos.repairId, params.id));
+	const payments = await listPayments(params.id);
 
 	// Get shop and car info
 	const shopInfo = repair.shopId ? await fetchById(schema.shops, repair.shopId) : null;
@@ -83,6 +85,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		successResponse({
 			...repair,
 			parts,
+			payments,
 			photos: formatPhotosForResponse(photos),
 			shop: shopInfo,
 			car: car || null,

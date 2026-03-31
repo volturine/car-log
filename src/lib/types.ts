@@ -1,6 +1,6 @@
-import type { RepairStatus } from '$lib/constants';
+import type { PaymentMethod, PaymentStatus, RepairStatus } from '$lib/constants';
 
-export type { RepairStatus };
+export type { PaymentMethod, PaymentStatus, RepairStatus };
 
 export interface Car {
 	id: string;
@@ -30,6 +30,17 @@ export interface Photo {
 	url: string;
 }
 
+export interface Payment {
+	id: string;
+	repairId: string;
+	amount: number;
+	method: PaymentMethod;
+	notes: string | null;
+	recordedBy: string;
+	paidAt: string | Date;
+	createdAt: string | Date;
+}
+
 export interface Repair {
 	id: string;
 	carId: string;
@@ -46,8 +57,9 @@ export interface Repair {
 	estimateNotes?: string;
 	customerApproved?: boolean;
 	approvedAt?: Date;
-	paymentStatus?: string;
+	paymentStatus?: PaymentStatus;
 	amountPaid?: number;
+	payments?: Payment[];
 	laborCost: number;
 	laborHours: number;
 	totalCost: number;
