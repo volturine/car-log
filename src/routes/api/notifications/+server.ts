@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { desc, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { requireAuth, successResponse } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { notificationWhere } from '$lib/server/predicates';
@@ -49,4 +49,30 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 	logger.debug('Notifications fetched', { count: notifications.length, userId: user.id });
 
 	return json(successResponse(notifications));
+};
+
+// PUT /api/notifications - Mark all unread notifications as read for current user
+export const PUT: RequestHandler = async ({ locals }) => {
+	const user = requireAuth(locals);
+
+	const where = and(eq(schema.notifications.userId, user.id), eq(schema.notifications.read, false));
+
+	if (!where) {
+		return json(successResponse({ updated: 0 }));
+	}
+
+	const unread = await db
+		.select({ id: schema.notifications.id })
+		.from(schema.notifications)
+		.where(where);
+
+	if (unread.length === 0) {
+		return json(successResponse({ updated: 0 }));
+	}
+
+	await db.update(schema.notifications).set({ read: true, readAt: new Date() }).where(where);
+
+	logger.info('Marked all notifications as read', { userId: user.id, updated: unread.length });
+
+	return json(successResponse({ updated: unread.length }));
 };

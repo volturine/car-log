@@ -10,6 +10,10 @@ class UseRepairs {
 	selectedCarId = $state<string | null>(null);
 	loading = $state(false);
 	searchQuery = $state<string>('');
+	lastLoadedAt = $state<Date | null>(null);
+
+	private refreshMs = 60000;
+	private timer: number | null = null;
 
 	// Filtered repairs based on search query
 	filteredRepairs = $derived.by(() => {
@@ -34,14 +38,55 @@ class UseRepairs {
 	constructor() {
 		// Load data from API
 		if (typeof window !== 'undefined') {
+			this.startLoop();
 			this.loadData();
 		}
 	}
 
+	private onFocus = () => {
+		void this.loadData();
+	};
+
+	private onVisibility = () => {
+		if (document.visibilityState !== 'visible') return;
+		void this.loadData();
+	};
+
+	private onUnload = () => {
+		this.stopLoop();
+	};
+
+	private startLoop() {
+		if (this.timer) return;
+
+		this.timer = window.setInterval(() => {
+			if (document.visibilityState !== 'visible') return;
+			void this.loadData();
+		}, this.refreshMs);
+
+		window.addEventListener('focus', this.onFocus);
+		document.addEventListener('visibilitychange', this.onVisibility);
+		window.addEventListener('beforeunload', this.onUnload);
+	}
+
+	private stopLoop() {
+		if (this.timer) {
+			window.clearInterval(this.timer);
+			this.timer = null;
+		}
+
+		window.removeEventListener('focus', this.onFocus);
+		document.removeEventListener('visibilitychange', this.onVisibility);
+		window.removeEventListener('beforeunload', this.onUnload);
+	}
+
 	async loadData() {
+		if (this.loading) return;
+
 		this.loading = true;
 		try {
 			await Promise.all([this.fetchCars(), this.fetchRepairs()]);
+			this.lastLoadedAt = new Date();
 		} catch (error) {
 			console.error('Failed to load data:', error);
 			toast.error('Failed to load data');

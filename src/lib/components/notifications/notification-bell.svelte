@@ -2,7 +2,14 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { Bell, ExternalLinkIcon, CheckIcon, XIcon } from '@lucide/svelte';
+	import {
+		Bell,
+		ExternalLinkIcon,
+		CheckIcon,
+		XIcon,
+		CheckCheckIcon,
+		TriangleAlertIcon
+	} from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import {
@@ -13,7 +20,7 @@
 		SheetTitle,
 		SheetTrigger
 	} from '$lib/components/ui/sheet';
-	import { formatDate } from '$lib/utils';
+	import { formatDateTime, formatRelativeTime } from '$lib/utils';
 
 	type Notification = {
 		id: string;
@@ -30,7 +37,32 @@
 	let notifications = $state<Notification[]>([]);
 	const unreadCount = $derived(notifications.filter((n) => !n.read).length);
 	let loading = $state(false);
+	let actionLoading = $state(false);
 	let open = $state(false);
+	let mode = $state<'all' | 'unread'>('all');
+
+	const sorted = $derived.by(() => {
+		return notifications.toSorted((a, b) => {
+			if (a.read !== b.read) {
+				return a.read ? 1 : -1;
+			}
+
+			const aRank = getRank(a.type);
+			const bRank = getRank(b.type);
+
+			if (aRank !== bRank) {
+				return aRank - bRank;
+			}
+
+			return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+		});
+	});
+
+	const listed = $derived(mode === 'unread' ? sorted.filter((n) => !n.read) : sorted);
+
+	const urgent = $derived(sorted.filter((n) => !n.read && getRank(n.type) <= 1).slice(0, 3));
+
+	const canMarkAll = $derived(unreadCount > 0);
 
 	async function loadNotifications() {
 		loading = true;
@@ -47,6 +79,15 @@
 		if (response?.ok) {
 			notifications = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
 		}
+	}
+
+	async function markAllAsRead() {
+		actionLoading = true;
+		const response = await fetch('/api/notifications', { method: 'PUT' }).catch(() => null);
+		if (response?.ok) {
+			notifications = notifications.map((n) => ({ ...n, read: true }));
+		}
+		actionLoading = false;
 	}
 
 	async function deleteNotification(id: string) {
@@ -81,6 +122,32 @@
 		return colors[type] ?? 'bg-gray-500';
 	}
 
+	function getRank(type: string): number {
+		const rank: Record<string, number> = {
+			estimate_ready: 0,
+			repair_completed: 0,
+			estimate_rejected: 1,
+			estimate_approved: 1,
+			repair_started: 2,
+			payment_received: 2
+		};
+
+		return rank[type] ?? 3;
+	}
+
+	function getTag(type: string): string {
+		const tag: Record<string, string> = {
+			estimate_ready: 'Action needed',
+			repair_completed: 'Ready for pickup',
+			estimate_rejected: 'Needs review',
+			estimate_approved: 'Ready to start',
+			repair_started: 'In progress',
+			payment_received: 'Payment'
+		};
+
+		return tag[type] ?? 'Update';
+	}
+
 	// side effect: polling cannot be expressed as $derived — requires setInterval
 	onMount(() => {
 		loadNotifications();
@@ -106,26 +173,69 @@
 	</SheetTrigger>
 	<SheetContent side="right" class="w-full sm:w-96">
 		<SheetHeader>
-			<div class="flex items-center justify-between">
-				<SheetTitle>Notifications</SheetTitle>
-				{#if unreadCount > 0}
-					<Badge variant="secondary">{unreadCount} new</Badge>
-				{/if}
+			<div class="flex items-center justify-between gap-2">
+				<div class="flex items-center gap-2">
+					<SheetTitle>Notifications</SheetTitle>
+					{#if unreadCount > 0}
+						<Badge variant="secondary">{unreadCount} new</Badge>
+					{/if}
+				</div>
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					onclick={markAllAsRead}
+					disabled={!canMarkAll || actionLoading}
+				>
+					<CheckCheckIcon class="size-4" />
+					Mark all read
+				</Button>
 			</div>
 			<SheetDescription>Stay updated on your repair status and payments</SheetDescription>
 		</SheetHeader>
 
 		<div class="mt-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
+			{#if urgent.length > 0}
+				<div class="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+					<div class="flex items-center gap-2 text-sm font-medium text-destructive">
+						<TriangleAlertIcon class="size-4" />
+						Priority updates
+					</div>
+					<p class="mt-1 text-xs text-muted-foreground">
+						{urgent.length} unread update{urgent.length > 1 ? 's' : ''} need attention
+					</p>
+				</div>
+			{/if}
+
+			<div class="mb-3 flex gap-2">
+				<Button
+					type="button"
+					variant={mode === 'all' ? 'default' : 'outline'}
+					size="sm"
+					onclick={() => (mode = 'all')}
+				>
+					All
+				</Button>
+				<Button
+					type="button"
+					variant={mode === 'unread' ? 'default' : 'outline'}
+					size="sm"
+					onclick={() => (mode = 'unread')}
+				>
+					Unread
+				</Button>
+			</div>
+
 			{#if loading && notifications.length === 0}
 				<div class="p-8 text-center text-muted-foreground">Loading...</div>
-			{:else if notifications.length === 0}
+			{:else if listed.length === 0}
 				<div class="p-8 text-center text-muted-foreground">
 					<Bell class="mx-auto mb-2 h-12 w-12 opacity-20" />
-					<p>No notifications yet</p>
+					<p>{mode === 'unread' ? 'No unread notifications' : 'No notifications yet'}</p>
 				</div>
 			{:else}
 				<div class="divide-y">
-					{#each notifications as notification (notification.id)}
+					{#each listed as notification (notification.id)}
 						<div
 							role="button"
 							tabindex="0"
@@ -146,7 +256,14 @@
 								</div>
 								<div class="min-w-0 flex-1">
 									<div class="flex items-start justify-between gap-2">
-										<h4 class="text-sm font-medium">{notification.title}</h4>
+										<div>
+											<h4 class="text-sm font-medium">{notification.title}</h4>
+											<div class="mt-1">
+												<Badge variant="outline" class="text-[10px]">
+													{getTag(notification.type)}
+												</Badge>
+											</div>
+										</div>
 										<div class="flex items-center gap-1">
 											{#if notification.carId}
 												<ExternalLinkIcon class="size-3 text-muted-foreground" />
@@ -178,8 +295,11 @@
 										</div>
 									</div>
 									<p class="mt-1 text-sm text-muted-foreground">{notification.message}</p>
-									<span class="mt-2 block text-xs text-muted-foreground">
-										{formatDate(notification.createdAt)}
+									<span
+										class="mt-2 block text-xs text-muted-foreground"
+										title={formatDateTime(notification.createdAt)}
+									>
+										{formatRelativeTime(notification.createdAt)}
 									</span>
 								</div>
 							</div>

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { formatCurrency, formatDate, generateId } from './utils';
+import {
+	formatCurrency,
+	formatDate,
+	formatDateTime,
+	formatRelativeTime,
+	generateId
+} from './utils';
 
 describe('formatDate', () => {
 	it('formats valid dates', () => {
@@ -15,6 +21,30 @@ describe('formatDate', () => {
 describe('formatCurrency', () => {
 	it('formats usd values', () => {
 		expect(formatCurrency(1234.5)).toBe('$1,234.50');
+	});
+});
+
+describe('formatDateTime', () => {
+	it('formats valid date-time values', () => {
+		const value = formatDateTime('2026-03-31T14:05:00.000Z');
+		expect(value).toContain('Mar');
+		expect(value).toContain('31');
+		expect(value).toContain('2026');
+	});
+
+	it('returns empty for invalid values', () => {
+		expect(formatDateTime('bad-date')).toBe('');
+	});
+});
+
+describe('formatRelativeTime', () => {
+	it('handles near-now values', () => {
+		const value = formatRelativeTime(new Date());
+		expect(['just now', 'in under a minute']).toContain(value);
+	});
+
+	it('returns empty for invalid values', () => {
+		expect(formatRelativeTime('bad-date')).toBe('');
 	});
 });
 

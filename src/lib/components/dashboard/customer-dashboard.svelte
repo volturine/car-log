@@ -11,9 +11,15 @@
 	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
 	import { REPAIR_STATUS, STATUS_COLORS, STATUS_LABELS } from '$lib/constants';
-	import { formatCurrency, formatDate, carLabel } from '$lib/utils';
-	import { carPath } from '$lib/utils/navigation';
+	import {
+		formatCurrency,
+		formatDate,
+		carLabel,
+		formatDateTime,
+		formatRelativeTime
+	} from '$lib/utils';
 	import EstimateApprovalCard from '$lib/components/repairs/estimate-approval-card.svelte';
 	import {
 		ChevronRightIcon,
@@ -22,19 +28,25 @@
 		WrenchIcon,
 		DollarSignIcon,
 		LayoutDashboardIcon,
-		AlertCircleIcon
+		AlertCircleIcon,
+		AlertTriangleIcon,
+		SearchIcon,
+		XIcon,
+		CalendarClockIcon,
+		RefreshCwIcon
 	} from '@lucide/svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton';
 
 	const repairs = useRepairs();
 
 	let expanded = $state<string | null>(null);
+	let query = $state('');
 
-	const pending = $derived(
+	const allPending = $derived(
 		repairs.repairs.filter((r) => r.status === REPAIR_STATUS.ESTIMATE_PENDING)
 	);
 
-	const active = $derived(
+	const allActive = $derived(
 		repairs.repairs.filter(
 			(r) =>
 				r.status === REPAIR_STATUS.IN_PROGRESS ||
@@ -43,42 +55,167 @@
 		)
 	);
 
-	const unpaid = $derived(repairs.repairs.filter((r) => r.status === REPAIR_STATUS.COMPLETED));
+	const allUnpaid = $derived(repairs.repairs.filter((r) => r.status === REPAIR_STATUS.COMPLETED));
+
+	const upcoming = $derived.by(() => {
+		const now = Date.now();
+		return repairs.repairs
+			.filter((r) => {
+				if (!r.appointmentAt) return false;
+				if (r.status === REPAIR_STATUS.ESTIMATE_REJECTED) return false;
+				if (r.status === REPAIR_STATUS.PAID) return false;
+				return new Date(r.appointmentAt).getTime() >= now;
+			})
+			.toSorted(
+				(a, b) =>
+					new Date(a.appointmentAt ?? 0).getTime() - new Date(b.appointmentAt ?? 0).getTime()
+			);
+	});
+
+	const next = $derived(upcoming[0] ?? null);
+
+	const outstanding = $derived(
+		allUnpaid.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
+	);
+
+	const matching = $derived.by(() => {
+		const search = query.trim().toLowerCase();
+
+		if (!search) {
+			return repairs.repairs;
+		}
+
+		return repairs.repairs.filter((repair) => {
+			const label = carLabel(repairs.cars, repair.carId).toLowerCase();
+			const title = repair.title.toLowerCase();
+			const desc = repair.description.toLowerCase();
+			const status = STATUS_LABELS[repair.status].toLowerCase();
+			return (
+				title.includes(search) ||
+				desc.includes(search) ||
+				status.includes(search) ||
+				label.includes(search)
+			);
+		});
+	});
+
+	const pending = $derived(matching.filter((r) => r.status === REPAIR_STATUS.ESTIMATE_PENDING));
+
+	const active = $derived(
+		matching.filter(
+			(r) =>
+				r.status === REPAIR_STATUS.IN_PROGRESS ||
+				r.status === REPAIR_STATUS.ESTIMATE_APPROVED ||
+				r.status === REPAIR_STATUS.PENDING
+		)
+	);
+
+	const unpaid = $derived(matching.filter((r) => r.status === REPAIR_STATUS.COMPLETED));
 
 	const recent = $derived(
-		repairs.repairs
+		matching
 			.toSorted((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 			.slice(0, 5)
 	);
 
-	const outstanding = $derived(
-		unpaid.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
-	);
+	const overdue = $derived.by(() => {
+		const now = Date.now();
+
+		return matching
+			.filter((r) => {
+				if (!r.appointmentAt) return false;
+				if (r.status === REPAIR_STATUS.COMPLETED) return false;
+				if (r.status === REPAIR_STATUS.PAID) return false;
+				if (r.status === REPAIR_STATUS.ESTIMATE_REJECTED) return false;
+				return new Date(r.appointmentAt).getTime() < now;
+			})
+			.toSorted(
+				(a, b) =>
+					new Date(a.appointmentAt ?? 0).getTime() - new Date(b.appointmentAt ?? 0).getTime()
+			);
+	});
+
+	const hasQuery = $derived(query.trim().length > 0);
 
 	function toggle(id: string) {
 		expanded = expanded === id ? null : id;
 	}
 
+	function clearSearch() {
+		query = '';
+	}
+
+	async function refresh() {
+		await repairs.loadData();
+	}
+
 	function handleAction() {
-		repairs.loadData();
+		refresh();
 	}
 </script>
 
 <div class="space-y-6 p-6">
-	<div class="flex items-center justify-between">
+	<div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
 		<div>
 			<h1 class="text-3xl font-bold">Dashboard</h1>
 			<p class="text-muted-foreground">Overview of your vehicles and repairs</p>
 		</div>
-		<Button variant="outline" onclick={() => goto(resolve('/app/cars'))}>
-			<CarIcon class="size-4" />
-			View Cars
-		</Button>
+		<div class="flex flex-wrap gap-2">
+			<Button variant="outline" onclick={refresh} disabled={repairs.loading}>
+				<RefreshCwIcon class="size-4" />
+				Refresh
+			</Button>
+			<Button variant="outline" onclick={() => goto(resolve('/app/calendar'))}>
+				<CalendarClockIcon class="size-4" />
+				Calendar
+			</Button>
+			<Button variant="outline" onclick={() => goto(resolve('/app/cars'))}>
+				<CarIcon class="size-4" />
+				View Cars
+			</Button>
+		</div>
+	</div>
+
+	<div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+		<div class="relative w-full lg:max-w-md">
+			<SearchIcon
+				class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+			/>
+			<Input
+				bind:value={query}
+				class="h-10 pr-9 pl-9"
+				placeholder="Search by repair, status, or vehicle"
+			/>
+			{#if hasQuery}
+				<Button
+					type="button"
+					variant="ghost"
+					size="icon"
+					class="absolute top-1/2 right-1 size-7 -translate-y-1/2"
+					onclick={clearSearch}
+				>
+					<XIcon class="size-4" />
+				</Button>
+			{/if}
+		</div>
+		{#if next}
+			<p class="text-sm text-muted-foreground">
+				Next appointment: <span class="font-medium text-foreground"
+					>{formatDateTime(next.appointmentAt)}</span
+				>
+				<span class="ml-1">({formatRelativeTime(next.appointmentAt)})</span>
+			</p>
+		{/if}
+		{#if repairs.lastLoadedAt}
+			<p class="text-xs text-muted-foreground">
+				Last synced {formatRelativeTime(repairs.lastLoadedAt)}
+			</p>
+		{/if}
 	</div>
 
 	{#if repairs.loading}
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-			{#each Array(4) as _, i (i)}
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+			{#each Array(5) as _, i (i)}
 				<Card>
 					<CardHeader class="pb-2">
 						<Skeleton class="h-4 w-24" />
@@ -93,7 +230,7 @@
 			{/each}
 		</div>
 	{:else}
-		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
 			<Card>
 				<CardHeader class="pb-2">
 					<CardDescription>Vehicles</CardDescription>
@@ -108,10 +245,24 @@
 				</CardHeader>
 			</Card>
 
-			<Card class={pending.length > 0 ? 'border-blue-500/50' : ''}>
+			<Card class={allActive.length > 0 ? 'border-sky-500/40' : ''}>
+				<CardHeader class="pb-2">
+					<CardDescription>Active Repairs</CardDescription>
+					<CardTitle class="text-3xl">{allActive.length}</CardTitle>
+				</CardHeader>
+			</Card>
+
+			<Card class={upcoming.length > 0 ? 'border-blue-500/50' : ''}>
+				<CardHeader class="pb-2">
+					<CardDescription>Upcoming Visits</CardDescription>
+					<CardTitle class="text-3xl">{upcoming.length}</CardTitle>
+				</CardHeader>
+			</Card>
+
+			<Card class={allPending.length > 0 ? 'border-blue-500/50' : ''}>
 				<CardHeader class="pb-2">
 					<CardDescription>Awaiting Approval</CardDescription>
-					<CardTitle class="text-3xl">{pending.length}</CardTitle>
+					<CardTitle class="text-3xl">{allPending.length}</CardTitle>
 				</CardHeader>
 			</Card>
 
@@ -122,6 +273,50 @@
 				</CardHeader>
 			</Card>
 		</div>
+
+		{#if hasQuery && matching.length === 0}
+			<Card>
+				<CardContent class="py-8">
+					<div class="text-center text-sm text-muted-foreground">
+						No repairs match <span class="font-medium text-foreground">{query}</span>
+					</div>
+				</CardContent>
+			</Card>
+		{/if}
+
+		{#if overdue.length > 0}
+			<Card class="border-destructive/50">
+				<CardHeader>
+					<CardTitle class="flex items-center gap-2">
+						<AlertTriangleIcon class="h-5 w-5 text-destructive" />
+						Needs Attention
+					</CardTitle>
+					<CardDescription>
+						Appointments that are past due and still open ({overdue.length})
+					</CardDescription>
+				</CardHeader>
+				<CardContent class="space-y-3">
+					{#each overdue.slice(0, 4) as repair (repair.id)}
+						<button
+							type="button"
+							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
+						>
+							<div>
+								<div class="font-medium">{repair.title}</div>
+								<div class="text-sm text-muted-foreground">
+									{carLabel(repairs.cars, repair.carId)}
+								</div>
+								<div class="text-sm text-destructive">
+									Was due {formatDateTime(repair.appointmentAt)}
+								</div>
+							</div>
+							<Badge variant={STATUS_COLORS[repair.status]}>{STATUS_LABELS[repair.status]}</Badge>
+						</button>
+					{/each}
+				</CardContent>
+			</Card>
+		{/if}
 
 		{#if pending.length > 0}
 			<Card>
@@ -189,7 +384,7 @@
 					{#each active as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(carPath(repair.carId))}
+							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -233,7 +428,7 @@
 					{#each unpaid as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(carPath(repair.carId))}
+							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -270,7 +465,7 @@
 					{#each recent as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(carPath(repair.carId))}
+							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">

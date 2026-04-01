@@ -31,6 +31,54 @@ export function formatCurrency(amount: number): string {
 	return usd.format(amount);
 }
 
+export function formatDateTime(date: Date | string | null | undefined): string {
+	if (!date) return '';
+
+	const value = typeof date === 'string' ? new Date(date) : date;
+
+	if (Number.isNaN(value.getTime())) return '';
+
+	return value.toLocaleString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit'
+	});
+}
+
+export function formatRelativeTime(date: Date | string | null | undefined): string {
+	if (!date) return '';
+
+	const value = typeof date === 'string' ? new Date(date) : date;
+
+	if (Number.isNaN(value.getTime())) return '';
+
+	const now = Date.now();
+	const delta = value.getTime() - now;
+	const abs = Math.abs(delta);
+
+	if (abs < 60000) {
+		if (delta < 0) return 'just now';
+		return 'in under a minute';
+	}
+
+	if (abs < 3600000) {
+		const mins = Math.round(abs / 60000);
+		if (delta < 0) return `${mins}m ago`;
+		return `in ${mins}m`;
+	}
+
+	if (abs < 86400000) {
+		const hours = Math.round(abs / 3600000);
+		if (delta < 0) return `${hours}h ago`;
+		return `in ${hours}h`;
+	}
+
+	const days = Math.round(abs / 86400000);
+	if (delta < 0) return `${days}d ago`;
+	return `in ${days}d`;
+}
+
 export function generateId(): string {
 	return crypto.randomUUID();
 }
