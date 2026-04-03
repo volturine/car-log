@@ -88,6 +88,8 @@ const state = vi.hoisted(() => {
 		rows.map((row) => ({ id: row.id, url: `/api/photos/${row.id}` }))
 	);
 	const verifyRepairAccess = vi.fn(async () => repair);
+	const getMechanic = vi.fn(async () => mechanic);
+	const getMechanicsByIds = vi.fn(async () => [mechanic]);
 	const listPayments = vi.fn(async () => payments);
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -101,6 +103,8 @@ const state = vi.hoisted(() => {
 		fetchById,
 		formatPhotosForResponse,
 		verifyRepairAccess,
+		getMechanic,
+		getMechanicsByIds,
 		listPayments,
 		logger
 	};
@@ -124,6 +128,8 @@ vi.mock('$lib/server/api-utils', () => ({
 	fetchById: state.fetchById,
 	formatPhotosForResponse: state.formatPhotosForResponse,
 	verifyRepairAccess: state.verifyRepairAccess,
+	getMechanic: state.getMechanic,
+	getMechanicsByIds: state.getMechanicsByIds,
 	validateBody: vi.fn(),
 	transaction: vi.fn(),
 	isShopMember: vi.fn()

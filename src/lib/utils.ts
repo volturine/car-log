@@ -39,6 +39,7 @@ export function formatDateTime(date: Date | string | null | undefined): string {
 	if (Number.isNaN(value.getTime())) return '';
 
 	return value.toLocaleString('en-US', {
+		year: 'numeric',
 		month: 'short',
 		day: 'numeric',
 		hour: 'numeric',
