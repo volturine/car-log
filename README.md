@@ -58,14 +58,7 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
-5. Apply the database schema before first run, after pulling schema changes, or when enabling
-   auth on an existing local database:
-
-```bash
-bun run db:push
-```
-
-6. Start the app:
+5. Start the app (database file and tables are bootstrapped automatically on first run):
 
 ```bash
 bun run dev
@@ -108,6 +101,8 @@ bun run lint
 bun run check
 bun run e2e
 ```
+
+`bun run db:push` is still available when you explicitly want Drizzle to reconcile schema changes.
 
 ## Production
 
