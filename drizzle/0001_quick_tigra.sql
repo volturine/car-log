@@ -1,0 +1,1 @@
+ALTER TABLE `repairs` ADD `appointment_at` integer;

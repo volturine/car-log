@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#6aaa64"/>
+  <g transform="translate(256,256)">
+    <!-- Car body -->
+    <path d="M-140,20 L-120,-40 L-60,-80 L60,-80 L120,-40 L140,20 L140,60 L-140,60 Z" fill="white" opacity="0.95"/>
+    <!-- Windshield -->
+    <path d="M-55,-75 L-35,-40 L55,-40 L75,-75 Z" fill="#6aaa64" opacity="0.5"/>
+    <!-- Wheels -->
+    <circle cx="-80" cy="60" r="30" fill="#333"/>
+    <circle cx="-80" cy="60" r="15" fill="#666"/>
+    <circle cx="80" cy="60" r="30" fill="#333"/>
+    <circle cx="80" cy="60" r="15" fill="#666"/>
+    <!-- Wrench overlay -->
+    <g transform="translate(60,-60) rotate(-45) scale(0.5)">
+      <rect x="-8" y="-80" width="16" height="100" rx="4" fill="white" opacity="0.9"/>
+      <circle cx="0" cy="-80" r="24" fill="none" stroke="white" stroke-width="12" opacity="0.9"/>
+    </g>
+  </g>
+</svg>

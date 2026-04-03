@@ -1,93 +1,128 @@
-# mini scrable
+# Car Log
 
+Car Log is a SvelteKit app for tracking vehicles, repairs, shops, photos, and notifications.
+`/` is public. Everything under `/app` is protected by Better Auth.
 
+## Auth
 
-## Getting started
+- Email/password sign-in and registration are enabled by default
+- Google sign-in is optional and only appears when both `GOOGLE_CLIENT_ID` and
+  `GOOGLE_CLIENT_SECRET` are set
+- Registration is email/password only; Google sign-in is available from the login page
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Route Structure
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+- `/` public landing page
+- `/auth/login` public sign-in page
+- `/auth/register` public registration page
+- `/app` protected app shell
+  - `/app/cars`
+  - `/app/cars/[id]`
+  - `/app/calendar`
+  - `/app/analytics`
+  - `/app/shop`
+- `/api/auth/[...all]` Better Auth handler
+- `/api/*` authenticated APIs for cars, repairs, shops, photos, and notifications
 
-## Add your files
+## Setup
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+1. Install dependencies:
 
+```bash
+bun install
 ```
-cd existing_repo
-git remote add origin https://gitlab.kripso-world.com/kripso/mini-scrable.git
-git branch -M master
-git push -uf origin master
+
+2. Copy the env template:
+
+```bash
+cp .env.example .env
 ```
 
-## Integrate with your tools
+3. Set the required auth env vars in `.env`:
 
-- [ ] [Set up project integrations](https://gitlab.kripso-world.com/kripso/mini-scrable/-/settings/integrations)
+```env
+BETTER_AUTH_SECRET=your-super-secret-key-change-this-in-production-min-32-chars
+BETTER_AUTH_URL=http://localhost:3000
+```
 
-## Collaborate with your team
+4. Optional: enable Google sign-in:
+   - Create a Google Cloud OAuth client for a **Web application**
+   - Add this local redirect URI in Google Cloud:
+     `http://localhost:3000/api/auth/callback/google`
+   - Add your production redirect URI too if you deploy:
+     `https://your-domain.com/api/auth/callback/google`
+   - Set both of these in `.env`:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```env
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
 
-## Test and Deploy
+5. Start the app (database file and tables are bootstrapped automatically on first run):
 
-Use the built-in continuous integration in GitLab.
+```bash
+bun run dev
+```
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+Then open `http://localhost:3000`.
 
-***
+## Test Environment
 
-# Editing this README
+- `.env.test` uses an isolated port (`4173`) and isolated SQLite database (`./sqlite.test.db`)
+- E2E uses that environment so it does not boot against the default dev DB or port
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+```bash
+bun run e2e:install
+bun run e2e
+```
 
-## Suggestions for a good README
+## App Structure
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```text
+src/routes/
+  +page.svelte          public landing page
+  auth/                 public auth pages
+  app/                  protected app pages
+  api/                  Better Auth + app APIs
+src/lib/server/         auth, db, validation, storage
+drizzle/                Drizzle output
+uploads/                local photo storage
+sqlite.db               local SQLite database
+```
 
-## Name
-Choose a self-explaining name for your project.
+## Useful Commands
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+```bash
+bun run dev
+bun run build
+bun run start
+bun run db:push
+bun run lint
+bun run check
+bun run e2e
+```
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+`bun run db:push` is still available when you explicitly want Drizzle to reconcile schema changes.
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+## Production
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+This app uses `@sveltejs/adapter-node` for production builds.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+It needs a persistent server because it writes to local SQLite and stores uploads on the local
+filesystem, which is not compatible with serverless or edge runtimes.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+Build and run it with Bun:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```bash
+bun run build
+bun run start
+```
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+The production server runs the adapter-node output from `build/index.js`, and `HOST`/`PORT` can
+be set with the standard adapter-node environment variables.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## Caveats
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- Google sign-in stays disabled unless both Google env vars are set
+- `BETTER_AUTH_URL` must match the domain used in Google OAuth redirects
+- Local photos are stored on disk in `uploads/`
