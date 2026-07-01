@@ -29,7 +29,6 @@
 	import { formatDate } from '$lib/utils';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
-	import type { ShopMember } from '$lib/types';
 
 	interface Candidate {
 		id: string;
@@ -62,7 +61,15 @@
 	);
 	let saving = $state(false);
 
-	let members = $state<ShopMember[]>([]);
+	let members = $state<
+		Array<{
+			userId: string;
+			role: string;
+			joinedAt: Date | string | null;
+			userName: string | null;
+			userEmail: string;
+		}>
+	>([]);
 	let loadingMembers = $state(true);
 	let inviteQuery = $state('');
 	let inviteRole = $state<string>('mechanic');

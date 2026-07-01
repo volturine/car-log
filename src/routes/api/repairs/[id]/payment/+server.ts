@@ -1,14 +1,15 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '$lib/server/db';
 import {
 	requireAuth,
 	isShopMember,
-	successResponse,
 	transaction,
 	validateBody,
-	verifyRepairAccess
+	verifyRepairAccess,
+	ok,
+	err
 } from '$lib/server/api-utils';
 import {
 	PAYMENT_METHOD,
@@ -32,61 +33,54 @@ const paymentSchema = z.object({
 	notes: z.string().trim().max(VALIDATION_LIMITS.PAYMENT.NOTES_MAX_LENGTH).optional()
 });
 
-async function verifyPaymentWriteAccess(
-	repairId: string,
-	user: NonNullable<App.Locals['user']>
-): Promise<typeof schema.repairs.$inferSelect> {
-	const [repair] = await db
-		.select()
-		.from(schema.repairs)
-		.where(eq(schema.repairs.id, repairId))
-		.limit(1);
-
-	if (!repair) {
-		throw error(404, 'Repair not found');
-	}
-
-	const isAdmin = user.role === USER_ROLE.ADMIN;
-	const isShop = isShopMember(user);
-	const isOwner = repair.userId === user.id;
-
-	if (!isShop && !isOwner && !isAdmin) {
-		throw error(403, 'You do not have permission to record payments for this repair');
-	}
-
-	if (!repair.shopId && !isOwner && !isAdmin) {
-		throw error(403, 'You do not have permission to record payments for this repair');
-	}
-
-	if (!isShop || !repair.shopId) {
-		return repair;
-	}
-
-	const [membership] = await db
-		.select()
-		.from(schema.shopMembers)
-		.where(memberWhere(repair.shopId, user.id))
-		.limit(1);
-
-	if (!membership && !isAdmin) {
-		throw error(403, 'You do not have access to this shop');
-	}
-
-	return repair;
-}
-
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	await verifyRepairAccess(params.id, user);
+	const user = userResult.value;
 
-	return json(successResponse(await listPayments(params.id)));
+	const accessResult = await verifyRepairAccess(params.id, user);
+	if (accessResult.isErr()) {
+		return json(
+			{ success: false, error: accessResult.error.message },
+			{ status: accessResult.error.status }
+		);
+	}
+
+	return json({ success: true, data: await listPayments(params.id) });
 };
 
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const user = requireAuth(locals);
-	const repair = await verifyPaymentWriteAccess(params.id, user);
-	const { amount, method, notes } = await validateBody(request, paymentSchema);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
+
+	const accessResult = await verifyPaymentWriteAccess(params.id, user);
+	if (accessResult.isErr()) {
+		return json(
+			{ success: false, error: accessResult.error.message },
+			{ status: accessResult.error.status }
+		);
+	}
+
+	const repair = accessResult.value;
+	const validationErr = await validateBody(request, paymentSchema);
+	if (validationErr.isErr()) {
+		return json({ success: false, error: validationErr.error.message }, { status: 400 });
+	}
+
+	const { amount, method, notes } = validationErr.value;
 	const payMethod = method ?? PAYMENT_METHOD.CASH;
 	const payNotes = notes || null;
 	const isOwner = repair.userId === user.id;
@@ -97,19 +91,28 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	logger.info('Recording payment', { repairId: params.id, userId: user.id, amount });
 
 	if (!canRecordRepairPayment(repair.status)) {
-		throw error(400, 'Payments can only be recorded for completed repairs');
+		return json(
+			{ success: false, error: 'Payments can only be recorded for completed repairs' },
+			{ status: 400 }
+		);
 	}
 
 	if (totalCost <= 0) {
-		throw error(400, 'Payments cannot be recorded until the repair total is set');
+		return json(
+			{ success: false, error: 'Payments cannot be recorded until the repair total is set' },
+			{ status: 400 }
+		);
 	}
 
 	if (balance <= 0) {
-		throw error(400, 'Repair is already fully paid');
+		return json({ success: false, error: 'Repair is already fully paid' }, { status: 400 });
 	}
 
 	if (amount > balance) {
-		throw error(400, 'Payment amount exceeds remaining balance');
+		return json(
+			{ success: false, error: 'Payment amount exceeds remaining balance' },
+			{ status: 400 }
+		);
 	}
 
 	const result = transaction((tx) => {
@@ -164,5 +167,56 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		}
 	}
 
-	return json(successResponse(result, 201), { status: 201 });
+	return json({ success: true, data: result }, { status: 201 });
 };
+
+async function verifyPaymentWriteAccess(
+	repairId: string,
+	user: NonNullable<App.Locals['user']>
+): Promise<ReturnType<typeof verifyRepairAccess>> {
+	const [repair] = await db
+		.select()
+		.from(schema.repairs)
+		.where(eq(schema.repairs.id, repairId))
+		.limit(1);
+
+	if (!repair) {
+		return err({ type: 'not_found', message: 'Repair not found', status: 404 });
+	}
+
+	const isAdmin = user.role === USER_ROLE.ADMIN;
+	const isShop = isShopMember(user);
+	const isOwner = repair.userId === user.id;
+
+	if (!isShop && !isOwner && !isAdmin) {
+		return err({
+			type: 'forbidden',
+			message: 'You do not have permission to record payments for this repair',
+			status: 403
+		});
+	}
+
+	if (!repair.shopId && !isOwner && !isAdmin) {
+		return err({
+			type: 'forbidden',
+			message: 'You do not have permission to record payments for this repair',
+			status: 403
+		});
+	}
+
+	if (!isShop || !repair.shopId) {
+		return ok(repair);
+	}
+
+	const [membership] = await db
+		.select()
+		.from(schema.shopMembers)
+		.where(memberWhere(repair.shopId, user.id))
+		.limit(1);
+
+	if (!membership && !isAdmin) {
+		return err({ type: 'forbidden', message: 'You do not have access to this shop', status: 403 });
+	}
+
+	return ok(repair);
+}

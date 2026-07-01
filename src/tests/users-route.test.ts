@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok } from 'neverthrow';
 
 vi.mock('zod', () => {
 	const text = {
@@ -46,9 +47,8 @@ const state = vi.hoisted(() => {
 		.fn()
 		.mockImplementationOnce(() => ({ from: fromMembers }))
 		.mockImplementationOnce(() => ({ from: fromUsers }));
-	const requireAuth = vi.fn(() => ({ id: 'owner-1', role: 'shop_owner' }));
-	const fetchById = vi.fn(async () => shop);
-	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
+	const requireAuth = vi.fn(() => ok({ id: 'owner-1', role: 'shop_owner' }));
+	const fetchById = vi.fn(async () => ok(shop));
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 	return {
@@ -62,7 +62,6 @@ const state = vi.hoisted(() => {
 		select,
 		requireAuth,
 		fetchById,
-		successResponse,
 		logger
 	};
 });
@@ -81,8 +80,7 @@ vi.mock('$lib/server/db', async () => {
 
 vi.mock('$lib/server/api-utils', () => ({
 	requireAuth: state.requireAuth,
-	fetchById: state.fetchById,
-	successResponse: state.successResponse
+	fetchById: state.fetchById
 }));
 
 vi.mock('$lib/server/logger', () => ({
@@ -100,7 +98,6 @@ describe('GET /api/users', () => {
 			.mockImplementationOnce(() => ({ from: state.fromUsers }));
 		state.requireAuth.mockClear();
 		state.fetchById.mockClear();
-		state.successResponse.mockClear();
 	});
 
 	it('returns invite candidates for shop owners', async () => {

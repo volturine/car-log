@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { requireRole, validateBody, successResponse, transaction } from '$lib/server/api-utils';
+import { requireRole, validateBody, transaction } from '$lib/server/api-utils';
 import { shopSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
@@ -9,7 +9,6 @@ import { eq } from 'drizzle-orm';
 
 const logger = apiLogger.child('shops');
 
-// GET /api/shops - List all shops (public)
 export const GET: RequestHandler = async () => {
 	logger.debug('Fetching all shops');
 
@@ -17,15 +16,26 @@ export const GET: RequestHandler = async () => {
 
 	logger.debug('Shops fetched', { count: shops.length });
 
-	return json(successResponse(shops));
+	return json({ success: true, data: shops });
 };
 
-// POST /api/shops - Create a new shop (shop_owner only)
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const user = requireRole(locals, ['shop_owner', 'admin']);
+	const userResult = requireRole(locals, ['shop_owner', 'admin']);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	// Validate request body
-	const validatedData = await validateBody(request, shopSchema);
+	const user = userResult.value;
+
+	const validationErr = await validateBody(request, shopSchema);
+	if (validationErr.isErr()) {
+		return json({ success: false, error: validationErr.error.message }, { status: 400 });
+	}
+
+	const validatedData = validationErr.value;
 
 	logger.info('Creating shop', { userId: user.id, shopName: validatedData.name });
 
@@ -67,5 +77,5 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	logger.info('Shop created', { shopId, userId: user.id });
 
-	return json(successResponse(newShop, 201), { status: 201 });
+	return json({ success: true, data: newShop }, { status: 201 });
 };

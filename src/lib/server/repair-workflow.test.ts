@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { PAYMENT_STATUS, REPAIR_STATUS, REPAIR_STATUS_VALUES } from '$lib/constants';
 import {
-	SHOP_REPAIR_TRANSITIONS,
+	PAYMENT_STATUS,
+	REPAIR_STATUS,
+	REPAIR_STATUS_VALUES,
+	SHOP_STATUS_TRANSITIONS
+} from '$lib/constants';
+import {
 	canRecordRepairPayment,
 	canTransitionRepairStatus,
 	getRepairPaymentState,
@@ -23,15 +27,15 @@ describe('isRepairStatus', () => {
 	});
 });
 
-describe('SHOP_REPAIR_TRANSITIONS', () => {
+describe('SHOP_STATUS_TRANSITIONS', () => {
 	it('has an entry for every repair status', () => {
 		for (const status of REPAIR_STATUS_VALUES) {
-			expect(SHOP_REPAIR_TRANSITIONS).toHaveProperty(status);
+			expect(SHOP_STATUS_TRANSITIONS).toHaveProperty(status);
 		}
 	});
 
 	it('only contains valid statuses as targets', () => {
-		for (const targets of Object.values(SHOP_REPAIR_TRANSITIONS)) {
+		for (const targets of Object.values(SHOP_STATUS_TRANSITIONS)) {
 			for (const target of targets) {
 				expect(isRepairStatus(target)).toBe(true);
 			}

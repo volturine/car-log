@@ -2,30 +2,29 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq, inArray } from 'drizzle-orm';
-import {
-	requireAuth,
-	validateBody,
-	successResponse,
-	isShopMember,
-	findUserShop
-} from '$lib/server/api-utils';
+import { requireAuth, validateBody, isShopMember, findUserShop } from '$lib/server/api-utils';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
 
 const logger = apiLogger.child('cars');
 
-// GET /api/cars - List all cars for the authenticated user
 export const GET: RequestHandler = async ({ locals }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	logger.info('Fetching cars', { userId: user.id });
+	const user = userResult.value;
 
 	if (isShopMember(user)) {
 		const shop = await findUserShop(user);
 
 		if (!shop) {
-			return json(successResponse([]));
+			return json({ success: true, data: [] });
 		}
 
 		const repairs = await db
@@ -36,7 +35,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		const carIds = [...new Set(repairs.map((repair) => repair.carId))];
 
 		if (carIds.length === 0) {
-			return json(successResponse([]));
+			return json({ success: true, data: [] });
 		}
 
 		const cars = await db
@@ -46,23 +45,35 @@ export const GET: RequestHandler = async ({ locals }) => {
 
 		logger.debug('Shop cars fetched', { count: cars.length, userId: user.id, shopId: shop.id });
 
-		return json(successResponse(cars));
+		return json({ success: true, data: cars });
 	}
 
 	const cars = await db.select().from(schema.cars).where(eq(schema.cars.userId, user.id));
-
 	logger.debug('Cars fetched', { count: cars.length, userId: user.id });
 
-	return json(successResponse(cars));
+	return json({ success: true, data: cars });
 };
 
-// POST /api/cars - Create a new car
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	// Validate request body
-	const validatedData = await validateBody(request, carSchema);
+	const user = userResult.value;
 
+	const validationResult = await validateBody(request, carSchema);
+	if (validationResult.isErr()) {
+		return json(
+			{ success: false, error: validationResult.error.message },
+			{ status: validationResult.error.status }
+		);
+	}
+
+	const validatedData = validationResult.value;
 	logger.info('Creating car', { userId: user.id, brand: validatedData.brand });
 
 	const newCar = {
@@ -74,8 +85,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 	};
 
 	await db.insert(schema.cars).values(newCar);
-
 	logger.info('Car created', { carId: newCar.id, userId: user.id });
 
-	return json(successResponse(newCar, 201), { status: 201 });
+	return json({ success: true, data: newCar }, { status: 201 });
 };

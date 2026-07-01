@@ -83,42 +83,11 @@
 
 	const awaitingPayment = $derived(matching.filter((r) => r.status === REPAIR_STATUS.COMPLETED));
 
-	const allUnassigned = $derived(
-		repairsState.repairs.filter(
-			(r) =>
-				!r.assignedMechanicId &&
-				r.status !== REPAIR_STATUS.COMPLETED &&
-				r.status !== REPAIR_STATUS.PAID &&
-				r.status !== REPAIR_STATUS.ESTIMATE_REJECTED
-		)
-	);
+	const allUnassigned = $derived(repairsState.unassignedRepairs);
 
-	const allToday = $derived.by(() => {
-		const now = new Date();
-		const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-		const end = new Date(start.getTime() + 86400000);
+	const allToday = $derived(repairsState.todaysAppointments);
 
-		return repairsState.repairs.filter((r) => {
-			if (!r.appointmentAt) return false;
-			if (r.status === REPAIR_STATUS.COMPLETED || r.status === REPAIR_STATUS.PAID) return false;
-			const apt = new Date(r.appointmentAt);
-			return apt >= start && apt < end;
-		});
-	});
-
-	const upcoming = $derived.by(() => {
-		const now = Date.now();
-		return repairsState.repairs
-			.filter((r) => {
-				if (!r.appointmentAt) return false;
-				if (r.status === REPAIR_STATUS.COMPLETED || r.status === REPAIR_STATUS.PAID) return false;
-				return new Date(r.appointmentAt).getTime() >= now;
-			})
-			.toSorted(
-				(a, b) =>
-					new Date(a.appointmentAt ?? 0).getTime() - new Date(b.appointmentAt ?? 0).getTime()
-			);
-	});
+	const upcoming = $derived(repairsState.upcomingAppointments);
 
 	const next = $derived(upcoming[0] ?? null);
 
@@ -130,7 +99,6 @@
 
 	const overdue = $derived.by(() => {
 		const now = Date.now();
-
 		return matching
 			.filter((r) => {
 				if (!r.appointmentAt) return false;
@@ -145,17 +113,9 @@
 			);
 	});
 
-	const totalRevenue = $derived(
-		repairsState.repairs
-			.filter((r) => r.status === REPAIR_STATUS.PAID)
-			.reduce((sum, r) => sum + r.totalCost, 0)
-	);
+	const totalRevenue = $derived(repairsState.totalRevenue);
 
-	const unpaidRevenue = $derived(
-		repairsState.repairs
-			.filter((r) => r.status === REPAIR_STATUS.COMPLETED)
-			.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
-	);
+	const unpaidRevenue = $derived(repairsState.outstandingRevenue);
 
 	const hasQuery = $derived(query.trim().length > 0);
 

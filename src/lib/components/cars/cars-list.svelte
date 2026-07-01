@@ -27,8 +27,8 @@
 			return (
 				car.brand.toLowerCase().includes(query) ||
 				car.model.toLowerCase().includes(query) ||
-				car.licensePlate.toLowerCase().includes(query) ||
-				car.ownerName.toLowerCase().includes(query)
+				(car.licensePlate ?? '').toLowerCase().includes(query) ||
+				(car.ownerName ?? '').toLowerCase().includes(query)
 			);
 		})
 	);

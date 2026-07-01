@@ -3,6 +3,8 @@ import { SvelteMap } from 'svelte/reactivity';
 import type { Car, Repair, ModelStats } from '$lib/types.js';
 import { toast } from 'svelte-sonner';
 import { useDebounce } from '$lib/utils/reactive.svelte';
+import { apiError } from '$lib/utils';
+import { REPAIR_STATUS, type RepairStatus } from '$lib/constants';
 
 class UseRepairs {
 	cars = $state<Car[]>([]);
@@ -15,7 +17,6 @@ class UseRepairs {
 	private refreshMs = 60000;
 	private timer: number | null = null;
 
-	// Filtered repairs based on search query
 	filteredRepairs = $derived.by(() => {
 		if (!this.searchQuery.trim()) {
 			return this.repairs;
@@ -30,13 +31,11 @@ class UseRepairs {
 		);
 	});
 
-	// Debounced search function
 	debouncedSearch = useDebounce((query: string) => {
 		this.searchQuery = query;
 	}, 300);
 
 	constructor() {
-		// Load data from API
 		if (typeof window !== 'undefined') {
 			this.startLoop();
 			this.loadData();
@@ -97,16 +96,22 @@ class UseRepairs {
 
 	async fetchCars() {
 		const response = await fetch('/api/cars');
-		if (!response.ok) throw new Error('Failed to fetch cars');
+		if (!response.ok) {
+			const message = await apiError(response);
+			throw new Error(message ?? 'Failed to fetch cars');
+		}
 		const result = await response.json();
-		this.cars = result.data || result; // Handle both wrapped and unwrapped responses
+		this.cars = result.data || result;
 	}
 
 	async fetchRepairs() {
 		const response = await fetch('/api/repairs');
-		if (!response.ok) throw new Error('Failed to fetch repairs');
+		if (!response.ok) {
+			const message = await apiError(response);
+			throw new Error(message ?? 'Failed to fetch repairs');
+		}
 		const result = await response.json();
-		this.repairs = result.data || result; // Handle both wrapped and unwrapped responses
+		this.repairs = result.data || result;
 	}
 
 	selectedCar = $derived(this.cars.find((c) => c.id === this.selectedCarId));
@@ -173,15 +178,19 @@ class UseRepairs {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(car)
 			});
-			if (!response.ok) throw new Error('Failed to create car');
+			if (!response.ok) {
+				const message = await apiError(response);
+				toast.error(message ?? 'Failed to add car');
+				throw new Error(message ?? 'Failed to add car');
+			}
 			const result = await response.json();
 			const newCar = result.data || result;
 			this.cars = [...this.cars, newCar];
 			toast.success('Car added successfully');
 			return newCar.id;
 		} catch (error) {
+			if (!(error instanceof Error)) throw error;
 			console.error('Failed to add car:', error);
-			toast.error('Failed to add car');
 			throw error;
 		}
 	};
@@ -193,14 +202,18 @@ class UseRepairs {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(updates)
 			});
-			if (!response.ok) throw new Error('Failed to update car');
+			if (!response.ok) {
+				const message = await apiError(response);
+				toast.error(message ?? 'Failed to update car');
+				throw new Error(message ?? 'Failed to update car');
+			}
 			const result = await response.json();
 			const updatedCar = result.data || result;
 			this.cars = this.cars.map((car) => (car.id === id ? updatedCar : car));
 			toast.success('Car updated successfully');
 		} catch (error) {
+			if (!(error instanceof Error)) throw error;
 			console.error('Failed to update car:', error);
-			toast.error('Failed to update car');
 			throw error;
 		}
 	};
@@ -210,7 +223,11 @@ class UseRepairs {
 			const response = await fetch(`/api/cars/${id}`, {
 				method: 'DELETE'
 			});
-			if (!response.ok) throw new Error('Failed to delete car');
+			if (!response.ok) {
+				const message = await apiError(response);
+				toast.error(message ?? 'Failed to delete car');
+				throw new Error(message ?? 'Failed to delete car');
+			}
 			this.cars = this.cars.filter((car) => car.id !== id);
 			this.repairs = this.repairs.filter((repair) => repair.carId !== id);
 			if (this.selectedCarId === id) {
@@ -218,8 +235,8 @@ class UseRepairs {
 			}
 			toast.success('Car deleted successfully');
 		} catch (error) {
+			if (!(error instanceof Error)) throw error;
 			console.error('Failed to delete car:', error);
-			toast.error('Failed to delete car');
 			throw error;
 		}
 	};
@@ -237,15 +254,19 @@ class UseRepairs {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(repairData)
 			});
-			if (!response.ok) throw new Error('Failed to create repair');
+			if (!response.ok) {
+				const message = await apiError(response);
+				toast.error(message ?? 'Failed to add repair');
+				throw new Error(message ?? 'Failed to add repair');
+			}
 			const result = await response.json();
 			const newRepair = result.data || result;
 			this.repairs = [...this.repairs, newRepair];
 			toast.success('Repair added successfully');
 			return newRepair.id;
 		} catch (error) {
+			if (!(error instanceof Error)) throw error;
 			console.error('Failed to add repair:', error);
-			toast.error('Failed to add repair');
 			throw error;
 		}
 	};
@@ -263,14 +284,18 @@ class UseRepairs {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(repairData)
 			});
-			if (!response.ok) throw new Error('Failed to update repair');
+			if (!response.ok) {
+				const message = await apiError(response);
+				toast.error(message ?? 'Failed to update repair');
+				throw new Error(message ?? 'Failed to update repair');
+			}
 			const result = await response.json();
 			const updatedRepair = result.data || result;
 			this.repairs = this.repairs.map((repair) => (repair.id === id ? updatedRepair : repair));
 			toast.success('Repair updated successfully');
 		} catch (error) {
+			if (!(error instanceof Error)) throw error;
 			console.error('Failed to update repair:', error);
-			toast.error('Failed to update repair');
 			throw error;
 		}
 	};
@@ -280,12 +305,16 @@ class UseRepairs {
 			const response = await fetch(`/api/repairs/${id}`, {
 				method: 'DELETE'
 			});
-			if (!response.ok) throw new Error('Failed to delete repair');
+			if (!response.ok) {
+				const message = await apiError(response);
+				toast.error(message ?? 'Failed to delete repair');
+				throw new Error(message ?? 'Failed to delete repair');
+			}
 			this.repairs = this.repairs.filter((repair) => repair.id !== id);
 			toast.success('Repair deleted successfully');
 		} catch (error) {
+			if (!(error instanceof Error)) throw error;
 			console.error('Failed to delete repair:', error);
-			toast.error('Failed to delete repair');
 			throw error;
 		}
 	};
@@ -300,19 +329,139 @@ class UseRepairs {
 				method: 'POST',
 				body: formData
 			});
-			if (!response.ok) throw new Error('Failed to upload photos');
+			if (!response.ok) {
+				const message = await apiError(response);
+				toast.error(message ?? 'Failed to upload photos');
+				throw new Error(message ?? 'Failed to upload photos');
+			}
 			const result = await response.json();
 			const uploadedPhotos = result.data || result;
 			const photoCount = Array.isArray(uploadedPhotos) ? uploadedPhotos.length : 1;
 			toast.success(`${photoCount} photo(s) uploaded successfully`);
 			return uploadedPhotos;
 		} catch (error) {
+			if (!(error instanceof Error)) throw error;
 			console.error('Failed to upload photos:', error);
-			toast.error('Failed to upload photos');
 			throw error;
 		}
 	};
+
+	/**
+	 * Filter repairs by status.
+	 */
+	filterByStatus(status: RepairStatus | string): Repair[] {
+		return this.repairs.filter((r) => r.status === status);
+	}
+
+	/**
+	 * Repairs currently in progress (not yet completed/paid).
+	 */
+	get activeRepairs(): Repair[] {
+		return this.repairs.filter(
+			(r) =>
+				r.status === REPAIR_STATUS.IN_PROGRESS ||
+				r.status === REPAIR_STATUS.ESTIMATE_APPROVED ||
+				r.status === REPAIR_STATUS.PENDING
+		);
+	}
+
+	/**
+	 * Repairs awaiting customer approval.
+	 */
+	get pendingEstimates(): Repair[] {
+		return this.repairs.filter((r) => r.status === REPAIR_STATUS.ESTIMATE_PENDING);
+	}
+
+	/**
+	 * Completed repairs with outstanding balance.
+	 */
+	get awaitingPayment(): Repair[] {
+		return this.repairs.filter((r) => r.status === REPAIR_STATUS.COMPLETED);
+	}
+
+	/**
+	 * Upcoming appointments (future, not completed/paid/rejected).
+	 */
+	get upcomingAppointments(): Repair[] {
+		const now = Date.now();
+		return this.repairs
+			.filter((r) => {
+				if (!r.appointmentAt) return false;
+				if (r.status === REPAIR_STATUS.ESTIMATE_REJECTED) return false;
+				if (r.status === REPAIR_STATUS.PAID) return false;
+				return new Date(r.appointmentAt).getTime() >= now;
+			})
+			.toSorted(
+				(a, b) =>
+					new Date(a.appointmentAt ?? 0).getTime() - new Date(b.appointmentAt ?? 0).getTime()
+			);
+	}
+
+	/**
+	 * Overdue appointments (past, still open).
+	 */
+	get overdueAppointments(): Repair[] {
+		const now = Date.now();
+		return this.repairs
+			.filter((r) => {
+				if (!r.appointmentAt) return false;
+				if (r.status === REPAIR_STATUS.COMPLETED) return false;
+				if (r.status === REPAIR_STATUS.PAID) return false;
+				if (r.status === REPAIR_STATUS.ESTIMATE_REJECTED) return false;
+				return new Date(r.appointmentAt).getTime() < now;
+			})
+			.toSorted(
+				(a, b) =>
+					new Date(a.appointmentAt ?? 0).getTime() - new Date(b.appointmentAt ?? 0).getTime()
+			);
+	}
+
+	/**
+	 * Today's appointments.
+	 */
+	get todaysAppointments(): Repair[] {
+		const now = new Date();
+		const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+		const end = new Date(start.getTime() + 86400000);
+		return this.repairs.filter((r) => {
+			if (!r.appointmentAt) return false;
+			if (r.status === REPAIR_STATUS.COMPLETED || r.status === REPAIR_STATUS.PAID) return false;
+			const apt = new Date(r.appointmentAt);
+			return apt >= start && apt < end;
+		});
+	}
+
+	/**
+	 * Unassigned repairs (not completed/paid/rejected).
+	 */
+	get unassignedRepairs(): Repair[] {
+		return this.repairs.filter(
+			(r) =>
+				!r.assignedMechanicId &&
+				r.status !== REPAIR_STATUS.COMPLETED &&
+				r.status !== REPAIR_STATUS.PAID &&
+				r.status !== REPAIR_STATUS.ESTIMATE_REJECTED
+		);
+	}
+
+	/**
+	 * Total revenue from paid repairs.
+	 */
+	get totalRevenue(): number {
+		return this.repairs
+			.filter((r) => r.status === REPAIR_STATUS.PAID)
+			.reduce((sum, r) => sum + r.totalCost, 0);
+	}
+
+	/**
+	 * Outstanding revenue (completed but not fully paid).
+	 */
+	get outstandingRevenue(): number {
+		return this.repairs
+			.filter((r) => r.status === REPAIR_STATUS.COMPLETED)
+			.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0);
+	}
 }
 
 export const setRepairs = () => setContext('repairsState', new UseRepairs());
-export const useRepairs = () => getContext<ReturnType<typeof setRepairs>>('repairsState');
+export const useRepairs = () => getContext<UseRepairs>('repairsState');

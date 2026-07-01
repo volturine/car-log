@@ -2,24 +2,31 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
-import {
-	requireAuth,
-	requireRole,
-	validateBody,
-	successResponse,
-	verifyShopAccess
-} from '$lib/server/api-utils';
+import { requireAuth, requireRole, validateBody, verifyShopAccess } from '$lib/server/api-utils';
 import { shopSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { API_ERRORS, USER_ROLE } from '$lib/constants';
-import { error } from '@sveltejs/kit';
+import { USER_ROLE } from '$lib/constants';
 
 const logger = apiLogger.child('shops');
 
-// GET /api/shops/[id] - Get shop details with members
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const user = requireAuth(locals);
-	await verifyShopAccess(params.id, user.id, user.role || USER_ROLE.CUSTOMER);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
+
+	const accessResult = await verifyShopAccess(params.id, user.id, user.role || USER_ROLE.CUSTOMER);
+	if (accessResult.isErr()) {
+		return json(
+			{ success: false, error: accessResult.error.message },
+			{ status: accessResult.error.status }
+		);
+	}
 
 	logger.debug('Fetching shop details', { shopId: params.id, userId: user.id });
 
@@ -30,10 +37,9 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		.limit(1);
 
 	if (!shop) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
+		return json({ success: false, error: 'Shop not found' }, { status: 404 });
 	}
 
-	// Get shop members
 	const members = await db
 		.select({
 			userId: schema.shopMembers.userId,
@@ -48,22 +54,28 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	logger.debug('Shop details fetched', { shopId: params.id, membersCount: members.length });
 
-	return json(
-		successResponse({
-			...shop,
-			members
-		})
-	);
+	return json({ success: true, data: { ...shop, members } });
 };
 
-// PUT /api/shops/[id] - Update shop details (owner only)
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	// Verify shop access - only owner can update
-	await verifyShopAccess(params.id, user.id, user.role || 'customer');
+	const user = userResult.value;
 
-	// Additional check: only owner or admin can update
+	const accessResult = await verifyShopAccess(params.id, user.id, user.role || 'customer');
+	if (accessResult.isErr()) {
+		return json(
+			{ success: false, error: accessResult.error.message },
+			{ status: accessResult.error.status }
+		);
+	}
+
 	const [shop] = await db
 		.select()
 		.from(schema.shops)
@@ -71,15 +83,22 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		.limit(1);
 
 	if (!shop) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
+		return json({ success: false, error: 'Shop not found' }, { status: 404 });
 	}
 
 	if (shop.ownerId !== user.id && user.role !== USER_ROLE.ADMIN) {
-		throw error(API_ERRORS.FORBIDDEN.status, 'Only shop owner can update shop details');
+		return json(
+			{ success: false, error: 'Only shop owner can update shop details' },
+			{ status: 403 }
+		);
 	}
 
-	// Validate request body
-	const validatedData = await validateBody(request, shopSchema);
+	const validationErr = await validateBody(request, shopSchema);
+	if (validationErr.isErr()) {
+		return json({ success: false, error: validationErr.error.message }, { status: 400 });
+	}
+
+	const validatedData = validationErr.value;
 
 	logger.info('Updating shop', { shopId: params.id, userId: user.id });
 
@@ -100,14 +119,20 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	logger.info('Shop updated', { shopId: params.id, userId: user.id });
 
-	return json(successResponse({ ...shop, ...updatedShop }));
+	return json({ success: true, data: { ...shop, ...updatedShop } });
 };
 
-// DELETE /api/shops/[id] - Delete shop (owner or admin only)
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-	const user = requireRole(locals, [USER_ROLE.SHOP_OWNER, USER_ROLE.ADMIN]);
+	const userResult = requireRole(locals, [USER_ROLE.SHOP_OWNER, USER_ROLE.ADMIN]);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	// Verify shop access
+	const user = userResult.value;
+
 	const [shop] = await db
 		.select()
 		.from(schema.shops)
@@ -115,19 +140,21 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		.limit(1);
 
 	if (!shop) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
+		return json({ success: false, error: 'Shop not found' }, { status: 404 });
 	}
 
 	if (shop.ownerId !== user.id && user.role !== USER_ROLE.ADMIN) {
-		throw error(API_ERRORS.FORBIDDEN.status, 'Only shop owner or admin can delete shop');
+		return json(
+			{ success: false, error: 'Only shop owner or admin can delete shop' },
+			{ status: 403 }
+		);
 	}
 
 	logger.info('Deleting shop', { shopId: params.id, userId: user.id });
 
-	// Delete shop (cascade will delete shop members)
 	await db.delete(schema.shops).where(eq(schema.shops.id, params.id));
 
 	logger.info('Shop deleted', { shopId: params.id, userId: user.id });
 
-	return json(successResponse({ deleted: true }));
+	return json({ success: true, data: { deleted: true } });
 };

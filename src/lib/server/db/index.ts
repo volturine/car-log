@@ -224,7 +224,6 @@ function ensureLegacyColumns(): void {
 	addColumn('accounts', 'access_token_expires_at', 'integer');
 	addColumn('accounts', 'refresh_token_expires_at', 'integer');
 	addColumn('accounts', 'scope', 'text');
-	addColumn('repairs', 'appointment_at', 'integer');
 }
 
 function bootstrapDatabase(): void {

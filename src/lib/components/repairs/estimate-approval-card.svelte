@@ -11,7 +11,7 @@
 	import { Textarea } from '$lib/components/ui/textarea';
 	import { Label } from '$lib/components/ui/label';
 	import { CheckCircle2, XCircle, Clock } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils';
+	import { apiError, formatCurrency } from '$lib/utils';
 	import { toast } from 'svelte-sonner';
 	import { REPAIR_STATUS } from '$lib/constants';
 	import type { Repair } from '$lib/types';
@@ -36,7 +36,8 @@
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to approve estimate');
+				const message = await apiError(response);
+				throw new Error(message ?? 'Failed to approve estimate');
 			}
 
 			toast.success('Estimate approved! The shop can now begin work.');
@@ -64,7 +65,8 @@
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to reject estimate');
+				const message = await apiError(response);
+				throw new Error(message ?? 'Failed to reject estimate');
 			}
 
 			toast.success('Estimate rejected. The shop has been notified.');

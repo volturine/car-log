@@ -13,7 +13,6 @@
 	import { fly } from 'svelte/transition';
 	import { USER_ROLE } from '$lib/constants';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { ShopMember } from '$lib/types';
 
 	let {
 		user = undefined
@@ -43,11 +42,13 @@
 		if (!response || !response.ok) return;
 		const result = await response.json();
 		const data = result.data ?? result;
-		shopMembers = (data.members ?? []).map((m: ShopMember) => ({
-			userId: m.userId,
-			userName: m.userName,
-			role: m.role
-		}));
+		shopMembers = (data.members ?? []).map(
+			(m: { userId: string; userName: string | null; role: string }) => ({
+				userId: m.userId,
+				userName: m.userName,
+				role: m.role
+			})
+		);
 	}
 
 	const handleDelete = async () => {

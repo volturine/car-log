@@ -14,8 +14,8 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import { Badge } from '$lib/components/ui/badge';
 	import { DollarSign, CreditCard, ReceiptText } from '@lucide/svelte';
-	import { formatCurrency } from '$lib/utils';
-	import { PAYMENT_METHOD, PAYMENT_METHOD_LABELS } from '$lib/constants';
+	import { apiError, formatCurrency, formatDateTime } from '$lib/utils';
+	import { PAYMENT_METHOD_LABELS, PAYMENT_METHOD_VALUES } from '$lib/constants';
 	import { toast } from 'svelte-sonner';
 	import type { Payment, PaymentMethod, Repair } from '$lib/types';
 
@@ -36,24 +36,9 @@
 	}
 
 	function parsePaymentMethod(value: string): PaymentMethod | null {
-		if (value === PAYMENT_METHOD.CASH) return PAYMENT_METHOD.CASH;
-		if (value === PAYMENT_METHOD.CARD) return PAYMENT_METHOD.CARD;
-		if (value === PAYMENT_METHOD.CHECK) return PAYMENT_METHOD.CHECK;
-		if (value === PAYMENT_METHOD.TRANSFER) return PAYMENT_METHOD.TRANSFER;
-		if (value === PAYMENT_METHOD.OTHER) return PAYMENT_METHOD.OTHER;
-		return null;
-	}
-
-	function formatDateTime(date: string | Date): string {
-		const value = typeof date === 'string' ? new Date(date) : date;
-		if (Number.isNaN(value.getTime())) return '';
-		return value.toLocaleString('en-US', {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric',
-			hour: 'numeric',
-			minute: '2-digit'
-		});
+		return (PAYMENT_METHOD_VALUES as readonly string[]).includes(value)
+			? (value as PaymentMethod)
+			: null;
 	}
 
 	function setFullAmount() {
@@ -80,7 +65,8 @@
 			});
 
 			if (!response.ok) {
-				throw new Error('Failed to record payment');
+				const message = await apiError(response);
+				throw new Error(message ?? 'Failed to record payment');
 			}
 
 			const result = await response.json();

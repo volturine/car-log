@@ -1,18 +1,29 @@
-import { API_ERRORS, USER_ROLE } from '$lib/constants';
-import { requireAuth, successResponse } from '$lib/server/api-utils';
+import { requireAuth } from '$lib/server/api-utils';
 import { auth } from '$lib/server/auth';
 import { db, schema } from '$lib/server/db';
 import { apiLogger } from '$lib/server/logger';
 import { eq } from 'drizzle-orm';
-import { error, json, type RequestHandler } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
+import { USER_ROLE } from '$lib/constants';
 
 const logger = apiLogger.child('users');
 
 export const POST: RequestHandler = async ({ locals, request }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
 
 	if (user.role !== USER_ROLE.CUSTOMER) {
-		throw error(API_ERRORS.FORBIDDEN.status, 'Only customers can become shop owners');
+		return json(
+			{ success: false, error: 'Only customers can become shop owners' },
+			{ status: 403 }
+		);
 	}
 
 	await db
@@ -30,7 +41,11 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 	logger.info('User became shop owner', { userId: user.id });
 
-	return json(successResponse({ role: USER_ROLE.SHOP_OWNER }), {
-		headers: session.headers
-	});
+	return json(
+		{ success: true, data: { role: USER_ROLE.SHOP_OWNER } },
+		{
+			status: 200,
+			headers: session.headers
+		}
+	);
 };

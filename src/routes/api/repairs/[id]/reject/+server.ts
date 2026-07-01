@@ -1,14 +1,8 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
-import {
-	requireAuth,
-	verifyOwnership,
-	validateBody,
-	successResponse,
-	transaction
-} from '$lib/server/api-utils';
+import { requireAuth, verifyOwnership, validateBody, transaction } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { REPAIR_STATUS } from '$lib/constants';
 import { notifyEstimateRejected } from '$lib/server/notifications';
@@ -20,19 +14,40 @@ const rejectSchema = z.object({
 	reason: z.string().optional()
 });
 
-// POST /api/repairs/[id]/reject - Reject an estimate
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const user = requireAuth(locals);
-
-	// Verify repair belongs to user (customer)
-	const repair = await verifyOwnership(schema.repairs, params.id, user.id, 'Repair');
-
-	// Check if repair is in estimate_pending status
-	if (repair.status !== REPAIR_STATUS.ESTIMATE_PENDING) {
-		throw error(400, 'Only pending estimates can be rejected');
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
 	}
 
-	const { reason } = await validateBody(request, rejectSchema);
+	const user = userResult.value;
+
+	const ownershipResult = await verifyOwnership(schema.repairs, params.id, user.id, 'Repair');
+	if (ownershipResult.isErr()) {
+		return json(
+			{ success: false, error: ownershipResult.error.message },
+			{ status: ownershipResult.error.status }
+		);
+	}
+
+	const repair = ownershipResult.value;
+
+	if (repair.status !== REPAIR_STATUS.ESTIMATE_PENDING) {
+		return json(
+			{ success: false, error: 'Only pending estimates can be rejected' },
+			{ status: 400 }
+		);
+	}
+
+	const validationErr = await validateBody(request, rejectSchema);
+	if (validationErr.isErr()) {
+		return json({ success: false, error: validationErr.error.message }, { status: 400 });
+	}
+
+	const { reason } = validationErr.value;
 
 	logger.info('Rejecting estimate', { repairId: params.id, userId: user.id, reason });
 
@@ -66,5 +81,5 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	logger.info('Estimate rejected', { repairId: params.id, userId: user.id });
 
-	return json(successResponse(result));
+	return json({ success: true, data: result });
 };

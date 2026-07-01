@@ -1,53 +1,64 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { schema } from '$lib/server/db';
 import { saveFile } from '$lib/server/storage';
-import {
-	requireAuth,
-	verifyRepairAccess,
-	successResponse,
-	transaction
-} from '$lib/server/api-utils';
+import { requireAuth, verifyRepairAccess, transaction } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
 import { FILE_UPLOAD } from '$lib/constants';
 
 const logger = apiLogger.child('photos');
 
-// POST /api/photos - Upload photos for a repair
 export const POST: RequestHandler = async ({ request, locals }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
 
 	const formData = await request.formData();
 	const repairId = formData.get('repairId');
 	if (typeof repairId !== 'string' || !repairId) {
-		throw error(400, 'repairId is required');
+		return json({ success: false, error: 'repairId is required' }, { status: 400 });
 	}
 
 	const files = formData.getAll('files').filter((entry): entry is File => entry instanceof File);
 	if (files.length === 0) {
-		throw error(400, 'At least one file is required');
+		return json({ success: false, error: 'At least one file is required' }, { status: 400 });
 	}
 
-	// Verify repair access
-	await verifyRepairAccess(repairId, user);
+	const accessResult = await verifyRepairAccess(repairId, user);
+	if (accessResult.isErr()) {
+		return json(
+			{ success: false, error: accessResult.error.message },
+			{ status: accessResult.error.status }
+		);
+	}
 
 	logger.info('Uploading photos', { repairId, userId: user.id, fileCount: files.length });
 
-	// Validate, save files, then insert in transaction
 	const maxSize = FILE_UPLOAD.MAX_SIZE_BYTES;
 	for (const file of files) {
-		if (!file.size) throw error(400, 'Empty files not allowed');
-		if (file.size > maxSize) throw error(400, `File exceeds ${maxSize / 1024 / 1024}MB`);
+		if (!file.size) {
+			return json({ success: false, error: 'Empty files not allowed' }, { status: 400 });
+		}
+		if (file.size > maxSize) {
+			return json(
+				{ success: false, error: `File exceeds ${maxSize / 1024 / 1024}MB` },
+				{ status: 400 }
+			);
+		}
 		if (!FILE_UPLOAD.ALLOWED_IMAGE_TYPES.some((type) => type === file.type)) {
-			throw error(400, `Type ${file.type} not allowed`);
+			return json({ success: false, error: `Type ${file.type} not allowed` }, { status: 400 });
 		}
 	}
 
-	// Save files to disk
 	const savedFiles = await Promise.all(files.map((file) => saveFile(file, user.id, repairId)));
 
-	// Insert all photos in single transaction
 	const uploadedPhotos = transaction((tx) =>
 		files.map((file, i) => {
 			const photo = {
@@ -68,5 +79,5 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 	logger.info('Photos uploaded', { repairId, userId: user.id, count: uploadedPhotos.length });
 
-	return json(successResponse(uploadedPhotos, 201), { status: 201 });
+	return json({ success: true, data: uploadedPhotos }, { status: 201 });
 };

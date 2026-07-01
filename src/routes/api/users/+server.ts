@@ -1,10 +1,10 @@
-import { API_ERRORS, USER_ROLE } from '$lib/constants';
-import { requireAuth, fetchById, successResponse } from '$lib/server/api-utils';
+import { requireAuth, fetchById } from '$lib/server/api-utils';
 import { db, schema } from '$lib/server/db';
 import { apiLogger } from '$lib/server/logger';
 import { and, eq, like, notInArray, or } from 'drizzle-orm';
-import { error, json, type RequestHandler } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { z } from 'zod';
+import { USER_ROLE } from '$lib/constants';
 
 const logger = apiLogger.child('users');
 
@@ -14,10 +14,21 @@ const querySchema = z.object({
 });
 
 export const GET: RequestHandler = async ({ locals, url }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
 
 	if (user.role !== USER_ROLE.SHOP_OWNER && user.role !== USER_ROLE.ADMIN) {
-		throw error(API_ERRORS.FORBIDDEN.status, 'Only shop owners or admins can search users');
+		return json(
+			{ success: false, error: 'Only shop owners or admins can search users' },
+			{ status: 403 }
+		);
 	}
 
 	const result = querySchema.safeParse({
@@ -27,18 +38,21 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	if (!result.success) {
 		const message = result.error.issues.map((issue) => issue.message).join(', ');
-		throw error(API_ERRORS.VALIDATION_ERROR.status, message);
+		return json({ success: false, error: message }, { status: 400 });
 	}
 
 	const input = result.data;
-	const shop = await fetchById(schema.shops, input.shopId);
-
-	if (!shop) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
+	const shopResult = await fetchById(schema.shops, input.shopId);
+	if (shopResult.isErr()) {
+		return json({ success: false, error: 'Shop not found' }, { status: 404 });
 	}
+	const shop = shopResult.value;
 
 	if (user.role !== USER_ROLE.ADMIN && shop.ownerId !== user.id) {
-		throw error(API_ERRORS.FORBIDDEN.status, 'Only shop owners or admins can search users');
+		return json(
+			{ success: false, error: 'Only shop owners or admins can search users' },
+			{ status: 403 }
+		);
 	}
 
 	const term = `%${input.query}%`;
@@ -84,5 +98,5 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 		count: users.length
 	});
 
-	return json(successResponse(users));
+	return json({ success: true, data: users });
 };

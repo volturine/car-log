@@ -42,41 +42,15 @@
 	let expanded = $state<string | null>(null);
 	let query = $state('');
 
-	const allPending = $derived(
-		repairs.repairs.filter((r) => r.status === REPAIR_STATUS.ESTIMATE_PENDING)
-	);
+	const allPending = $derived(repairs.pendingEstimates);
 
-	const allActive = $derived(
-		repairs.repairs.filter(
-			(r) =>
-				r.status === REPAIR_STATUS.IN_PROGRESS ||
-				r.status === REPAIR_STATUS.ESTIMATE_APPROVED ||
-				r.status === REPAIR_STATUS.PENDING
-		)
-	);
+	const allActive = $derived(repairs.activeRepairs);
 
-	const allUnpaid = $derived(repairs.repairs.filter((r) => r.status === REPAIR_STATUS.COMPLETED));
-
-	const upcoming = $derived.by(() => {
-		const now = Date.now();
-		return repairs.repairs
-			.filter((r) => {
-				if (!r.appointmentAt) return false;
-				if (r.status === REPAIR_STATUS.ESTIMATE_REJECTED) return false;
-				if (r.status === REPAIR_STATUS.PAID) return false;
-				return new Date(r.appointmentAt).getTime() >= now;
-			})
-			.toSorted(
-				(a, b) =>
-					new Date(a.appointmentAt ?? 0).getTime() - new Date(b.appointmentAt ?? 0).getTime()
-			);
-	});
+	const upcoming = $derived(repairs.upcomingAppointments);
 
 	const next = $derived(upcoming[0] ?? null);
 
-	const outstanding = $derived(
-		allUnpaid.reduce((sum, r) => sum + (r.totalCost - (r.amountPaid ?? 0)), 0)
-	);
+	const outstanding = $derived(repairs.outstandingRevenue);
 
 	const matching = $derived.by(() => {
 		const search = query.trim().toLowerCase();
@@ -120,7 +94,6 @@
 
 	const overdue = $derived.by(() => {
 		const now = Date.now();
-
 		return matching
 			.filter((r) => {
 				if (!r.appointmentAt) return false;

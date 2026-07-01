@@ -1,29 +1,44 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
-import { requireAuth, verifyOwnership, successResponse, transaction } from '$lib/server/api-utils';
+import { requireAuth, verifyOwnership, transaction } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { REPAIR_STATUS } from '$lib/constants';
 import { notifyEstimateApproved } from '$lib/server/notifications';
 
 const logger = apiLogger.child('repairs');
 
-// POST /api/repairs/[id]/approve - Approve an estimate
 export const POST: RequestHandler = async ({ params, locals }) => {
-	const user = requireAuth(locals);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	// Verify repair belongs to user (customer)
-	const repair = await verifyOwnership(schema.repairs, params.id, user.id, 'Repair');
+	const user = userResult.value;
 
-	// Check if repair is in estimate_pending status
+	const ownershipResult = await verifyOwnership(schema.repairs, params.id, user.id, 'Repair');
+	if (ownershipResult.isErr()) {
+		return json(
+			{ success: false, error: ownershipResult.error.message },
+			{ status: ownershipResult.error.status }
+		);
+	}
+
+	const repair = ownershipResult.value;
+
 	if (repair.status !== REPAIR_STATUS.ESTIMATE_PENDING) {
-		throw error(400, 'Only pending estimates can be approved');
+		return json(
+			{ success: false, error: 'Only pending estimates can be approved' },
+			{ status: 400 }
+		);
 	}
 
 	logger.info('Approving estimate', { repairId: params.id, userId: user.id });
 
-	// Update in transaction
 	const result = transaction((tx) => {
 		const updatedRepair = {
 			status: REPAIR_STATUS.ESTIMATE_APPROVED,
@@ -37,7 +52,6 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 		return { ...repair, ...updatedRepair };
 	});
 
-	// Send notification after transaction (can be async)
 	if (repair.shopId) {
 		const [shop] = await db
 			.select()
@@ -52,5 +66,5 @@ export const POST: RequestHandler = async ({ params, locals }) => {
 
 	logger.info('Estimate approved', { repairId: params.id, userId: user.id });
 
-	return json(successResponse(result));
+	return json({ success: true, data: result });
 };

@@ -10,14 +10,16 @@ function render(where: Parameters<SQLiteSyncDialect['sqlToQuery']>[0]) {
 
 describe('notificationWhere', () => {
 	it('keeps the user filter when unreadOnly is false', () => {
-		const query = render(notificationWhere('user-1', false));
+		const where = notificationWhere('user-1', false);
+		const query = render(where!);
 
 		expect(query.sql).toBe('"notifications"."user_id" = ?');
 		expect(query.params).toEqual(['user-1']);
 	});
 
 	it('keeps the user filter when unreadOnly is true', () => {
-		const query = render(notificationWhere('user-1', true));
+		const where = notificationWhere('user-1', true);
+		const query = render(where!);
 
 		expect(query.sql).toBe('("notifications"."user_id" = ? and "notifications"."read" = ?)');
 		expect(query.params).toEqual(['user-1', 0]);
@@ -26,7 +28,8 @@ describe('notificationWhere', () => {
 
 describe('memberWhere', () => {
 	it('builds a combined membership predicate', () => {
-		const query = render(memberWhere('shop-1', 'user-1'));
+		const where = memberWhere('shop-1', 'user-1');
+		const query = render(where!);
 
 		expect(query.sql).toBe('("shop_members"."shop_id" = ? and "shop_members"."user_id" = ?)');
 		expect(query.params).toEqual(['shop-1', 'user-1']);

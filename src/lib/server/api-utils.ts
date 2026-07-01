@@ -1,9 +1,18 @@
-import { error, type NumericRange } from '@sveltejs/kit';
+import { ok as _ok, err as _err } from 'neverthrow';
+
+export const ok = _ok;
+export const err = _err;
 import { db, schema } from './db';
 import { eq, and, inArray } from 'drizzle-orm';
 import type { AnySQLiteColumn, AnySQLiteTable } from 'drizzle-orm/sqlite-core';
 import { API_ERRORS, USER_ROLE } from '$lib/constants';
 import { z } from 'zod';
+
+export type ApiError =
+	| { type: 'validation'; message: string; status: 400 }
+	| { type: 'unauthorized'; message: string; status: 401 }
+	| { type: 'forbidden'; message: string; status: 403 }
+	| { type: 'not_found'; message: string; status: 404 };
 
 type User = NonNullable<App.Locals['user']>;
 type IdTable = AnySQLiteTable<{ columns: { id: AnySQLiteColumn } }> & { id: AnySQLiteColumn };
@@ -14,42 +23,48 @@ type OwnedTable = AnySQLiteTable<{ columns: { id: AnySQLiteColumn; userId: AnySQ
 type Row<TTable extends AnySQLiteTable> = TTable['$inferSelect'];
 type Tx = Parameters<typeof db.transaction>[0] extends (tx: infer TTx) => unknown ? TTx : never;
 
-export function requireAuth(locals: App.Locals): User {
+export function requireAuth(locals: App.Locals) {
 	if (!locals.user) {
-		throw error(API_ERRORS.UNAUTHORIZED.status, API_ERRORS.UNAUTHORIZED.message);
+		return err({ type: 'unauthorized', message: API_ERRORS.UNAUTHORIZED.message, status: 401 });
 	}
 
-	return locals.user;
+	return ok(locals.user);
 }
 
-export function requireRole(locals: App.Locals, allowedRoles: string[]): User {
-	const user = requireAuth(locals);
+export function requireRole(locals: App.Locals, allowedRoles: string[]) {
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) return userResult;
+
+	const user = userResult.value;
 
 	if (!allowedRoles.includes(user.role || 'customer')) {
-		throw error(API_ERRORS.FORBIDDEN.status, 'Insufficient permissions');
+		return err({ type: 'forbidden', message: 'Insufficient permissions', status: 403 });
 	}
 
-	return user;
+	return ok(user);
 }
 
 export function isShopMember(user: User): boolean {
 	return user.role === USER_ROLE.SHOP_OWNER || user.role === USER_ROLE.MECHANIC;
 }
 
-export async function fetchById<TTable extends IdTable>(
-	table: TTable,
-	id: Row<TTable>['id']
-): Promise<Row<TTable> | undefined> {
+export async function fetchById<TTable extends IdTable>(table: TTable, id: Row<TTable>['id']) {
 	const [record] = await db.select().from(table).where(eq(table.id, id)).limit(1);
-	return record;
+	if (!record) {
+		return err({ type: 'not_found', message: 'Not found', status: 404 });
+	}
+
+	return ok(record);
 }
 
 export async function verifyShopAccess(shopId: string, userId: string, userRole: string) {
-	const shop = await fetchById(schema.shops, shopId);
-	if (!shop) throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
+	const shopResult = await fetchById(schema.shops, shopId);
+	if (shopResult.isErr()) return shopResult;
 
-	if (shop.ownerId === userId) return shop;
-	if (userRole === USER_ROLE.ADMIN) return shop;
+	const shop = shopResult.value;
+
+	if (shop.ownerId === userId) return ok(shop);
+	if (userRole === USER_ROLE.ADMIN) return ok(shop);
 
 	if (userRole === USER_ROLE.MECHANIC || userRole === USER_ROLE.SHOP_OWNER) {
 		const [membership] = await db
@@ -57,21 +72,21 @@ export async function verifyShopAccess(shopId: string, userId: string, userRole:
 			.from(schema.shopMembers)
 			.where(and(eq(schema.shopMembers.shopId, shopId), eq(schema.shopMembers.userId, userId)))
 			.limit(1);
-		if (membership) return shop;
+		if (membership) return ok(shop);
 	}
 
-	throw error(API_ERRORS.FORBIDDEN.status, 'You do not have access to this shop');
+	return err({ type: 'forbidden', message: 'You do not have access to this shop', status: 403 });
 }
 
-export async function findUserShop(user: User): Promise<typeof schema.shops.$inferSelect | null> {
+export async function findUserShop(user: User) {
 	if (!isShopMember(user)) {
 		return null;
 	}
 
 	if (user.shopId) {
-		const shop = await fetchById(schema.shops, user.shopId);
-		if (shop) {
-			return shop;
+		const shopResult = await fetchById(schema.shops, user.shopId);
+		if (shopResult.isOk()) {
+			return shopResult.value;
 		}
 	}
 
@@ -82,9 +97,9 @@ export async function findUserShop(user: User): Promise<typeof schema.shops.$inf
 		.limit(1);
 
 	if (member) {
-		const shop = await fetchById(schema.shops, member.shopId);
-		if (shop) {
-			return shop;
+		const shopResult = await fetchById(schema.shops, member.shopId);
+		if (shopResult.isOk()) {
+			return shopResult.value;
 		}
 	}
 
@@ -101,46 +116,44 @@ export async function findUserShop(user: User): Promise<typeof schema.shops.$inf
 	return shop ?? null;
 }
 
-export async function verifyRepairAccess(
-	repairId: string,
-	user: User
-): Promise<typeof schema.repairs.$inferSelect> {
-	const repair = await fetchById(schema.repairs, repairId);
+export async function verifyRepairAccess(repairId: string, user: User) {
+	const repairResult = await fetchById(schema.repairs, repairId);
+	if (repairResult.isErr()) return repairResult;
 
-	if (!repair) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Repair not found');
-	}
+	const repair = repairResult.value;
 
 	if (repair.userId === user.id || user.role === USER_ROLE.ADMIN) {
-		return repair;
+		return ok(repair);
 	}
 
 	if (!repair.shopId || !isShopMember(user)) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Repair not found');
+		return err({ type: 'not_found', message: 'Repair not found', status: 404 });
 	}
 
-	await verifyShopAccess(repair.shopId, user.id, user.role || USER_ROLE.CUSTOMER);
+	const shopAccessResult = await verifyShopAccess(
+		repair.shopId,
+		user.id,
+		user.role || USER_ROLE.CUSTOMER
+	);
+	if (shopAccessResult.isErr()) return shopAccessResult;
 
-	return repair;
+	return ok(repair);
 }
 
-export async function verifyPhotoAccess(
-	photoId: string,
-	user: User
-): Promise<typeof schema.photos.$inferSelect> {
-	const photo = await fetchById(schema.photos, photoId);
+export async function verifyPhotoAccess(photoId: string, user: User) {
+	const photoResult = await fetchById(schema.photos, photoId);
+	if (photoResult.isErr()) return photoResult;
 
-	if (!photo) {
-		throw error(API_ERRORS.NOT_FOUND.status, 'Photo not found');
-	}
+	const photo = photoResult.value;
 
 	if (photo.userId === user.id || user.role === USER_ROLE.ADMIN) {
-		return photo;
+		return ok(photo);
 	}
 
-	await verifyRepairAccess(photo.repairId, user);
+	const repairResult = await verifyRepairAccess(photo.repairId, user);
+	if (repairResult.isErr()) return repairResult;
 
-	return photo;
+	return ok(photo);
 }
 
 export async function verifyOwnership<TTable extends OwnedTable>(
@@ -148,35 +161,34 @@ export async function verifyOwnership<TTable extends OwnedTable>(
 	resourceId: Row<TTable>['id'],
 	userId: Row<TTable>['userId'],
 	resourceName: string = 'Resource'
-): Promise<Row<TTable>> {
-	const record = await fetchById(table, resourceId);
-	if (!record || record.userId !== userId) {
-		throw error(API_ERRORS.NOT_FOUND.status, `${resourceName} not found`);
+) {
+	const recordResult = await fetchById(table, resourceId);
+	if (recordResult.isErr())
+		return err({ type: 'not_found', message: `${resourceName} not found`, status: 404 });
+
+	const record = recordResult.value;
+	if (record.userId !== userId) {
+		return err({ type: 'not_found', message: `${resourceName} not found`, status: 404 });
 	}
-	return record;
+
+	return ok(record);
 }
 
-export async function validateBody<T>(request: Request, schema: z.ZodSchema<T>): Promise<T> {
+export async function validateBody<T>(request: Request, schema: z.ZodSchema<T>) {
 	try {
 		const data = await request.json();
-		return schema.parse(data);
-	} catch (err) {
-		if (err instanceof z.ZodError) {
-			const errorMessage = err.issues
-				.map((e: z.ZodIssue) => `${e.path.join('.')}: ${e.message}`)
+		const validated = schema.parse(data);
+		return ok(validated);
+	} catch (validationErr) {
+		if (validationErr instanceof z.ZodError) {
+			const message = validationErr.issues
+				.map((e) => `${e.path.join('.')}: ${e.message}`)
 				.join(', ');
-			throw error(API_ERRORS.VALIDATION_ERROR.status, errorMessage);
+			return err({ type: 'validation', message, status: 400 });
 		}
-		throw error(400, 'Invalid request body');
-	}
-}
 
-export function successResponse<T>(data: T, status: NumericRange<200, 299> = 200) {
-	return {
-		success: true as const,
-		data,
-		status
-	};
+		return err({ type: 'validation', message: 'Invalid request body', status: 400 });
+	}
 }
 
 export function transaction<T>(callback: (tx: Tx) => T): T {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok as _ok, err as _err } from 'neverthrow';
 
 type Tx = {
 	insert: ReturnType<typeof vi.fn>;
@@ -42,11 +43,10 @@ const state = vi.hoisted(() => {
 		delete: txDelete,
 		update: txUpdate
 	};
-	const requireAuth = vi.fn(() => ({ id: 'shop-1', role: 'shop_owner' }));
-	const validateBody = vi.fn(async () => ({ status: 'completed' }));
-	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
+	const requireAuth = vi.fn(() => _ok({ id: 'shop-1', role: 'shop_owner' }));
+	const validateBody = vi.fn(async () => _ok({ status: 'completed' }));
 	const transaction = vi.fn((callback: (tx: Tx) => unknown) => callback(tx));
-	const verifyRepairAccess = vi.fn(async () => repair);
+	const verifyRepairAccess = vi.fn(async () => _ok(repair));
 	const isShopMember = vi.fn(() => true);
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
@@ -64,7 +64,6 @@ const state = vi.hoisted(() => {
 		txUpdate,
 		requireAuth,
 		validateBody,
-		successResponse,
 		transaction,
 		verifyRepairAccess,
 		isShopMember,
@@ -90,16 +89,19 @@ vi.mock('$lib/server/db', async () => {
 	};
 });
 
-vi.mock('$lib/server/api-utils', () => ({
-	requireAuth: state.requireAuth,
-	validateBody: state.validateBody,
-	successResponse: state.successResponse,
-	transaction: state.transaction,
-	fetchById: vi.fn(),
-	formatPhotosForResponse: vi.fn(),
-	verifyRepairAccess: state.verifyRepairAccess,
-	isShopMember: state.isShopMember
-}));
+vi.mock('$lib/server/api-utils', async () => {
+	const actual =
+		await vi.importActual<typeof import('$lib/server/api-utils')>('$lib/server/api-utils');
+
+	return {
+		...actual,
+		requireAuth: state.requireAuth,
+		validateBody: state.validateBody,
+		transaction: state.transaction,
+		verifyRepairAccess: state.verifyRepairAccess,
+		isShopMember: state.isShopMember
+	};
+});
 
 vi.mock('$lib/server/logger', () => ({
 	apiLogger: {
@@ -135,8 +137,7 @@ describe('PUT /api/repairs/[id]', () => {
 		state.txUpdate.mockClear();
 		state.requireAuth.mockClear();
 		state.validateBody.mockReset();
-		state.validateBody.mockResolvedValue({ status: 'completed' });
-		state.successResponse.mockClear();
+		state.validateBody.mockResolvedValue(_ok({ status: 'completed' }));
 		state.transaction.mockClear();
 		state.verifyRepairAccess.mockClear();
 		state.isShopMember.mockClear();
@@ -145,25 +146,25 @@ describe('PUT /api/repairs/[id]', () => {
 	it('rejects out-of-order shop status changes', async () => {
 		const { PUT } = await import('../routes/api/repairs/[id]/+server');
 
-		await expect(
-			PUT({
-				params: { id: 'repair-1' },
-				request: new Request('http://test.local/api/repairs/repair-1', { method: 'PUT' }),
-				locals: { user: { id: 'shop-1', role: 'shop_owner' } }
-			} as never)
-		).rejects.toMatchObject({
-			status: 400,
-			body: {
-				message:
-					'Invalid repair status transition from estimate_approved to completed. Allowed next statuses: in_progress.'
-			}
-		});
+		const response = await PUT({
+			params: { id: 'repair-1' },
+			request: new Request('http://test.local/api/repairs/repair-1', { method: 'PUT' }),
+			locals: { user: { id: 'shop-1', role: 'shop_owner' } }
+		} as never);
 
+		const body = await response.json();
+		expect(response.status).toBe(400);
+		expect(body).toMatchObject({
+			success: false,
+			error: expect.stringContaining(
+				'Invalid repair status transition from estimate_approved to completed.'
+			)
+		});
 		expect(state.transaction).not.toHaveBeenCalled();
 	});
 
 	it('allows the next in-order shop status change', async () => {
-		state.validateBody.mockResolvedValue({ status: 'in_progress' });
+		state.validateBody.mockResolvedValue(_ok({ status: 'in_progress' }));
 
 		const { PUT } = await import('../routes/api/repairs/[id]/+server');
 		const response = await PUT({

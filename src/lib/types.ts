@@ -7,22 +7,22 @@ export interface Car {
 	brand: string;
 	model: string;
 	year: number;
-	vin: string;
-	licensePlate: string;
-	ownerName: string;
-	ownerPhone: string;
-	color: string;
+	vin?: string | null;
+	licensePlate?: string | null;
+	ownerName?: string | null;
+	ownerPhone?: string | null;
+	color?: string | null;
 	createdAt: Date;
 }
 
 export interface RepairPart {
 	id: string;
 	name: string;
-	description: string;
+	description?: string | null;
 	quantity: number;
 	unitCost: number;
 	totalCost: number;
-	sourceUrl: string;
+	sourceUrl?: string | null;
 }
 
 export interface Photo {
@@ -98,13 +98,9 @@ export interface Shop {
 	city?: string | null;
 	state?: string | null;
 	zipCode?: string | null;
+	businessHours?: string | null;
 	specialties?: string | null;
-}
-
-export interface ShopMember {
-	userId: string;
-	role: string;
-	joinedAt: Date | string | null;
-	userName: string | null;
-	userEmail: string;
+	logo?: string | null;
+	rating?: number | null;
+	totalReviews?: number | null;
 }

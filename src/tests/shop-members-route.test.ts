@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok } from 'neverthrow';
 
 vi.mock('zod', () => {
 	const text = {
@@ -33,9 +34,8 @@ const state = vi.hoisted(() => {
 	const leftJoin = vi.fn(() => ({ where }));
 	const from = vi.fn(() => ({ leftJoin }));
 	const select = vi.fn(() => ({ from }));
-	const requireAuth = vi.fn(() => ({ id: 'owner-1', role: 'shop_owner' }));
-	const verifyShopAccess = vi.fn(async () => ({ id: 'shop-1' }));
-	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
+	const requireAuth = vi.fn(() => ok({ id: 'owner-1', role: 'shop_owner' }));
+	const verifyShopAccess = vi.fn(async () => ok({ id: 'shop-1' }));
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 	return {
@@ -46,7 +46,6 @@ const state = vi.hoisted(() => {
 		select,
 		requireAuth,
 		verifyShopAccess,
-		successResponse,
 		logger
 	};
 });
@@ -66,7 +65,6 @@ vi.mock('$lib/server/db', async () => {
 vi.mock('$lib/server/api-utils', () => ({
 	requireAuth: state.requireAuth,
 	verifyShopAccess: state.verifyShopAccess,
-	successResponse: state.successResponse,
 	validateBody: vi.fn(),
 	fetchById: vi.fn()
 }));
@@ -86,7 +84,6 @@ describe('GET /api/shops/[id]/members', () => {
 		state.where.mockClear();
 		state.requireAuth.mockClear();
 		state.verifyShopAccess.mockClear();
-		state.successResponse.mockClear();
 		state.logger.debug.mockClear();
 	});
 

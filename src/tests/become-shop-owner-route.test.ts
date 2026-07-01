@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok } from 'neverthrow';
 
 const state = vi.hoisted(() => {
 	const where = vi.fn(async () => undefined);
 	const set = vi.fn(() => ({ where }));
 	const update = vi.fn(() => ({ set }));
-	const requireAuth = vi.fn(() => ({ id: 'user-1', role: 'customer' }));
-	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
+	const requireAuth = vi.fn(() => ok({ id: 'user-1', role: 'customer' } as never));
 	const getSession = vi.fn(async () => ({
 		headers: new Headers({
 			'set-cookie': 'better-auth.session_data=next; Path=/; HttpOnly'
@@ -18,7 +18,6 @@ const state = vi.hoisted(() => {
 		set,
 		update,
 		requireAuth,
-		successResponse,
 		getSession,
 		logger
 	};
@@ -37,8 +36,7 @@ vi.mock('$lib/server/db', async () => {
 });
 
 vi.mock('$lib/server/api-utils', () => ({
-	requireAuth: state.requireAuth,
-	successResponse: state.successResponse
+	requireAuth: state.requireAuth
 }));
 
 vi.mock('$lib/server/auth', () => ({
@@ -62,8 +60,7 @@ describe('POST /api/users/become-shop-owner', () => {
 		state.set.mockClear();
 		state.where.mockClear();
 		state.requireAuth.mockReset();
-		state.requireAuth.mockReturnValue({ id: 'user-1', role: 'customer' });
-		state.successResponse.mockClear();
+		state.requireAuth.mockReturnValue(ok({ id: 'user-1', role: 'customer' } as never));
 		state.getSession.mockClear();
 		state.logger.info.mockClear();
 	});
@@ -96,30 +93,28 @@ describe('POST /api/users/become-shop-owner', () => {
 			success: true,
 			data: {
 				role: 'shop_owner'
-			},
-			status: 200
+			}
 		});
 	});
 
 	it('rejects non-customer users', async () => {
-		state.requireAuth.mockReturnValue({ id: 'owner-1', role: 'shop_owner' });
+		state.requireAuth.mockReturnValue(ok({ id: 'owner-1', role: 'shop_owner' } as never));
 
 		const { POST } = await import('../routes/api/users/become-shop-owner/+server');
 
-		await expect(
-			POST({
-				locals: { user: { id: 'owner-1', role: 'shop_owner' } },
-				request: new Request('http://test.local/api/users/become-shop-owner', {
-					method: 'POST'
-				})
-			} as never)
-		).rejects.toMatchObject({
-			status: 403,
-			body: {
-				message: 'Only customers can become shop owners'
-			}
-		});
+		const response = await POST({
+			locals: { user: { id: 'owner-1', role: 'shop_owner' } },
+			request: new Request('http://test.local/api/users/become-shop-owner', {
+				method: 'POST'
+			})
+		} as never);
 
+		const body = await response.json();
+		expect(response.status).toBe(403);
+		expect(body).toEqual({
+			success: false,
+			error: 'Only customers can become shop owners'
+		});
 		expect(state.update).not.toHaveBeenCalled();
 		expect(state.getSession).not.toHaveBeenCalled();
 	});

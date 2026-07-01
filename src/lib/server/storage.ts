@@ -1,4 +1,4 @@
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 
@@ -70,4 +70,19 @@ function isValidUUID(uuid: string): boolean {
 // Get full file path
 export function getFilePath(relativePath: string): string {
 	return join(UPLOAD_DIR, relativePath);
+}
+
+export async function cleanupPhotoFiles(
+	photos: Array<{ id: string; path: string }>
+): Promise<void> {
+	await Promise.allSettled(
+		photos.map(async (photo) => {
+			const filePath = getFilePath(photo.path);
+			try {
+				await unlink(filePath);
+			} catch {
+				// Non-fatal: file may already be gone
+			}
+		})
+	);
 }

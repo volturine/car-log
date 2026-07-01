@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok as _ok } from 'neverthrow';
 
 type User = {
 	id: string;
@@ -31,14 +32,13 @@ const state = vi.hoisted(() => {
 	const txSet = vi.fn(() => ({ where: txWhere }));
 	const txUpdate = vi.fn(() => ({ set: txSet }));
 	const tx: Tx = { insert: txInsert, update: txUpdate };
-	const requireAuth = vi.fn<() => User>(() => ({ id: 'shop-1', role: 'shop_owner' }));
-	const validateBody = vi.fn(async () => ({ amount: 25 }));
-	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
+	const requireAuth = vi.fn(() => _ok({ id: 'shop-1', role: 'shop_owner' } as User));
+	const validateBody = vi.fn(async () => _ok({ amount: 25 }));
 	const transaction = vi.fn((callback: (tx: Tx) => unknown) => callback(tx));
 	const isShopMember = vi.fn(
 		(user: { role?: string }) => user.role === 'shop_owner' || user.role === 'mechanic'
 	);
-	const verifyRepairAccess = vi.fn(async () => repair);
+	const verifyRepairAccess = vi.fn(async () => _ok(repair));
 	const listPayments = vi.fn(async () => [
 		{
 			id: 'payment-1',
@@ -68,7 +68,6 @@ const state = vi.hoisted(() => {
 		txUpdate,
 		requireAuth,
 		validateBody,
-		successResponse,
 		transaction,
 		isShopMember,
 		verifyRepairAccess,
@@ -77,17 +76,6 @@ const state = vi.hoisted(() => {
 		logger
 	};
 });
-
-vi.mock('zod', () => ({
-	z: {
-		object: vi.fn(() => ({})),
-		number: vi.fn(() => ({ positive: vi.fn(() => ({ max: vi.fn(() => ({})) })) })),
-		enum: vi.fn(() => ({ optional: vi.fn(() => ({})) })),
-		string: vi.fn(() => ({
-			trim: vi.fn(() => ({ max: vi.fn(() => ({ optional: vi.fn(() => ({})) })) }))
-		}))
-	}
-}));
 
 vi.mock('$lib/server/db', async () => {
 	const schema =
@@ -101,14 +89,19 @@ vi.mock('$lib/server/db', async () => {
 	};
 });
 
-vi.mock('$lib/server/api-utils', () => ({
-	requireAuth: state.requireAuth,
-	validateBody: state.validateBody,
-	successResponse: state.successResponse,
-	transaction: state.transaction,
-	isShopMember: state.isShopMember,
-	verifyRepairAccess: state.verifyRepairAccess
-}));
+vi.mock('$lib/server/api-utils', async () => {
+	const actual =
+		await vi.importActual<typeof import('$lib/server/api-utils')>('$lib/server/api-utils');
+
+	return {
+		...actual,
+		requireAuth: state.requireAuth,
+		validateBody: state.validateBody,
+		transaction: state.transaction,
+		isShopMember: state.isShopMember,
+		verifyRepairAccess: state.verifyRepairAccess
+	};
+});
 
 vi.mock('$lib/server/logger', () => ({
 	apiLogger: {
@@ -142,10 +135,9 @@ describe('/api/repairs/[id]/payment', () => {
 		state.txSet.mockClear();
 		state.txUpdate.mockClear();
 		state.requireAuth.mockReset();
-		state.requireAuth.mockReturnValue({ id: 'shop-1', role: 'shop_owner' });
+		state.requireAuth.mockReturnValue(_ok({ id: 'shop-1', role: 'shop_owner' } as User));
 		state.validateBody.mockReset();
-		state.validateBody.mockResolvedValue({ amount: 25 });
-		state.successResponse.mockClear();
+		state.validateBody.mockResolvedValue(_ok({ amount: 25 }));
 		state.transaction.mockClear();
 		state.isShopMember.mockClear();
 		state.verifyRepairAccess.mockClear();
@@ -157,17 +149,19 @@ describe('/api/repairs/[id]/payment', () => {
 	it('rejects shop users for shopless repairs they do not own', async () => {
 		const { POST } = await import('../routes/api/repairs/[id]/payment/+server');
 
-		await expect(
-			POST({
-				params: { id: 'repair-1' },
-				request: new Request('http://test.local/api/repairs/repair-1/payment', {
-					method: 'POST'
-				}),
-				locals: { user: { id: 'shop-1', role: 'shop_owner' } }
-			} as never)
-		).rejects.toMatchObject({
-			status: 403,
-			body: { message: 'You do not have permission to record payments for this repair' }
+		const response = await POST({
+			params: { id: 'repair-1' },
+			request: new Request('http://test.local/api/repairs/repair-1/payment', {
+				method: 'POST'
+			}),
+			locals: { user: { id: 'shop-1', role: 'shop_owner' } }
+		} as never);
+
+		const body = await response.json();
+		expect(response.status).toBe(403);
+		expect(body).toMatchObject({
+			success: false,
+			error: 'You do not have permission to record payments for this repair'
 		});
 
 		expect(state.transaction).not.toHaveBeenCalled();
@@ -175,7 +169,7 @@ describe('/api/repairs/[id]/payment', () => {
 	});
 
 	it('allows admins to record payments on shopless repairs and persists a ledger row', async () => {
-		state.requireAuth.mockReturnValue({ id: 'admin-1', role: 'admin', name: 'Admin' });
+		state.requireAuth.mockReturnValue(_ok({ id: 'admin-1', role: 'admin', name: 'Admin' } as User));
 
 		const { POST } = await import('../routes/api/repairs/[id]/payment/+server');
 		const response = await POST({
@@ -215,21 +209,23 @@ describe('/api/repairs/[id]/payment', () => {
 
 	it('rejects payments before a repair is completed', async () => {
 		state.repair.status = 'in_progress';
-		state.requireAuth.mockReturnValue({ id: 'admin-1', role: 'admin', name: 'Admin' });
+		state.requireAuth.mockReturnValue(_ok({ id: 'admin-1', role: 'admin', name: 'Admin' } as User));
 
 		const { POST } = await import('../routes/api/repairs/[id]/payment/+server');
 
-		await expect(
-			POST({
-				params: { id: 'repair-1' },
-				request: new Request('http://test.local/api/repairs/repair-1/payment', {
-					method: 'POST'
-				}),
-				locals: { user: { id: 'admin-1', role: 'admin' } }
-			} as never)
-		).rejects.toMatchObject({
-			status: 400,
-			body: { message: 'Payments can only be recorded for completed repairs' }
+		const response = await POST({
+			params: { id: 'repair-1' },
+			request: new Request('http://test.local/api/repairs/repair-1/payment', {
+				method: 'POST'
+			}),
+			locals: { user: { id: 'admin-1', role: 'admin' } }
+		} as never);
+
+		const body = await response.json();
+		expect(response.status).toBe(400);
+		expect(body).toMatchObject({
+			success: false,
+			error: 'Payments can only be recorded for completed repairs'
 		});
 
 		expect(state.transaction).not.toHaveBeenCalled();
@@ -239,8 +235,8 @@ describe('/api/repairs/[id]/payment', () => {
 		state.repair.status = 'completed';
 		state.repair.amountPaid = 25;
 		state.repair.totalCost = 100;
-		state.requireAuth.mockReturnValue({ id: 'admin-1', role: 'admin', name: 'Admin' });
-		state.validateBody.mockResolvedValue({ amount: 75 });
+		state.requireAuth.mockReturnValue(_ok({ id: 'admin-1', role: 'admin', name: 'Admin' } as User));
+		state.validateBody.mockResolvedValue(_ok({ amount: 75 }));
 
 		const { POST } = await import('../routes/api/repairs/[id]/payment/+server');
 		const response = await POST({
@@ -263,7 +259,9 @@ describe('/api/repairs/[id]/payment', () => {
 	});
 
 	it('returns payment history for authorized users', async () => {
-		state.requireAuth.mockReturnValue({ id: 'owner-1', role: 'customer', name: 'Owner' });
+		state.requireAuth.mockReturnValue(
+			_ok({ id: 'owner-1', role: 'customer', name: 'Owner' } as User)
+		);
 
 		const { GET } = await import('../routes/api/repairs/[id]/payment/+server');
 		const response = await GET({

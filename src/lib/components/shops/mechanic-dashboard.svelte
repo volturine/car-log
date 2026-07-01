@@ -86,16 +86,7 @@
 		)
 	);
 
-	const today = $derived.by(() => {
-		const now = new Date();
-		const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-		const end = new Date(start.getTime() + 86400000);
-		return matching.filter((r) => {
-			if (!r.appointmentAt) return false;
-			const apt = new Date(r.appointmentAt);
-			return apt >= start && apt < end;
-		});
-	});
+	const today = $derived(repairs.todaysAppointments);
 
 	const allMine = $derived(
 		repairs.repairs.filter(
@@ -106,19 +97,7 @@
 		)
 	);
 
-	const upcoming = $derived.by(() => {
-		const now = Date.now();
-		return repairs.repairs
-			.filter((r) => {
-				if (!r.appointmentAt) return false;
-				if (r.status === REPAIR_STATUS.COMPLETED || r.status === REPAIR_STATUS.PAID) return false;
-				return new Date(r.appointmentAt).getTime() >= now;
-			})
-			.toSorted(
-				(a, b) =>
-					new Date(a.appointmentAt ?? 0).getTime() - new Date(b.appointmentAt ?? 0).getTime()
-			);
-	});
+	const upcoming = $derived(repairs.upcomingAppointments);
 
 	const next = $derived(upcoming[0] ?? null);
 

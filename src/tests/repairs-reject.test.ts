@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok } from 'neverthrow';
 
 const state = vi.hoisted(() => {
 	const order: string[] = [];
@@ -35,13 +36,6 @@ const state = vi.hoisted(() => {
 	};
 });
 
-vi.mock('zod', () => ({
-	z: {
-		object: vi.fn(() => ({})),
-		string: vi.fn(() => ({ optional: vi.fn(() => ({})) }))
-	}
-}));
-
 vi.mock('$lib/server/db', async () => {
 	const schema =
 		await vi.importActual<typeof import('$lib/server/db/schema')>('$lib/server/db/schema');
@@ -55,15 +49,16 @@ vi.mock('$lib/server/db', async () => {
 });
 
 vi.mock('$lib/server/api-utils', () => ({
-	requireAuth: vi.fn(() => ({ id: 'user-1', name: 'Casey', role: 'customer' })),
-	verifyOwnership: vi.fn(async () => ({
-		id: 'repair-1',
-		userId: 'user-1',
-		shopId: 'shop-1',
-		status: 'estimate_pending'
-	})),
-	validateBody: vi.fn(async () => ({ reason: 'Too expensive' })),
-	successResponse: vi.fn((data: unknown, status = 200) => ({ success: true, data, status })),
+	requireAuth: vi.fn(() => ok({ id: 'user-1', name: 'Casey', role: 'customer' })),
+	verifyOwnership: vi.fn(async () =>
+		ok({
+			id: 'repair-1',
+			userId: 'user-1',
+			shopId: 'shop-1',
+			status: 'estimate_pending'
+		})
+	),
+	validateBody: vi.fn(async () => ok({ reason: 'Too expensive' })),
 	transaction: vi.fn((callback: (tx: typeof state.tx) => unknown) => {
 		state.order.push('transaction');
 		const result = callback(state.tx);

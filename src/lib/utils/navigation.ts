@@ -1,5 +1,1 @@
-import { resolve } from '$app/paths';
-
-export function carPath(carId: string): string {
-	return resolve(`/app/cars/${carId}`);
-}
+// Navigation utilities — currently empty; carPath was removed as it was unused.

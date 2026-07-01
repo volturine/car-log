@@ -1,16 +1,10 @@
-import { json, error } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq, and } from 'drizzle-orm';
-import {
-	requireAuth,
-	validateBody,
-	successResponse,
-	fetchById,
-	verifyShopAccess
-} from '$lib/server/api-utils';
+import { requireAuth, validateBody, fetchById, verifyShopAccess } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
-import { API_ERRORS, USER_ROLE } from '$lib/constants';
+import { USER_ROLE } from '$lib/constants';
 import { z } from 'zod';
 
 const logger = apiLogger.child('shop-members');
@@ -20,19 +14,24 @@ const addMemberSchema = z.object({
 	role: z.enum(['mechanic', 'owner']).default('mechanic')
 });
 
-// Helper: Verify shop ownership
-async function verifyShopOwner(shopId: string, userId: string, userRole: string) {
-	const shop = await fetchById(schema.shops, shopId);
-	if (!shop) throw error(API_ERRORS.NOT_FOUND.status, 'Shop not found');
-	if (shop.ownerId !== userId && userRole !== USER_ROLE.ADMIN) {
-		throw error(API_ERRORS.FORBIDDEN.status, 'Only shop owner can manage members');
-	}
-	return shop;
-}
-
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const user = requireAuth(locals);
-	await verifyShopAccess(params.id, user.id, user.role || USER_ROLE.CUSTOMER);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
+
+	const accessResult = await verifyShopAccess(params.id, user.id, user.role || USER_ROLE.CUSTOMER);
+	if (accessResult.isErr()) {
+		return json(
+			{ success: false, error: accessResult.error.message },
+			{ status: accessResult.error.status }
+		);
+	}
 
 	const members = await db
 		.select({
@@ -49,39 +48,59 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	logger.debug('Members fetched', { shopId: params.id, userId: user.id, count: members.length });
 
-	return json(successResponse(members));
+	return json({ success: true, data: members });
 };
 
-// POST /api/shops/[id]/members - Add member to shop
 export const POST: RequestHandler = async ({ params, request, locals }) => {
-	const user = requireAuth(locals);
-	await verifyShopOwner(params.id, user.id, user.role || 'customer');
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	const { userId, role } = await validateBody(request, addMemberSchema);
+	const user = userResult.value;
 
-	// Verify user exists and has valid role
-	const memberUser = await fetchById(schema.users, userId);
-	if (!memberUser) throw error(API_ERRORS.NOT_FOUND.status, 'User not found');
+	const shopResult = await fetchShopOwner(params.id, user.id, user.role || 'customer');
+	if (!shopResult.ok) {
+		return json(
+			{ success: false, error: shopResult.error.message },
+			{ status: shopResult.error.status }
+		);
+	}
+
+	const validationErr = await validateBody(request, addMemberSchema);
+	if (validationErr.isErr()) {
+		return json({ success: false, error: validationErr.error.message }, { status: 400 });
+	}
+
+	const { userId, role } = validationErr.value;
+
+	const memberUserResult = await fetchById(schema.users, userId);
+	if (memberUserResult.isErr()) {
+		return json({ success: false, error: 'User not found' }, { status: 404 });
+	}
+	const memberUser = memberUserResult.value;
 
 	const validRoles: Array<string> = [USER_ROLE.MECHANIC, USER_ROLE.SHOP_OWNER, USER_ROLE.ADMIN];
 	if (!validRoles.includes(memberUser.role)) {
-		throw error(API_ERRORS.VALIDATION_ERROR.status, 'User must be mechanic or shop owner');
+		return json({ success: false, error: 'User must be mechanic or shop owner' }, { status: 400 });
 	}
 
-	// Check if already member
 	const [existing] = await db
 		.select()
 		.from(schema.shopMembers)
 		.where(and(eq(schema.shopMembers.shopId, params.id), eq(schema.shopMembers.userId, userId)))
 		.limit(1);
 
-	if (existing) throw error(API_ERRORS.VALIDATION_ERROR.status, 'Already a member');
+	if (existing) {
+		return json({ success: false, error: 'Already a member' }, { status: 400 });
+	}
 
-	// Add member
 	const newMember = { userId, shopId: params.id, role, joinedAt: new Date() };
 	await db.insert(schema.shopMembers).values(newMember);
 
-	// Update mechanic's shopId
 	if (memberUser.role === USER_ROLE.MECHANIC) {
 		await db.update(schema.users).set({ shopId: params.id }).where(eq(schema.users.id, userId));
 	}
@@ -89,32 +108,55 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	logger.info('Member added', { shopId: params.id, userId });
 
 	return json(
-		successResponse({ ...newMember, userName: memberUser.name, userEmail: memberUser.email }, 201),
+		{
+			success: true,
+			data: { ...newMember, userName: memberUser.name, userEmail: memberUser.email }
+		},
 		{ status: 201 }
 	);
 };
 
-// DELETE /api/shops/[id]/members - Remove member from shop
 export const DELETE: RequestHandler = async ({ params, request, locals }) => {
-	const user = requireAuth(locals);
-	const shop = await verifyShopOwner(params.id, user.id, user.role || 'customer');
-
-	const { userId } = await validateBody(request, z.object({ userId: z.string().uuid() }));
-
-	if (shop.ownerId === userId) {
-		throw error(API_ERRORS.VALIDATION_ERROR.status, 'Cannot remove shop owner');
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
 	}
 
-	// Verify member exists
+	const user = userResult.value;
+
+	const shopResult = await fetchShopOwner(params.id, user.id, user.role || 'customer');
+	if (!shopResult.ok) {
+		return json(
+			{ success: false, error: shopResult.error.message },
+			{ status: shopResult.error.status }
+		);
+	}
+	const shop = shopResult.value;
+
+	const validationErr = await validateBody(request, z.object({ userId: z.string().uuid() }));
+	if (validationErr.isErr()) {
+		return json({ success: false, error: validationErr.error.message }, { status: 400 });
+	}
+
+	const { userId } = validationErr.value;
+
+	if (shop.ownerId === userId) {
+		return json({ success: false, error: 'Cannot remove shop owner' }, { status: 400 });
+	}
+
 	const [member] = await db
 		.select()
 		.from(schema.shopMembers)
 		.where(and(eq(schema.shopMembers.shopId, params.id), eq(schema.shopMembers.userId, userId)))
 		.limit(1);
 
-	if (!member) throw error(API_ERRORS.NOT_FOUND.status, 'Member not found');
+	if (!member) {
+		return json({ success: false, error: 'Member not found' }, { status: 404 });
+	}
 
-	// Remove member
 	await db
 		.delete(schema.shopMembers)
 		.where(and(eq(schema.shopMembers.shopId, params.id), eq(schema.shopMembers.userId, userId)));
@@ -123,5 +165,24 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 
 	logger.info('Member removed', { shopId: params.id, userId });
 
-	return json(successResponse({ deleted: true }));
+	return json({ success: true, data: { deleted: true } });
 };
+
+async function fetchShopOwner(
+	shopId: string,
+	userId: string,
+	userRole: string
+): Promise<
+	| { ok: true; value: typeof schema.shops.$inferSelect }
+	| { ok: false; error: { message: string; status: number } }
+> {
+	const shopResult = await fetchById(schema.shops, shopId);
+	if (shopResult.isErr()) {
+		return { ok: false, error: { message: 'Shop not found', status: 404 } };
+	}
+	const shop = shopResult.value;
+	if (shop.ownerId !== userId && userRole !== USER_ROLE.ADMIN) {
+		return { ok: false, error: { message: 'Only shop owner can manage members', status: 403 } };
+	}
+	return { ok: true, value: shop };
+}

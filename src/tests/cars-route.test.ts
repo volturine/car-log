@@ -1,31 +1,45 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok } from 'neverthrow';
 
 vi.mock('$lib/server/validation', () => ({
 	carSchema: {}
 }));
 
-const state = vi.hoisted(() => ({
-	requireAuth: vi.fn(() => ({ id: 'admin-1', role: 'admin' })),
-	verifyOwnership: vi.fn(),
-	validateBody: vi.fn(),
-	successResponse: vi.fn((data: unknown, status = 200) => ({ success: true, data, status })),
-	isShopMember: vi.fn(() => false),
-	findUserShop: vi.fn(async () => null),
-	fetchById: vi.fn(async () => ({ id: 'car-1', userId: 'owner-1' })),
-	logger: {
+const state = vi.hoisted(() => {
+	const requireAuth = vi.fn();
+	const verifyOwnership = vi.fn();
+	const fetchById = vi.fn();
+	const dbSelect = vi.fn(() => ({
+		from: vi.fn(() => ({
+			where: vi.fn(() => ({
+				limit: vi.fn(async () => [{ id: 'car-1', userId: 'owner-1' }])
+			}))
+		}))
+	}));
+	const logger = {
 		debug: vi.fn(),
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn()
-	}
-}));
+	};
+
+	return {
+		requireAuth,
+		verifyOwnership,
+		fetchById,
+		dbSelect,
+		logger
+	};
+});
 
 vi.mock('$lib/server/db', async () => {
 	const schema =
 		await vi.importActual<typeof import('$lib/server/db/schema')>('$lib/server/db/schema');
 
 	return {
-		db: { select: vi.fn(), update: vi.fn(), delete: vi.fn() },
+		db: {
+			select: state.dbSelect
+		},
 		schema
 	};
 });
@@ -33,10 +47,9 @@ vi.mock('$lib/server/db', async () => {
 vi.mock('$lib/server/api-utils', () => ({
 	requireAuth: state.requireAuth,
 	verifyOwnership: state.verifyOwnership,
-	validateBody: state.validateBody,
-	successResponse: state.successResponse,
-	isShopMember: state.isShopMember,
-	findUserShop: state.findUserShop,
+	validateBody: vi.fn(),
+	isShopMember: vi.fn(() => false),
+	findUserShop: vi.fn(async () => null),
 	fetchById: state.fetchById
 }));
 
@@ -49,16 +62,11 @@ vi.mock('$lib/server/logger', () => ({
 describe('GET /api/cars/[id]', () => {
 	beforeEach(() => {
 		vi.resetModules();
-		state.requireAuth.mockReset();
-		state.requireAuth.mockReturnValue({ id: 'admin-1', role: 'admin' });
+		state.requireAuth.mockReturnValue(ok({ id: 'admin-1', role: 'admin' }));
 		state.verifyOwnership.mockReset();
-		state.successResponse.mockClear();
-		state.isShopMember.mockReset();
-		state.isShopMember.mockReturnValue(false);
-		state.findUserShop.mockReset();
-		state.findUserShop.mockResolvedValue(null);
+		state.verifyOwnership.mockResolvedValue(ok({ id: 'car-1', userId: 'owner-1' }));
 		state.fetchById.mockReset();
-		state.fetchById.mockResolvedValue({ id: 'car-1', userId: 'owner-1' });
+		state.fetchById.mockResolvedValue(ok({ id: 'car-1', userId: 'owner-1' }));
 		state.logger.debug.mockClear();
 	});
 
@@ -70,9 +78,13 @@ describe('GET /api/cars/[id]', () => {
 		} as never);
 		const body = await response.json();
 
-		expect(state.fetchById).toHaveBeenCalledOnce();
-		expect(state.fetchById).toHaveBeenCalledWith(expect.anything(), 'car-1');
-		expect(state.verifyOwnership).not.toHaveBeenCalled();
+		expect(state.verifyOwnership).toHaveBeenCalledOnce();
+		expect(state.verifyOwnership).toHaveBeenCalledWith(
+			expect.anything(),
+			'car-1',
+			'admin-1',
+			'Car'
+		);
 		expect(body).toMatchObject({
 			success: true,
 			data: {

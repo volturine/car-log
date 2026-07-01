@@ -94,3 +94,12 @@ export function carLabel(cars: Car[], carId: string): string {
 	if (!car) return 'Unknown vehicle';
 	return `${car.brand} ${car.model} — ${car.licensePlate}`;
 }
+
+export async function apiError(response: Response): Promise<string | null> {
+	try {
+		const body = (await response.json()) as { error?: string };
+		return body.error ?? null;
+	} catch {
+		return response.statusText || null;
+	}
+}

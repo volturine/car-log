@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ok } from 'neverthrow';
 
 const state = vi.hoisted(() => {
 	const repair = {
@@ -71,26 +72,25 @@ const state = vi.hoisted(() => {
 			throw new Error(`Unexpected select call: ${plainSelects}`);
 		})
 	}));
-	const requireAuth = vi.fn(() => ({ id: 'owner-1', role: 'customer' }));
-	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
-	const fetchById = vi.fn(async (table: { name: string }) => {
-		if (table.name === 'shops') {
-			return { id: 'shop-1', name: 'Main Street Garage' };
-		}
-
-		if (table.name === 'cars') {
-			return { id: 'car-1', brand: 'Toyota', model: 'Camry' };
-		}
-
-		return null;
-	});
 	const formatPhotosForResponse = vi.fn((rows: Array<{ id: string }>) =>
 		rows.map((row) => ({ id: row.id, url: `/api/photos/${row.id}` }))
 	);
-	const verifyRepairAccess = vi.fn(async () => repair);
+	const verifyRepairAccess = vi.fn(async () => ok(repair));
 	const getMechanic = vi.fn(async () => mechanic);
 	const getMechanicsByIds = vi.fn(async () => [mechanic]);
 	const listPayments = vi.fn(async () => payments);
+	const requireAuth = vi.fn(() => ok({ id: 'owner-1', role: 'customer' }));
+	const fetchById = vi.fn(async (table: { name: string }) => {
+		if (table.name === 'shops') {
+			return ok({ id: 'shop-1', name: 'Main Street Garage' });
+		}
+
+		if (table.name === 'cars') {
+			return ok({ id: 'car-1', brand: 'Toyota', model: 'Camry' });
+		}
+
+		return ok(null);
+	});
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 	return {
@@ -99,7 +99,6 @@ const state = vi.hoisted(() => {
 		},
 		dbSelect,
 		requireAuth,
-		successResponse,
 		fetchById,
 		formatPhotosForResponse,
 		verifyRepairAccess,
@@ -124,7 +123,6 @@ vi.mock('$lib/server/db', async () => {
 
 vi.mock('$lib/server/api-utils', () => ({
 	requireAuth: state.requireAuth,
-	successResponse: state.successResponse,
 	fetchById: state.fetchById,
 	formatPhotosForResponse: state.formatPhotosForResponse,
 	verifyRepairAccess: state.verifyRepairAccess,
@@ -161,7 +159,6 @@ describe('GET /api/repairs/[id]', () => {
 		state.reset();
 		state.dbSelect.mockClear();
 		state.requireAuth.mockClear();
-		state.successResponse.mockClear();
 		state.fetchById.mockClear();
 		state.formatPhotosForResponse.mockClear();
 		state.verifyRepairAccess.mockClear();

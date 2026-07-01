@@ -1,23 +1,24 @@
-import { error, json } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import type { Result } from 'neverthrow';
 import { db, schema } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 import {
 	requireAuth,
 	validateBody,
-	successResponse,
 	transaction,
-	fetchById,
 	formatPhotosForResponse,
 	verifyRepairAccess,
 	isShopMember,
-	getMechanic
+	getMechanic,
+	fetchById,
+	ok,
+	err
 } from '$lib/server/api-utils';
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { generateId, toError } from '$lib/utils';
-import { getFilePath } from '$lib/server/storage';
-import { unlink } from 'fs/promises';
+import { generateId } from '$lib/utils';
+import { cleanupPhotoFiles } from '$lib/server/storage';
 import { USER_ROLE } from '$lib/constants';
 import { listPayments } from '$lib/server/payments';
 import {
@@ -36,30 +37,42 @@ function hasKey<T extends object>(obj: T, key: PropertyKey): boolean {
 	return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
-// GET /api/repairs/[id] - Get a specific repair
 export const GET: RequestHandler = async ({ params, locals }) => {
-	const user = requireAuth(locals);
-	const repair = await verifyRepairAccess(params.id, user);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
 
-	logger.debug('Fetching repair details', { repairId: params.id, userId: user.id });
+	const user = userResult.value;
 
-	// Get parts
+	const repairResult = await verifyRepairAccess(params.id, user);
+	if (repairResult.isErr()) {
+		return json(
+			{ success: false, error: repairResult.error.message },
+			{ status: repairResult.error.status }
+		);
+	}
+
+	const repair = repairResult.value;
+
 	const parts = await db
 		.select()
 		.from(schema.repairParts)
 		.where(eq(schema.repairParts.repairId, params.id));
 
-	// Get photos
 	const photos = await db.select().from(schema.photos).where(eq(schema.photos.repairId, params.id));
 	const payments = await listPayments(params.id);
 
-	// Get shop and car info
 	const shopInfo = repair.shopId ? await fetchById(schema.shops, repair.shopId) : null;
 	const car = await fetchById(schema.cars, repair.carId);
 	const assignedMechanic = await getMechanic(repair.assignedMechanicId);
 
-	return json(
-		successResponse({
+	return json({
+		success: true,
+		data: {
 			...repair,
 			parts,
 			payments,
@@ -67,27 +80,50 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 			shop: shopInfo,
 			car: car || null,
 			assignedMechanic
-		})
-	);
+		}
+	});
 };
 
-// PUT /api/repairs/[id] - Update a repair
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
-	const user = requireAuth(locals);
-	const repair = await verifyRepairAccess(params.id, user);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
+
+	const repairResult = await verifyRepairAccess(params.id, user);
+	if (repairResult.isErr()) {
+		return json(
+			{ success: false, error: repairResult.error.message },
+			{ status: repairResult.error.status }
+		);
+	}
+
+	const repair = repairResult.value;
 	const isShop = isShopMember(user);
 
-	// Validate request body
-	const validatedData = await validateBody(request, repairSchema.partial());
+	const validationErr = await validateBody(request, repairSchema.partial());
+	if (validationErr.isErr()) {
+		return json({ success: false, error: validationErr.error.message }, { status: 400 });
+	}
+
+	const validatedData = validationErr.value;
 
 	logger.info('Updating repair', { repairId: params.id, userId: user.id });
 
 	if (!isShop && repair.shopId) {
-		throw error(403, 'Only the shop can update this repair');
+		return json({ success: false, error: 'Only the shop can update this repair' }, { status: 403 });
 	}
 
 	if (isShop) {
-		assertShopRepairTransition(repair.status, validatedData.status);
+		const transitionErr = assertShopRepairTransition(repair.status, validatedData.status);
+		if (transitionErr.isErr()) {
+			return json({ success: false, error: transitionErr.error.message }, { status: 400 });
+		}
 	}
 
 	const updates = isShop
@@ -104,7 +140,6 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	const result = transaction((tx) => {
 		tx.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)).run();
 
-		// Update parts if provided
 		if (isShop && parts) {
 			tx.delete(schema.repairParts).where(eq(schema.repairParts.repairId, params.id)).run();
 			parts.forEach((part) => {
@@ -123,7 +158,6 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		return { ...updatedRepair, id: params.id };
 	});
 
-	// Fetch updated parts outside transaction
 	const updatedParts = await db
 		.select()
 		.from(schema.repairParts)
@@ -131,48 +165,51 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 
 	logger.info('Repair updated', { repairId: params.id, userId: user.id });
 
-	return json(successResponse({ ...result, parts: updatedParts }));
+	return json({ success: true, data: { ...result, parts: updatedParts } });
 };
 
-// DELETE /api/repairs/[id] - Delete a repair
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-	const user = requireAuth(locals);
-	const repair = await verifyRepairAccess(params.id, user);
+	const userResult = requireAuth(locals);
+	if (userResult.isErr()) {
+		return json(
+			{ success: false, error: userResult.error.message },
+			{ status: userResult.error.status }
+		);
+	}
+
+	const user = userResult.value;
+
+	const repairResult = await verifyRepairAccess(params.id, user);
+	if (repairResult.isErr()) {
+		return json(
+			{ success: false, error: repairResult.error.message },
+			{ status: repairResult.error.status }
+		);
+	}
+
+	const repair = repairResult.value;
 
 	if (
 		repair.userId !== user.id &&
 		user.role !== USER_ROLE.ADMIN &&
 		user.role !== USER_ROLE.SHOP_OWNER
 	) {
-		throw error(403, 'Only the repair owner, shop owner, or admin can delete this repair');
+		return json(
+			{
+				success: false,
+				error: 'Only the repair owner, shop owner, or admin can delete this repair'
+			},
+			{ status: 403 }
+		);
 	}
 
 	logger.info('Deleting repair', { repairId: params.id, userId: user.id });
 
-	// Get all photos for this repair BEFORE deleting from database
 	const photos = await db.select().from(schema.photos).where(eq(schema.photos.repairId, params.id));
 
-	// Delete repair from database (cascade will delete parts and photos)
 	await db.delete(schema.repairs).where(eq(schema.repairs.id, params.id));
 
-	// Clean up photo files from disk
-	const fileCleanupPromises = photos.map(async (photo) => {
-		const filePath = getFilePath(photo.path);
-		try {
-			await unlink(filePath);
-			logger.debug('Photo file deleted', { photoId: photo.id, path: photo.path });
-		} catch (err) {
-			// Log warning but don't fail the deletion
-			logger.warn('Failed to delete photo file', {
-				photoId: photo.id,
-				path: photo.path,
-				error: toError(err).message
-			});
-		}
-	});
-
-	// Wait for all file deletions (but don't fail if some fail)
-	await Promise.allSettled(fileCleanupPromises);
+	await cleanupPhotoFiles(photos);
 
 	logger.info('Repair deleted', {
 		repairId: params.id,
@@ -180,7 +217,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 		photosCleaned: photos.length
 	});
 
-	return json(successResponse({ deleted: true }));
+	return json({ success: true, data: { deleted: true } });
 };
 
 function getShopRepairUpdate(data: RepairInput): RepairUpdate {
@@ -267,17 +304,23 @@ function getCustomerRepairUpdate(data: RepairInput): RepairUpdate {
 	return next;
 }
 
-function assertShopRepairTransition(current: string, next: RepairInput['status']): void {
+function assertShopRepairTransition(
+	current: string,
+	next: RepairInput['status']
+): Result<void, { message: string; status: number }> {
 	if (typeof next !== 'string') {
-		return;
+		return ok();
 	}
 
 	if (canTransitionRepairStatus(current, next)) {
-		return;
+		return ok();
 	}
 
 	const allowed = listAllowedRepairTransitions(current);
 	const tail = allowed.length > 0 ? ` Allowed next statuses: ${allowed.join(', ')}.` : '';
 
-	throw error(400, `Invalid repair status transition from ${current} to ${next}.${tail}`);
+	return err({
+		message: `Invalid repair status transition from ${current} to ${next}.${tail}`,
+		status: 400
+	});
 }

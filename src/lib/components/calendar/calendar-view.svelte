@@ -10,7 +10,7 @@
 
 	import { REPAIR_STATUS } from '$lib/constants';
 	import { Skeleton } from '$lib/components/ui/skeleton';
-	import type { RepairStatus } from '$lib/types.js';
+	import type { RepairStatus } from '$lib/constants';
 
 	const repairs = useRepairs();
 	let currentDate = $state(new Date());
