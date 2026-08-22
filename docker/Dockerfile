@@ -5,7 +5,7 @@ FROM oven/bun:1.3.11 AS build
 WORKDIR /app
 
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
 RUN bun run build
@@ -15,7 +15,7 @@ FROM oven/bun:1.3.11-slim AS deps
 WORKDIR /app
 
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production
+RUN bun install --frozen-lockfile --production --ignore-scripts
 
 FROM oven/bun:1.3.11-slim AS runtime
 
