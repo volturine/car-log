@@ -16,9 +16,9 @@ fi
 
 mkdir -p "$(dirname "$data_directory")"
 touch "$data_directory"
-chown bun:bun "$(dirname "$data_directory")" "$data_directory"
+chown node:node "$(dirname "$data_directory")" "$data_directory"
 
 mkdir -p /app/uploads
-chown bun:bun /app/uploads
+chown node:node /app/uploads
 
-exec setpriv --reuid=bun --regid=bun --init-groups bun build/index.js
+exec setpriv --reuid=node --regid=node --init-groups node build/index.js
