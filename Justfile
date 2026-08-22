@@ -47,3 +47,26 @@ prod:
     bun run build
     @echo "Starting production server..."
     bun run start
+
+# Local container stack (builds image)
+deploy-dev:
+    @echo "Starting local Docker stack..."
+    docker compose --project-directory . -f docker/compose.yaml up -d --build
+
+# Production deployment (requires .env with CAR_LOG_IMAGE + secrets)
+deploy-prod:
+    @echo "Deploying production stack..."
+    docker compose --project-directory . -f docker/compose.production.yaml --env-file .env pull
+    docker compose --project-directory . -f docker/compose.production.yaml --env-file .env up -d
+
+# Production deployment with Tailscale Serve overlay (requires .env)
+deploy-tailscale:
+    @echo "Deploying production stack with Tailscale..."
+    docker compose --project-directory . -f docker/compose.production.yaml -f docker/compose.tailscale.yaml --env-file .env pull
+    docker compose --project-directory . -f docker/compose.production.yaml -f docker/compose.tailscale.yaml --env-file .env up -d
+
+# Stop any running container stack
+deploy-down:
+    @echo "Stopping containers..."
+    docker compose --project-directory . -f docker/compose.yaml down 2>/dev/null || true
+    docker compose --project-directory . -f docker/compose.production.yaml --env-file .env down 2>/dev/null || true

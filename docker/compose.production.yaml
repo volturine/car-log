@@ -1,0 +1,41 @@
+# Production deployment: pinned image, required secrets, optional Tailscale overlay.
+#
+#   cp .env.example .env   # then fill in real values
+#
+# Plain HTTP (reverse proxy terminates TLS):
+#   docker compose --project-directory . -f docker/compose.production.yaml --env-file .env up -d
+#
+# With Tailscale Serve (tailnet-only HTTPS):
+#   docker compose --project-directory . -f docker/compose.production.yaml \
+#     -f docker/compose.tailscale.yaml --env-file .env up -d
+
+name: car-log
+
+services:
+  app:
+    image: '${CAR_LOG_IMAGE:?Set CAR_LOG_IMAGE to a pinned release tag or digest in .env}'
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    ports:
+      - '${CAR_LOG_PORT:-3000}:3000'
+    environment:
+      ORIGIN: '${CAR_LOG_ORIGIN:?Set CAR_LOG_ORIGIN in .env}'
+      BODY_SIZE_LIMIT: '${CAR_LOG_BODY_SIZE_LIMIT:-220M}'
+      DATABASE_URL: '${CAR_LOG_DATABASE_URL:-/data/car-log.db}'
+      BETTER_AUTH_SECRET: '${BETTER_AUTH_SECRET:?Set BETTER_AUTH_SECRET in .env}'
+      BETTER_AUTH_URL: '${CAR_LOG_ORIGIN}'
+      GOOGLE_CLIENT_ID: '${GOOGLE_CLIENT_ID:-}'
+      GOOGLE_CLIENT_SECRET: '${GOOGLE_CLIENT_SECRET:-}'
+    volumes:
+      - car-log-data:/data
+      - car-log-uploads:/app/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  car-log-data:
+  car-log-uploads:

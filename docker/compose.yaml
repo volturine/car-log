@@ -1,0 +1,33 @@
+name: car-log
+
+services:
+  app:
+    build:
+      # Requires: docker compose --project-directory . -f docker/compose.yaml up -d
+      context: .
+      dockerfile: docker/Dockerfile
+    image: car-log:latest
+    restart: unless-stopped
+    init: true
+    ports:
+      - '${CAR_LOG_PORT:-3000}:3000'
+    environment:
+      ORIGIN: '${CAR_LOG_ORIGIN:-http://localhost:3000}'
+      BODY_SIZE_LIMIT: '${CAR_LOG_BODY_SIZE_LIMIT:-220M}'
+      DATABASE_URL: '${CAR_LOG_DATABASE_URL:-/data/car-log.db}'
+      BETTER_AUTH_SECRET: '${BETTER_AUTH_SECRET:-development-only-secret-change-me}'
+      BETTER_AUTH_URL: '${CAR_LOG_ORIGIN:-http://localhost:3000}'
+      GOOGLE_CLIENT_ID: '${GOOGLE_CLIENT_ID:-}'
+      GOOGLE_CLIENT_SECRET: '${GOOGLE_CLIENT_SECRET:-}'
+    volumes:
+      - car-log-data:/data
+      - car-log-uploads:/app/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  car-log-data:
+  car-log-uploads:
