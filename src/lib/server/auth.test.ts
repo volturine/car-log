@@ -47,13 +47,22 @@ describe('auth config', () => {
 		vi.unstubAllEnvs();
 	});
 
+	async function importAuth() {
+		const mod = await import('./auth');
+		mod.resetAuthForTesting();
+
+		return mod;
+	}
+
 	it('adds Google social auth when env vars are set', async () => {
 		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
 		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
 		vi.stubEnv('GOOGLE_CLIENT_ID', 'google-client-id');
 		vi.stubEnv('GOOGLE_CLIENT_SECRET', 'google-client-secret');
 
-		await import('./auth');
+		const { auth } = await importAuth();
+
+		void auth.$Infer;
 
 		const config = state.betterAuth.mock.calls[0]?.[0] as {
 			baseURL: string;
@@ -86,7 +95,8 @@ describe('auth config', () => {
 		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
 		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
 
-		await import('./auth');
+		const { auth } = await importAuth();
+		void auth.$Infer;
 
 		const config = state.betterAuth.mock.calls[0]?.[0] as {
 			socialProviders?: unknown;
@@ -100,7 +110,9 @@ describe('auth config', () => {
 		vi.stubEnv('BETTER_AUTH_SECRET', '');
 		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
 
-		await expect(import('./auth')).rejects.toThrow('BETTER_AUTH_SECRET is required in production.');
+		const { auth } = await importAuth();
+
+		expect(() => void auth.$Infer).toThrow('BETTER_AUTH_SECRET is required in production.');
 	});
 
 	it('throws when BETTER_AUTH_URL is not https in production', async () => {
@@ -108,14 +120,17 @@ describe('auth config', () => {
 		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
 		vi.stubEnv('BETTER_AUTH_URL', 'http://car-log.test');
 
-		await expect(import('./auth')).rejects.toThrow('BETTER_AUTH_URL must use https in production.');
+		const { auth } = await importAuth();
+
+		expect(() => void auth.$Infer).toThrow('BETTER_AUTH_URL must use https in production.');
 	});
 
 	it('forces self-signup users into the customer role', async () => {
 		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
 		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
 
-		await import('./auth');
+		const { auth } = await importAuth();
+		void auth.$Infer;
 
 		const config = state.betterAuth.mock.calls[0]?.[0] as {
 			databaseHooks?: {
@@ -156,7 +171,8 @@ describe('auth config', () => {
 		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
 		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
 
-		await import('./auth');
+		const { auth } = await importAuth();
+		void auth.$Infer;
 
 		const config = state.betterAuth.mock.calls[0]?.[0] as {
 			databaseHooks?: {
@@ -188,7 +204,8 @@ describe('auth config', () => {
 		vi.stubEnv('BETTER_AUTH_SECRET', '12345678901234567890123456789012');
 		vi.stubEnv('BETTER_AUTH_URL', 'https://car-log.test');
 
-		await import('./auth');
+		const { auth } = await importAuth();
+		void auth.$Infer;
 
 		const config = state.betterAuth.mock.calls[0]?.[0] as {
 			user?: {

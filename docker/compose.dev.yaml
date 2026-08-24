@@ -1,0 +1,46 @@
+name: car-log-dev
+
+# Preview a published PR image beside a production stack.
+# Isolated project name + volumes. Host port 3100 (3000 stays free for other stacks).
+#
+#   cp .env.dev.example .env.dev
+#   # set CAR_LOG_IMAGE=ghcr.io/volturine/car-log:dev-<pr>
+#   docker compose --project-directory . -f docker/compose.dev.yaml --env-file .env.dev pull
+#   docker compose --project-directory . -f docker/compose.dev.yaml --env-file .env.dev up -d
+#
+# With Tailscale Serve:
+#   docker compose --project-directory . -f docker/compose.dev.yaml \
+#     -f docker/compose.tailscale.yaml --env-file .env.dev up -d
+#
+# Change the tag: edit CAR_LOG_IMAGE in .env.dev, then pull && up -d again.
+
+services:
+  app:
+    image: '${CAR_LOG_IMAGE:?Set CAR_LOG_IMAGE to a GHCR dev-* tag in .env.dev}'
+    # PR images are published as linux/amd64 only.
+    platform: linux/amd64
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    ports:
+      - '${CAR_LOG_PORT:-3100}:3000'
+    environment:
+      ORIGIN: '${CAR_LOG_ORIGIN:?Set CAR_LOG_ORIGIN in .env.dev}'
+      BODY_SIZE_LIMIT: '${CAR_LOG_BODY_SIZE_LIMIT:-220M}'
+      DATABASE_URL: '${CAR_LOG_DATABASE_URL:-/data/car-log.db}'
+      BETTER_AUTH_SECRET: '${BETTER_AUTH_SECRET:-development-only-secret-change-me}'
+      BETTER_AUTH_URL: '${CAR_LOG_ORIGIN}'
+      GOOGLE_CLIENT_ID: '${GOOGLE_CLIENT_ID:-}'
+      GOOGLE_CLIENT_SECRET: '${GOOGLE_CLIENT_SECRET:-}'
+    volumes:
+      - car-log-dev-data:/data
+      - car-log-dev-uploads:/app/uploads
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  car-log-dev-data:
+  car-log-dev-uploads:

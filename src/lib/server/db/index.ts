@@ -1,5 +1,5 @@
-import { drizzle } from 'drizzle-orm/bun-sqlite';
-import { Database } from 'bun:sqlite';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
 import { getDatabasePath } from '$lib/server/env';
 import * as schema from './schema';
 
@@ -7,11 +7,11 @@ const dbPath = getDatabasePath();
 const sqlite = new Database(dbPath);
 
 function hasTable(name: string): boolean {
-	const stmt = sqlite.prepare<{ name: string }, [string]>(
+	const stmt = sqlite.prepare(
 		"SELECT name FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
 	);
 	const row = stmt.get(name);
-	return row !== null;
+	return row !== undefined;
 }
 
 function hasColumn(table: string, name: string): boolean {
@@ -20,7 +20,7 @@ function hasColumn(table: string, name: string): boolean {
 	}
 
 	const cols = sqlite
-		.prepare<{ name: string }, []>(`PRAGMA table_info("${table}")`)
+		.prepare<[], { name: string }>(`PRAGMA table_info("${table}")`)
 		.all()
 		.map((col) => col.name);
 

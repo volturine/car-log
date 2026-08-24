@@ -1,0 +1,15 @@
+node_modules
+/build
+/.svelte-kit
+/uploads
+/sqlite.db*
+.env
+.env.*
+Dockerfile
+docker/compose*.yaml
+.git
+e2e
+src/tests
+playwright-report
+test-results
+*.md

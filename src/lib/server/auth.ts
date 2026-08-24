@@ -71,69 +71,88 @@ function getSocial() {
 const socialProviders = getSocial();
 export const googleEnabled = Boolean(socialProviders);
 
-export const auth = betterAuth({
-	baseURL: getUrl(),
-	secret: getSecret(),
-	database: drizzleAdapter(db, {
-		provider: 'sqlite',
-		schema: {
-			user: schema.users,
-			session: schema.sessions,
-			account: schema.accounts,
-			verification: schema.verifications
-		}
-	}),
-	emailAndPassword: {
-		enabled: true,
-		requireEmailVerification: false
-	},
-	...(socialProviders ? { socialProviders } : {}),
-	session: {
-		expiresIn: SESSION_CONFIG.EXPIRY_SECONDS,
-		updateAge: SESSION_CONFIG.UPDATE_AGE_SECONDS,
-		cookieCache: {
-			enabled: true,
-			maxAge: SESSION_CONFIG.COOKIE_CACHE_SECONDS
-		}
-	},
-	databaseHooks: {
-		user: {
-			create: {
-				before: async (user, context) => {
-					if (context?.path.startsWith('/admin/')) {
-						return;
-					}
+// Auth is initialized lazily so that merely importing this module never reads
+// or validates env vars. SvelteKit's post-build analysis evaluates server
+// modules without runtime env, so eager init would break `vite build`.
+type AuthInstance = ReturnType<typeof createAuth>;
 
-					return {
-						data: {
-							...user,
-							role: USER_ROLE.CUSTOMER,
-							shopId: null
+let instance: AuthInstance | undefined;
+
+function createAuth() {
+	return betterAuth({
+		baseURL: getUrl(),
+		secret: getSecret(),
+		database: drizzleAdapter(db, {
+			provider: 'sqlite',
+			schema: {
+				user: schema.users,
+				session: schema.sessions,
+				account: schema.accounts,
+				verification: schema.verifications
+			}
+		}),
+		emailAndPassword: {
+			enabled: true,
+			requireEmailVerification: false
+		},
+		...(socialProviders ? { socialProviders } : {}),
+		session: {
+			expiresIn: SESSION_CONFIG.EXPIRY_SECONDS,
+			updateAge: SESSION_CONFIG.UPDATE_AGE_SECONDS,
+			cookieCache: {
+				enabled: true,
+				maxAge: SESSION_CONFIG.COOKIE_CACHE_SECONDS
+			}
+		},
+		databaseHooks: {
+			user: {
+				create: {
+					before: async (user, context) => {
+						if (context?.path.startsWith('/admin/')) {
+							return;
 						}
-					};
+
+						return {
+							data: {
+								...user,
+								role: USER_ROLE.CUSTOMER,
+								shopId: null
+							}
+						};
+					}
+				}
+			}
+		},
+		user: {
+			additionalFields: {
+				role: {
+					type: 'string',
+					input: false,
+					defaultValue: USER_ROLE.CUSTOMER,
+					required: false
+				},
+				shopId: {
+					type: 'string',
+					input: false,
+					required: false
 				}
 			}
 		}
-	},
-	user: {
-		additionalFields: {
-			role: {
-				type: 'string',
-				input: false,
-				defaultValue: USER_ROLE.CUSTOMER,
-				required: false
-			},
-			shopId: {
-				type: 'string',
-				input: false,
-				required: false
-			},
-			phone: {
-				type: 'string',
-				required: false
-			}
-		}
+	});
+}
+
+export const auth = new Proxy({} as AuthInstance, {
+	get(_target, prop) {
+		instance ??= createAuth();
+
+		const value = Reflect.get(instance as object, prop);
+
+		return typeof value === 'function' ? value.bind(instance) : value;
 	}
 });
 
-export type Session = typeof auth.$Infer.Session;
+export function resetAuthForTesting(): void {
+	instance = undefined;
+}
+
+export type Session = AuthInstance['$Infer']['Session'];
