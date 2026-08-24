@@ -16,22 +16,22 @@ name: car-log-dev
 
 services:
   app:
-    image: "${CAR_LOG_IMAGE:?Set CAR_LOG_IMAGE to a GHCR dev-* tag in .env.dev}"
+    image: '${CAR_LOG_IMAGE:?Set CAR_LOG_IMAGE to a GHCR dev-* tag in .env.dev}'
     # PR images are published as linux/amd64 only.
     platform: linux/amd64
     pull_policy: always
     restart: unless-stopped
     init: true
     ports:
-      - "${CAR_LOG_PORT:-3100}:3000"
+      - '${CAR_LOG_PORT:-3100}:3000'
     environment:
-      ORIGIN: "${CAR_LOG_ORIGIN:?Set CAR_LOG_ORIGIN in .env.dev}"
-      BODY_SIZE_LIMIT: "${CAR_LOG_BODY_SIZE_LIMIT:-220M}"
-      DATABASE_URL: "${CAR_LOG_DATABASE_URL:-/data/car-log.db}"
-      BETTER_AUTH_SECRET: "${BETTER_AUTH_SECRET:-development-only-secret-change-me}"
-      BETTER_AUTH_URL: "${CAR_LOG_ORIGIN}"
-      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
-      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      ORIGIN: '${CAR_LOG_ORIGIN:?Set CAR_LOG_ORIGIN in .env.dev}'
+      BODY_SIZE_LIMIT: '${CAR_LOG_BODY_SIZE_LIMIT:-220M}'
+      DATABASE_URL: '${CAR_LOG_DATABASE_URL:-/data/car-log.db}'
+      BETTER_AUTH_SECRET: '${BETTER_AUTH_SECRET:-development-only-secret-change-me}'
+      BETTER_AUTH_URL: '${CAR_LOG_ORIGIN}'
+      GOOGLE_CLIENT_ID: '${GOOGLE_CLIENT_ID:-}'
+      GOOGLE_CLIENT_SECRET: '${GOOGLE_CLIENT_SECRET:-}'
     volumes:
       - car-log-dev-data:/data
       - car-log-dev-uploads:/app/uploads
