@@ -1,4 +1,4 @@
-# Justfile for Car Log (SvelteKit + Bun)
+# Justfile for Car Log (SvelteKit + Node)
 
 # Default goal
 default: dev
@@ -6,47 +6,47 @@ default: dev
 # Install dependencies
 install:
     @echo "Installing dependencies..."
-    bun install
+    npm ci
 
 # Run development server
 dev:
     @echo "Starting development server..."
-    bun run dev
+    npm run dev
 
 # Format code
 format:
     @echo "Formatting project..."
-    bun run format
+    npm run format
 
 # Run Svelte and type checks
 check:
     @echo "Running Svelte and type checks..."
-    bun run check
+    npm run check
 
 # Run lint and formatting checks
 lint:
     @echo "Running lint and formatting checks..."
-    bun run lint
+    npm run lint
 
 # Run tests
 test:
     @echo "Running tests..."
-    bun run test
+    npm test
 
 # Full verification gate -- must pass before any task is declared done
 verify:
     @echo "Running full verification..."
-    bun run check
-    bun run lint
-    bun run test
+    npm run check
+    npm run lint
+    npm test
 
 
 # Build for production
 prod:
     @echo "Building app..."
-    bun run build
+    npm run build
     @echo "Starting production server..."
-    bun run start
+    npm run start
 
 # Local container stack (builds image)
 deploy-dev:

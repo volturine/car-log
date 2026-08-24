@@ -29,7 +29,7 @@ Car Log is a SvelteKit app for tracking vehicles, repairs, shops, photos, and no
 1. Install dependencies:
 
 ```bash
-bun install
+npm ci
 ```
 
 2. Copy the env template:
@@ -61,7 +61,7 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 5. Start the app (database file and tables are bootstrapped automatically on first run):
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 Then open `http://localhost:3000`.
@@ -72,8 +72,8 @@ Then open `http://localhost:3000`.
 - E2E uses that environment so it does not boot against the default dev DB or port
 
 ```bash
-bun run e2e:install
-bun run e2e
+npm run e2e:install
+npm run e2e
 ```
 
 ## App Structure
@@ -93,16 +93,16 @@ sqlite.db               local SQLite database
 ## Useful Commands
 
 ```bash
-bun run dev
-bun run build
-bun run start
-bun run db:push
-bun run lint
-bun run check
-bun run e2e
+npm run dev
+npm run build
+npm run start
+npm run db:push
+npm run lint
+npm run check
+npm run e2e
 ```
 
-`bun run db:push` is still available when you explicitly want Drizzle to reconcile schema changes.
+`npm run db:push` is still available when you explicitly want Drizzle to reconcile schema changes.
 
 ## Production
 
@@ -111,11 +111,11 @@ This app uses `@sveltejs/adapter-node` for production builds.
 It needs a persistent server because it writes to local SQLite and stores uploads on the local
 filesystem, which is not compatible with serverless or edge runtimes.
 
-Build and run it with Bun:
+Build and run it with Node:
 
 ```bash
-bun run build
-bun run start
+npm run build
+npm run start
 ```
 
 The production server runs the adapter-node output from `build/index.js`, and `HOST`/`PORT` can
