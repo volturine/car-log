@@ -32,7 +32,7 @@ export const GET: RequestHandler = async ({ locals, url }) => {
 
 	logger.debug('Fetching repairs', { userId: user.id, carId, shopId });
 
-	let repairs: Array<typeof schema.repairs.$inferSelect> = [];
+	let repairs: Array<typeof schema.repairs.$inferSelect>;
 
 	if (isShopMember(user)) {
 		// Shop owners/mechanics see repairs for their shop(s)
