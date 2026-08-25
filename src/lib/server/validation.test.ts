@@ -78,6 +78,7 @@ vi.mock('$lib/constants', () => ({
 
 describe('validateEnv', () => {
 	beforeEach(() => {
+		vi.restoreAllMocks();
 		vi.resetModules();
 		vi.unstubAllEnvs();
 	});
