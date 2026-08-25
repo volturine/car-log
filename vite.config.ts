@@ -1,7 +1,8 @@
 import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import { getPort } from './src/lib/server/env';
+import { getPort } from './src/lib/server/env.ts';
 
 function getHmrProtocol(value: string | undefined): 'ws' | 'wss' {
 	if (value === 'wss') return 'wss';
@@ -23,6 +24,7 @@ const hmr =
 
 export default defineConfig({
 	plugins: [
+		tailwindcss(),
 		sveltekit(),
 		VitePWA({
 			registerType: 'autoUpdate',
