@@ -27,7 +27,7 @@
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { formatDate } from '$lib/utils';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import type { PageData } from './$types';
 	import type { ShopMember } from '$lib/types';
 
@@ -73,9 +73,8 @@
 
 	const ready = $derived(name.trim().length > 0);
 
-	// Side effect: fetch members from API on mount
-	$effect(() => {
-		fetchMembers();
+	onMount(() => {
+		void fetchMembers();
 	});
 
 	async function fetchMembers() {

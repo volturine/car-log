@@ -7,7 +7,6 @@ import { useDebounce } from '$lib/utils/reactive.svelte';
 class UseRepairs {
 	cars = $state<Car[]>([]);
 	repairs = $state<Repair[]>([]);
-	selectedCarId = $state<string | null>(null);
 	loading = $state(false);
 	searchQuery = $state<string>('');
 	lastLoadedAt = $state<Date | null>(null);
@@ -109,16 +108,6 @@ class UseRepairs {
 		this.repairs = result.data || result; // Handle both wrapped and unwrapped responses
 	}
 
-	selectedCar = $derived(this.cars.find((c) => c.id === this.selectedCarId));
-
-	carRepairs = $derived(
-		this.selectedCarId
-			? this.repairs
-					.filter((r) => r.carId === this.selectedCarId)
-					.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-			: []
-	);
-
 	brandStats = $derived.by(() => {
 		const statsMap = new SvelteMap<
 			string,
@@ -213,9 +202,6 @@ class UseRepairs {
 			if (!response.ok) throw new Error('Failed to delete car');
 			this.cars = this.cars.filter((car) => car.id !== id);
 			this.repairs = this.repairs.filter((repair) => repair.carId !== id);
-			if (this.selectedCarId === id) {
-				this.selectedCarId = null;
-			}
 			toast.success('Car deleted successfully');
 		} catch (error) {
 			console.error('Failed to delete car:', error);

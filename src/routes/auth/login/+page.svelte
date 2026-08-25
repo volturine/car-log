@@ -14,6 +14,7 @@
 	} from '$lib/components/ui/card';
 	import { Separator } from '$lib/components/ui/separator';
 	import { toast } from 'svelte-sonner';
+	import { onDestroy } from 'svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -22,18 +23,10 @@
 	let password = $state('');
 	let loading = $state(false);
 	let googleLoading = $state(false);
-	let googleTimeout = $state<ReturnType<typeof setTimeout> | null>(null);
+	let googleTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	// side-effect: clears the safety timer when googleLoading resets or component unmounts
-	$effect(() => {
-		if (!googleLoading && googleTimeout) {
-			clearTimeout(googleTimeout);
-			googleTimeout = null;
-		}
-
-		return () => {
-			if (googleTimeout) clearTimeout(googleTimeout);
-		};
+	onDestroy(() => {
+		if (googleTimeout) clearTimeout(googleTimeout);
 	});
 
 	async function handleSignIn() {
@@ -77,8 +70,10 @@
 			return;
 		}
 
+		if (googleTimeout) clearTimeout(googleTimeout);
 		googleTimeout = setTimeout(() => {
 			googleLoading = false;
+			googleTimeout = null;
 		}, 5000);
 	}
 

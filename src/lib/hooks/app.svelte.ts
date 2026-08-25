@@ -21,14 +21,18 @@ class UseApp {
 			this.isDarkMode = props.isDarkMode;
 		}
 
-		// Side effect: sync dark class + localStorage with reactive state
-		$effect(() => {
-			document.body.classList.toggle('dark', this.isDarkMode);
-			localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
-		});
+		if (typeof document !== 'undefined') this.applyTheme();
 	}
 
-	darkModeToggle = () => (this.isDarkMode = !this.isDarkMode);
+	private applyTheme() {
+		document.body.classList.toggle('dark', this.isDarkMode);
+		localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+	}
+
+	darkModeToggle = () => {
+		this.isDarkMode = !this.isDarkMode;
+		this.applyTheme();
+	};
 }
 
 export type UseAppProps = Pick<UseApp, 'isDarkMode'>;
