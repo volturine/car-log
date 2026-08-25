@@ -1,10 +1,12 @@
 # Documentation
 
-| Document                           | Audience                                          |
-| ---------------------------------- | ------------------------------------------------- |
-| [architecture.md](architecture.md) | Contributors — system layout and modules          |
-| [security.md](security.md)         | Operators & contributors — threat model and roles |
-| [self-hosting.md](self-hosting.md) | Operators — Docker, env, Tailscale, backups       |
-| [development.md](development.md)   | Contributors — scripts, tests, CI                 |
+> Under heavy construction — docs are intentionally minimal.
 
-Start at the root [README.md](../README.md) for a product overview.
+| Document                           | Use when                         |
+| ---------------------------------- | -------------------------------- |
+| [architecture.md](architecture.md) | Understanding the invariants     |
+| [security.md](security.md)         | Touching auth, roles, or uploads |
+| [self-hosting.md](self-hosting.md) | Deploying with Docker            |
+| [development.md](development.md)   | Contributing                     |
+
+Start at the root [README.md](../README.md).
