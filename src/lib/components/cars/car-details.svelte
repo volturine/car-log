@@ -16,9 +16,11 @@
 	import type { ShopMember } from '$lib/types';
 
 	let {
-		user = undefined
+		user = undefined,
+		carId
 	}: {
 		user?: { id?: string; role?: string | null; shopId?: string | null } | null;
+		carId?: string;
 	} = $props();
 
 	const repairs = useRepairs();
@@ -31,12 +33,12 @@
 	);
 	const userShopId = $derived(isShopUser ? (user?.shopId ?? '') : '');
 
-	// Side effect: fetch shop members when shop user opens form
-	$effect(() => {
-		if (isShopUser && userShopId) {
-			fetchShopMembers(userShopId);
-		}
-	});
+	const selectedCar = $derived(repairs.cars.find((car) => car.id === carId));
+	const carRepairs = $derived(
+		repairs.repairs
+			.filter((repair) => repair.carId === carId)
+			.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+	);
 
 	async function fetchShopMembers(shopId: string) {
 		const response = await fetch(`/api/shops/${shopId}`).catch(() => null);
@@ -50,20 +52,25 @@
 		}));
 	}
 
+	async function handleShowAddRepair() {
+		if (isShopUser && userShopId) await fetchShopMembers(userShopId);
+		showAddRepair = true;
+	}
+
 	const handleDelete = async () => {
-		if (!repairs.selectedCar) return;
+		if (!selectedCar) return;
 		if (
 			confirm(
-				`Are you sure you want to delete ${repairs.selectedCar.brand} ${repairs.selectedCar.model}? This will also delete all associated repairs.`
+				`Are you sure you want to delete ${selectedCar.brand} ${selectedCar.model}? This will also delete all associated repairs.`
 			)
 		) {
-			await repairs.deleteCar(repairs.selectedCar.id);
+			await repairs.deleteCar(selectedCar.id);
 			toast.success('Car deleted successfully');
 			goto(resolve('/app/cars'));
 		}
 	};
 
-	const totalCost = $derived(repairs.carRepairs.reduce((sum, r) => sum + r.totalCost, 0));
+	const totalCost = $derived(carRepairs.reduce((sum, r) => sum + r.totalCost, 0));
 </script>
 
 {#if repairs.loading}
@@ -98,16 +105,16 @@
 			{/each}
 		</div>
 	</div>
-{:else if repairs.selectedCar}
+{:else if selectedCar}
 	<div class="space-y-6 p-6">
 		<div class="flex items-center gap-4">
 			<Button variant="ghost" size="icon" onclick={() => goto(resolve('/app/cars'))}>
 				<ArrowLeftIcon />
 			</Button>
 			<div class="flex-1">
-				<h1 class="text-3xl font-bold">{repairs.selectedCar.brand} {repairs.selectedCar.model}</h1>
+				<h1 class="text-3xl font-bold">{selectedCar.brand} {selectedCar.model}</h1>
 				<p class="text-muted-foreground">
-					{repairs.selectedCar.year} • {repairs.selectedCar.licensePlate}
+					{selectedCar.year} • {selectedCar.licensePlate}
 				</p>
 			</div>
 			<Button variant="outline" size="icon" onclick={() => (showEditForm = !showEditForm)}>
@@ -121,7 +128,7 @@
 		{#if showEditForm}
 			<div transition:fly={{ y: -20, duration: 300 }}>
 				<CarForm
-					car={repairs.selectedCar}
+					car={selectedCar}
 					onCancel={() => (showEditForm = false)}
 					onSuccess={() => (showEditForm = false)}
 				/>
@@ -135,19 +142,19 @@
 			<CardContent class="grid gap-4 md:grid-cols-2">
 				<div>
 					<p class="text-sm text-muted-foreground">Owner</p>
-					<p class="font-medium">{repairs.selectedCar.ownerName}</p>
-					{#if repairs.selectedCar.ownerPhone}
-						<p class="text-sm text-muted-foreground">{repairs.selectedCar.ownerPhone}</p>
+					<p class="font-medium">{selectedCar.ownerName}</p>
+					{#if selectedCar.ownerPhone}
+						<p class="text-sm text-muted-foreground">{selectedCar.ownerPhone}</p>
 					{/if}
 				</div>
 				<div>
 					<p class="text-sm text-muted-foreground">Color</p>
-					<p class="font-medium">{repairs.selectedCar.color}</p>
+					<p class="font-medium">{selectedCar.color}</p>
 				</div>
-				{#if repairs.selectedCar.vin}
+				{#if selectedCar.vin}
 					<div class="md:col-span-2">
 						<p class="text-sm text-muted-foreground">VIN</p>
-						<p class="font-mono text-sm font-medium">{repairs.selectedCar.vin}</p>
+						<p class="font-mono text-sm font-medium">{selectedCar.vin}</p>
 					</div>
 				{/if}
 			</CardContent>
@@ -159,10 +166,10 @@
 			<div>
 				<h2 class="text-2xl font-bold">Repair History</h2>
 				<p class="text-muted-foreground">
-					{repairs.carRepairs.length} repairs • Total: ${totalCost.toFixed(2)}
+					{carRepairs.length} repairs • Total: ${totalCost.toFixed(2)}
 				</p>
 			</div>
-			<Button onclick={() => (showAddRepair = true)}>
+			<Button onclick={handleShowAddRepair}>
 				<PlusIcon />
 				Add Repair
 			</Button>
@@ -171,7 +178,7 @@
 		{#if showAddRepair}
 			<div transition:fly={{ y: -20, duration: 300 }}>
 				<RepairForm
-					carId={repairs.selectedCar.id}
+					carId={selectedCar.id}
 					onCancel={() => (showAddRepair = false)}
 					onSuccess={() => (showAddRepair = false)}
 					user={user ?? undefined}
@@ -181,7 +188,7 @@
 			</div>
 		{/if}
 
-		{#if repairs.carRepairs.length === 0}
+		{#if carRepairs.length === 0}
 			<Card class="border-dashed">
 				<CardContent class="flex flex-col items-center justify-center py-12">
 					<p class="text-lg font-medium text-muted-foreground">No repairs recorded yet</p>
@@ -189,7 +196,7 @@
 						Add your first repair to start tracking service history.
 					</p>
 					{#if !showAddRepair}
-						<Button variant="outline" class="mt-4" onclick={() => (showAddRepair = true)}>
+						<Button variant="outline" class="mt-4" onclick={handleShowAddRepair}>
 							<PlusIcon />
 							Add First Repair
 						</Button>
@@ -198,7 +205,7 @@
 			</Card>
 		{:else}
 			<div class="flex flex-col gap-6">
-				{#each repairs.carRepairs as repair (repair.id)}
+				{#each carRepairs as repair (repair.id)}
 					<div class="flex flex-col gap-3" transition:fly={{ y: 20, duration: 300 }}>
 						<RepairCard {repair} />
 					</div>

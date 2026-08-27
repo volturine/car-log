@@ -5,11 +5,32 @@
 		<link rel="icon" type="image/png" sizes="32x32" href="%sveltekit.assets%/favicon.png" />
 		<link rel="apple-touch-icon" sizes="180x180" href="%sveltekit.assets%/apple-touch-icon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-		<meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="#ffffff" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="apple-mobile-web-app-title" content="CarLog" />
+		<script nonce="%sveltekit.nonce%">
+			// Apply the saved/system theme before CSS loads to prevent a flash.
+			(function () {
+				try {
+					var raw = localStorage.getItem('carlog-ui-state');
+					var dark = null;
+					if (raw) {
+						var parsed = JSON.parse(raw);
+						if (typeof parsed.dark === 'boolean') dark = parsed.dark;
+					}
+					if (dark === null) dark = matchMedia('(prefers-color-scheme: dark)').matches;
+					var root = document.documentElement;
+					root.classList.toggle('dark', dark);
+					root.style.backgroundColor = dark ? '#0a0a0a' : '#ffffff';
+					root.style.colorScheme = dark ? 'dark' : 'light';
+					var theme = document.querySelector('meta[name="theme-color"]');
+					if (theme) theme.setAttribute('content', dark ? '#0a0a0a' : '#ffffff');
+				} catch {
+					// Keep the document's light defaults if storage is unavailable.
+				}
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
