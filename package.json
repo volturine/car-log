@@ -60,7 +60,7 @@
 	"dependencies": {
 		"bcryptjs": "^3.0.3",
 		"better-auth": "^1.7.1",
-		"better-sqlite3": "^12.11.1",
+		"better-sqlite3": "^13.0.3",
 		"drizzle-orm": "^0.45.1",
 		"neverthrow": "^8.2.0",
 		"runed": "^0.37.1",
