@@ -48,6 +48,21 @@ prod:
     @echo "Starting production server..."
     npm run start
 
+# Workers build served by Wrangler on local D1 and R2 (reads .dev.vars)
+cf-dev:
+    @echo "Starting local Cloudflare Worker..."
+    npm run cf:dev
+
+# Deploy the shared Cloudflare development Worker (requires BETTER_AUTH_SECRET)
+cf-deploy-dev:
+    @echo "Deploying Cloudflare development Worker..."
+    npm run cf:deploy:dev
+
+# Deploy the Cloudflare production Worker
+cf-deploy:
+    @echo "Deploying Cloudflare production Worker..."
+    npm run cf:deploy
+
 # Local container stack (builds image)
 deploy-dev:
     @echo "Starting local Docker stack..."

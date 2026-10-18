@@ -13,7 +13,8 @@ vi.mock('zod', () => {
 		nullable: vi.fn(() => chain),
 		array: vi.fn(() => chain),
 		url: vi.fn(() => chain),
-		datetime: vi.fn(() => chain)
+		datetime: vi.fn(() => chain),
+		refine: vi.fn(() => chain)
 	};
 
 	return {
@@ -28,6 +29,7 @@ vi.mock('zod', () => {
 });
 
 vi.mock('$lib/constants', () => ({
+	maxCarYear: () => 2100,
 	REPAIR_STATUS_VALUES: [
 		'estimate_pending',
 		'estimate_approved',
@@ -42,7 +44,7 @@ vi.mock('$lib/constants', () => ({
 			BRAND_MAX_LENGTH: 100,
 			MODEL_MAX_LENGTH: 100,
 			YEAR_MIN: 1900,
-			YEAR_MAX: 2100,
+			YEAR_MAX_AHEAD: 2,
 			VIN_MAX_LENGTH: 17,
 			LICENSE_PLATE_MAX_LENGTH: 20,
 			OWNER_NAME_MAX_LENGTH: 200,

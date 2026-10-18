@@ -7,7 +7,7 @@ import {
 	verifyOwnership,
 	validateBody,
 	successResponse,
-	transaction
+	writeBatch
 } from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { REPAIR_STATUS } from '$lib/constants';
@@ -36,19 +36,17 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	logger.info('Rejecting estimate', { repairId: params.id, userId: user.id, reason });
 
-	const updatedRepair = transaction((tx) => {
-		const repairUpdate = {
-			status: REPAIR_STATUS.ESTIMATE_REJECTED,
-			estimateNotes: reason ? `Rejected: ${reason}` : 'Estimate rejected by customer',
-			customerApproved: false,
-			approvedAt: null,
-			updatedAt: new Date()
-		};
+	const updatedRepair = {
+		status: REPAIR_STATUS.ESTIMATE_REJECTED,
+		estimateNotes: reason ? `Rejected: ${reason}` : 'Estimate rejected by customer',
+		customerApproved: false,
+		approvedAt: null,
+		updatedAt: new Date()
+	};
 
-		tx.update(schema.repairs).set(repairUpdate).where(eq(schema.repairs.id, params.id)).run();
-
-		return repairUpdate;
-	});
+	await writeBatch([
+		db.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id))
+	]);
 
 	const result = { ...repair, ...updatedRepair };
 

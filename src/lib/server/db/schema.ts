@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 // User table
@@ -38,28 +38,35 @@ export const sessions = sqliteTable('sessions', {
 });
 
 // Account table for Better Auth (for password hashing, etc.)
-export const accounts = sqliteTable('accounts', {
-	id: text('id').primaryKey(),
-	userId: text('user_id')
-		.notNull()
-		.references(() => users.id, { onDelete: 'cascade' }),
-	accountId: text('account_id').notNull(),
-	providerId: text('provider_id').notNull(),
-	accessToken: text('access_token'),
-	refreshToken: text('refresh_token'),
-	idToken: text('id_token'),
-	accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp' }),
-	refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
-	scope: text('scope'),
-	expiresAt: integer('expires_at', { mode: 'timestamp' }),
-	password: text('password'),
-	createdAt: integer('created_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`CURRENT_TIMESTAMP`),
-	updatedAt: integer('updated_at', { mode: 'timestamp' })
-		.notNull()
-		.default(sql`CURRENT_TIMESTAMP`)
-});
+export const accounts = sqliteTable(
+	'accounts',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		accountId: text('account_id').notNull(),
+		providerId: text('provider_id').notNull(),
+		// Namespace for accountId: `local:credential` for passwords, the OIDC
+		// issuer for social providers (better-auth 1.7+).
+		issuer: text('issuer').notNull(),
+		accessToken: text('access_token'),
+		refreshToken: text('refresh_token'),
+		idToken: text('id_token'),
+		accessTokenExpiresAt: integer('access_token_expires_at', { mode: 'timestamp' }),
+		refreshTokenExpiresAt: integer('refresh_token_expires_at', { mode: 'timestamp' }),
+		scope: text('scope'),
+		expiresAt: integer('expires_at', { mode: 'timestamp' }),
+		password: text('password'),
+		createdAt: integer('created_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`CURRENT_TIMESTAMP`),
+		updatedAt: integer('updated_at', { mode: 'timestamp' })
+			.notNull()
+			.default(sql`CURRENT_TIMESTAMP`)
+	},
+	(table) => [uniqueIndex('accounts_issuer_account_id_unique').on(table.issuer, table.accountId)]
+);
 
 // Verification table for Better Auth
 export const verifications = sqliteTable('verifications', {

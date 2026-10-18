@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { requireRole, validateBody, successResponse, transaction } from '$lib/server/api-utils';
+import { requireRole, validateBody, successResponse, writeBatch } from '$lib/server/api-utils';
 import { shopSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId } from '$lib/utils';
@@ -51,19 +51,17 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		updatedAt: now
 	};
 
-	transaction((tx) => {
-		tx.insert(schema.shops).values(newShop).run();
-		tx.update(schema.users).set({ shopId }).where(eq(schema.users.id, user.id)).run();
-
-		tx.insert(schema.shopMembers)
-			.values({
-				userId: user.id,
-				shopId,
-				role: 'owner',
-				joinedAt: now
-			})
-			.run();
-	});
+	// The shop, the owner's shop link and the membership land together
+	await writeBatch([
+		db.insert(schema.shops).values(newShop),
+		db.update(schema.users).set({ shopId }).where(eq(schema.users.id, user.id)),
+		db.insert(schema.shopMembers).values({
+			userId: user.id,
+			shopId,
+			role: 'owner',
+			joinedAt: now
+		})
+	]);
 
 	logger.info('Shop created', { shopId, userId: user.id });
 

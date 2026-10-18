@@ -1,5 +1,7 @@
 import { error, type NumericRange } from '@sveltejs/kit';
+import { platform } from '$platform';
 import { db, schema } from './db';
+import type { WriteBatch } from './platform/types';
 import { eq, and, inArray } from 'drizzle-orm';
 import type { AnySQLiteColumn, AnySQLiteTable } from 'drizzle-orm/sqlite-core';
 import { API_ERRORS, USER_ROLE } from '$lib/constants';
@@ -12,7 +14,6 @@ type OwnedTable = AnySQLiteTable<{ columns: { id: AnySQLiteColumn; userId: AnySQ
 	userId: AnySQLiteColumn;
 };
 type Row<TTable extends AnySQLiteTable> = TTable['$inferSelect'];
-type Tx = Parameters<typeof db.transaction>[0] extends (tx: infer TTx) => unknown ? TTx : never;
 
 export function requireAuth(locals: App.Locals): User {
 	if (!locals.user) {
@@ -179,10 +180,9 @@ export function successResponse<T>(data: T, status: NumericRange<200, 299> = 200
 	};
 }
 
-export function transaction<T>(callback: (tx: Tx) => T): T {
-	return db.transaction((tx) => {
-		return callback(tx);
-	});
+/** Applies every statement atomically; none is visible unless all succeed. */
+export function writeBatch(statements: WriteBatch): Promise<void> {
+	return platform.batch(statements);
 }
 
 export function formatPhotosForResponse(

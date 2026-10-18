@@ -6,11 +6,6 @@ type User = {
 	name?: string;
 };
 
-type Tx = {
-	insert: ReturnType<typeof vi.fn>;
-	update: ReturnType<typeof vi.fn>;
-};
-
 const state = vi.hoisted(() => {
 	const repair = {
 		id: 'repair-1',
@@ -24,17 +19,15 @@ const state = vi.hoisted(() => {
 	const repairWhere = vi.fn(() => ({ limit: repairLimit }));
 	const repairFrom = vi.fn(() => ({ where: repairWhere }));
 	const dbSelect = vi.fn(() => ({ from: repairFrom }));
-	const txRun = vi.fn();
-	const txValues = vi.fn(() => ({ run: txRun }));
+	const txValues = vi.fn(() => ({ kind: 'insert' }));
 	const txInsert = vi.fn(() => ({ values: txValues }));
-	const txWhere = vi.fn(() => ({ run: txRun }));
+	const txWhere = vi.fn(() => ({ kind: 'update' }));
 	const txSet = vi.fn(() => ({ where: txWhere }));
 	const txUpdate = vi.fn(() => ({ set: txSet }));
-	const tx: Tx = { insert: txInsert, update: txUpdate };
 	const requireAuth = vi.fn<() => User>(() => ({ id: 'shop-1', role: 'shop_owner' }));
 	const validateBody = vi.fn(async () => ({ amount: 25 }));
 	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
-	const transaction = vi.fn((callback: (tx: Tx) => unknown) => callback(tx));
+	const writeBatch = vi.fn(async () => undefined);
 	const isShopMember = vi.fn(
 		(user: { role?: string }) => user.role === 'shop_owner' || user.role === 'mechanic'
 	);
@@ -60,7 +53,6 @@ const state = vi.hoisted(() => {
 		repairWhere,
 		repairFrom,
 		dbSelect,
-		txRun,
 		txValues,
 		txInsert,
 		txWhere,
@@ -69,7 +61,7 @@ const state = vi.hoisted(() => {
 		requireAuth,
 		validateBody,
 		successResponse,
-		transaction,
+		writeBatch,
 		isShopMember,
 		verifyRepairAccess,
 		listPayments,
@@ -96,7 +88,9 @@ vi.mock('$lib/server/db', async () => {
 	return {
 		schema,
 		db: {
-			select: state.dbSelect
+			select: state.dbSelect,
+			insert: state.txInsert,
+			update: state.txUpdate
 		}
 	};
 });
@@ -105,7 +99,7 @@ vi.mock('$lib/server/api-utils', () => ({
 	requireAuth: state.requireAuth,
 	validateBody: state.validateBody,
 	successResponse: state.successResponse,
-	transaction: state.transaction,
+	writeBatch: state.writeBatch,
 	isShopMember: state.isShopMember,
 	verifyRepairAccess: state.verifyRepairAccess
 }));
@@ -135,7 +129,6 @@ describe('/api/repairs/[id]/payment', () => {
 		state.repairWhere.mockClear();
 		state.repairFrom.mockClear();
 		state.dbSelect.mockClear();
-		state.txRun.mockClear();
 		state.txValues.mockClear();
 		state.txInsert.mockClear();
 		state.txWhere.mockClear();
@@ -146,7 +139,7 @@ describe('/api/repairs/[id]/payment', () => {
 		state.validateBody.mockReset();
 		state.validateBody.mockResolvedValue({ amount: 25 });
 		state.successResponse.mockClear();
-		state.transaction.mockClear();
+		state.writeBatch.mockClear();
 		state.isShopMember.mockClear();
 		state.verifyRepairAccess.mockClear();
 		state.listPayments.mockClear();
@@ -170,7 +163,7 @@ describe('/api/repairs/[id]/payment', () => {
 			body: { message: 'You do not have permission to record payments for this repair' }
 		});
 
-		expect(state.transaction).not.toHaveBeenCalled();
+		expect(state.writeBatch).not.toHaveBeenCalled();
 		expect(state.notify).not.toHaveBeenCalled();
 	});
 
@@ -187,7 +180,8 @@ describe('/api/repairs/[id]/payment', () => {
 		} as never);
 		const body = await response.json();
 
-		expect(state.transaction).toHaveBeenCalledOnce();
+		expect(state.writeBatch).toHaveBeenCalledOnce();
+		expect(state.writeBatch).toHaveBeenCalledWith([{ kind: 'insert' }, { kind: 'update' }]);
 		expect(state.txInsert).toHaveBeenCalledOnce();
 		expect(state.txValues).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -232,7 +226,7 @@ describe('/api/repairs/[id]/payment', () => {
 			body: { message: 'Payments can only be recorded for completed repairs' }
 		});
 
-		expect(state.transaction).not.toHaveBeenCalled();
+		expect(state.writeBatch).not.toHaveBeenCalled();
 	});
 
 	it('marks completed repairs as paid when the last payment clears the balance', async () => {

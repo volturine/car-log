@@ -1,24 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-type Tx = {
-	insert: ReturnType<typeof vi.fn>;
-	delete: ReturnType<typeof vi.fn>;
-	update: ReturnType<typeof vi.fn>;
-};
-
 const state = vi.hoisted(() => {
-	const txRun = vi.fn();
-	const txValues = vi.fn(() => ({ run: txRun }));
+	// Query builders return inert statement objects; writeBatch receives them.
+	const txValues = vi.fn((values: unknown) => ({ kind: 'insert', values }));
 	const txInsert = vi.fn(() => ({ values: txValues }));
-	const txWhere = vi.fn(() => ({ run: txRun }));
+	const txWhere = vi.fn(() => ({ kind: 'write' }));
 	const txDelete = vi.fn(() => ({ where: txWhere }));
 	const txSet = vi.fn(() => ({ where: txWhere }));
 	const txUpdate = vi.fn(() => ({ set: txSet }));
-	const tx: Tx = {
-		insert: txInsert,
-		delete: txDelete,
-		update: txUpdate
-	};
 	const requireAuth = vi.fn(() => ({ id: 'owner-1', role: 'shop_owner' }));
 	const validateBody = vi.fn(async () => ({
 		carId: 'car-1',
@@ -35,7 +24,7 @@ const state = vi.hoisted(() => {
 		totalCost: 0
 	}));
 	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
-	const transaction = vi.fn((callback: (tx: Tx) => unknown) => callback(tx));
+	const writeBatch = vi.fn(async () => undefined);
 	const fetchById = vi.fn(async () => ({ id: 'car-1', userId: 'customer-1' }));
 	const verifyShopAccess = vi.fn(async () => ({ id: 'shop-1' }));
 	const isShopMember = vi.fn(() => true);
@@ -43,18 +32,16 @@ const state = vi.hoisted(() => {
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 
 	return {
-		txRun,
 		txValues,
 		txInsert,
 		txWhere,
 		txDelete,
 		txSet,
 		txUpdate,
-		tx,
 		requireAuth,
 		validateBody,
 		successResponse,
-		transaction,
+		writeBatch,
 		fetchById,
 		verifyShopAccess,
 		isShopMember,
@@ -81,9 +68,9 @@ vi.mock('$lib/server/db', async () => {
 		schema,
 		db: {
 			select: vi.fn(),
-			update: vi.fn(),
-			delete: vi.fn(),
-			insert: vi.fn()
+			update: state.txUpdate,
+			delete: state.txDelete,
+			insert: state.txInsert
 		}
 	};
 });
@@ -92,7 +79,7 @@ vi.mock('$lib/server/api-utils', () => ({
 	requireAuth: state.requireAuth,
 	validateBody: state.validateBody,
 	successResponse: state.successResponse,
-	transaction: state.transaction,
+	writeBatch: state.writeBatch,
 	fetchById: state.fetchById,
 	formatPhotosForResponse: state.formatPhotosForResponse,
 	isShopMember: state.isShopMember,
@@ -110,13 +97,12 @@ vi.mock('$lib/server/logger', () => ({
 describe('POST /api/repairs', () => {
 	beforeEach(() => {
 		vi.resetModules();
-		state.txRun.mockClear();
 		state.txValues.mockClear();
 		state.txInsert.mockClear();
 		state.requireAuth.mockClear();
 		state.validateBody.mockClear();
 		state.successResponse.mockClear();
-		state.transaction.mockClear();
+		state.writeBatch.mockClear();
 		state.fetchById.mockClear();
 		state.verifyShopAccess.mockClear();
 		state.isShopMember.mockClear();
@@ -131,6 +117,13 @@ describe('POST /api/repairs', () => {
 		const body = await response.json();
 
 		expect(state.verifyShopAccess).toHaveBeenCalledWith('shop-1', 'owner-1', 'shop_owner');
+		expect(state.writeBatch).toHaveBeenCalledOnce();
+		expect(state.writeBatch).toHaveBeenCalledWith([
+			expect.objectContaining({
+				kind: 'insert',
+				values: expect.objectContaining({ id: 'repair-1' })
+			})
+		]);
 		expect(body).toMatchObject({
 			success: true,
 			data: {

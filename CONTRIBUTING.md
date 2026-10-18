@@ -59,6 +59,7 @@ Useful partial commands:
 | `npm start`       | Run the built Node adapter app    |
 | `npm run e2e`     | Playwright end-to-end smoke tests |
 | `npm run db:push` | Push the Drizzle schema to SQLite |
+| `npm run cf:dev`  | Workers build on local D1 and R2  |
 
 ### Docker (optional)
 
@@ -68,22 +69,25 @@ Build and run the development Compose template:
 docker compose --project-directory . -f docker/compose.yaml up -d --build
 ```
 
-Production-style deployment is documented in
+Production runs on Cloudflare Workers; both shapes are documented in
 [docs/self-hosting.md](docs/self-hosting.md).
 
 ## Project map
 
-| Path                     | Role                                           |
-| ------------------------ | ---------------------------------------------- |
-| `src/routes/auth/`       | Login and registration pages                   |
-| `src/routes/app/`        | Customer dashboard, cars, shop, analytics      |
-| `src/routes/api/`        | JSON API (cars, repairs, photos, shops, users) |
-| `src/lib/server/`        | Auth, DB, predicates, workflow, storage        |
-| `src/lib/components/ui/` | shadcn-svelte UI primitives                    |
-| `src/lib/constants.ts`   | Roles, statuses, limits                        |
-| `drizzle/`               | SQL migrations                                 |
-| `docs/`                  | Architecture, security, self-hosting           |
-| `docker/`                | Docker Compose templates and image             |
+| Path                       | Role                                                |
+| -------------------------- | --------------------------------------------------- |
+| `src/routes/auth/`         | Login and registration pages                        |
+| `src/routes/app/`          | Customer dashboard, cars, shop, analytics           |
+| `src/routes/api/`          | JSON API (cars, repairs, photos, shops, users)      |
+| `src/lib/server/`          | Auth, DB, predicates, workflow, storage             |
+| `src/lib/components/ui/`   | shadcn-svelte UI primitives                         |
+| `src/lib/constants.ts`     | Roles, statuses, limits                             |
+| `src/lib/server/platform/` | Node (SQLite, disk) and Cloudflare (D1, R2) drivers |
+| `drizzle/`                 | SQL migrations                                      |
+| `cf/`                      | Worker entry and D1 migrations                      |
+| `scripts/`                 | Cloudflare helper scripts                           |
+| `docs/`                    | Architecture, security, self-hosting                |
+| `docker/`                  | Docker Compose templates and image                  |
 
 Deeper orientation: [docs/architecture.md](docs/architecture.md) and
 [docs/development.md](docs/development.md).

@@ -1,11 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-type Tx = {
-	insert: ReturnType<typeof vi.fn>;
-	delete: ReturnType<typeof vi.fn>;
-	update: ReturnType<typeof vi.fn>;
-};
-
 const state = vi.hoisted(() => {
 	const repair = {
 		id: 'repair-1',
@@ -30,22 +24,16 @@ const state = vi.hoisted(() => {
 	const partsWhere = vi.fn(async () => []);
 	const partsFrom = vi.fn(() => ({ where: partsWhere }));
 	const dbSelect = vi.fn(() => ({ from: partsFrom }));
-	const txRun = vi.fn();
-	const txValues = vi.fn(() => ({ run: txRun }));
+	const txValues = vi.fn(() => ({ kind: 'insert' }));
 	const txInsert = vi.fn(() => ({ values: txValues }));
-	const txWhere = vi.fn(() => ({ run: txRun }));
+	const txWhere = vi.fn(() => ({ kind: 'write' }));
 	const txDelete = vi.fn(() => ({ where: txWhere }));
 	const txSet = vi.fn(() => ({ where: txWhere }));
 	const txUpdate = vi.fn(() => ({ set: txSet }));
-	const tx: Tx = {
-		insert: txInsert,
-		delete: txDelete,
-		update: txUpdate
-	};
 	const requireAuth = vi.fn(() => ({ id: 'shop-1', role: 'shop_owner' }));
 	const validateBody = vi.fn(async () => ({ status: 'completed' }));
 	const successResponse = vi.fn((data: unknown, status = 200) => ({ success: true, data, status }));
-	const transaction = vi.fn((callback: (tx: Tx) => unknown) => callback(tx));
+	const writeBatch = vi.fn(async () => undefined);
 	const verifyRepairAccess = vi.fn(async () => repair);
 	const isShopMember = vi.fn(() => true);
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -55,7 +43,6 @@ const state = vi.hoisted(() => {
 		partsWhere,
 		partsFrom,
 		dbSelect,
-		txRun,
 		txValues,
 		txInsert,
 		txWhere,
@@ -65,7 +52,7 @@ const state = vi.hoisted(() => {
 		requireAuth,
 		validateBody,
 		successResponse,
-		transaction,
+		writeBatch,
 		verifyRepairAccess,
 		isShopMember,
 		logger
@@ -85,7 +72,10 @@ vi.mock('$lib/server/db', async () => {
 	return {
 		schema,
 		db: {
-			select: state.dbSelect
+			select: state.dbSelect,
+			update: state.txUpdate,
+			delete: state.txDelete,
+			insert: state.txInsert
 		}
 	};
 });
@@ -94,7 +84,7 @@ vi.mock('$lib/server/api-utils', () => ({
 	requireAuth: state.requireAuth,
 	validateBody: state.validateBody,
 	successResponse: state.successResponse,
-	transaction: state.transaction,
+	writeBatch: state.writeBatch,
 	fetchById: vi.fn(),
 	formatPhotosForResponse: vi.fn(),
 	verifyRepairAccess: state.verifyRepairAccess,
@@ -116,7 +106,7 @@ vi.mock('$lib/utils', () => ({
 }));
 
 vi.mock('$lib/server/storage', () => ({
-	getFilePath: vi.fn(() => '/tmp/photo.jpg')
+	deleteFile: vi.fn(async () => undefined)
 }));
 
 describe('PUT /api/repairs/[id]', () => {
@@ -126,7 +116,6 @@ describe('PUT /api/repairs/[id]', () => {
 		state.partsWhere.mockClear();
 		state.partsFrom.mockClear();
 		state.dbSelect.mockClear();
-		state.txRun.mockClear();
 		state.txValues.mockClear();
 		state.txInsert.mockClear();
 		state.txWhere.mockClear();
@@ -137,7 +126,7 @@ describe('PUT /api/repairs/[id]', () => {
 		state.validateBody.mockReset();
 		state.validateBody.mockResolvedValue({ status: 'completed' });
 		state.successResponse.mockClear();
-		state.transaction.mockClear();
+		state.writeBatch.mockClear();
 		state.verifyRepairAccess.mockClear();
 		state.isShopMember.mockClear();
 	});
@@ -159,7 +148,7 @@ describe('PUT /api/repairs/[id]', () => {
 			}
 		});
 
-		expect(state.transaction).not.toHaveBeenCalled();
+		expect(state.writeBatch).not.toHaveBeenCalled();
 	});
 
 	it('allows the next in-order shop status change', async () => {
@@ -173,7 +162,8 @@ describe('PUT /api/repairs/[id]', () => {
 		} as never);
 		const body = await response.json();
 
-		expect(state.transaction).toHaveBeenCalledOnce();
+		expect(state.writeBatch).toHaveBeenCalledOnce();
+		expect(state.writeBatch).toHaveBeenCalledWith([{ kind: 'write' }]);
 		expect(state.txUpdate).toHaveBeenCalledOnce();
 		expect(state.txSet).toHaveBeenCalledWith(
 			expect.objectContaining({

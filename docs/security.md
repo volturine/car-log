@@ -30,6 +30,9 @@ its assignment.
 
 - Uploads validate MIME type, size, extension length, and count
   (`FILE_UPLOAD` in `$lib/constants.ts`, enforced with zod).
+- Photo responses are `Cache-Control: private`: on Cloudflare the Worker
+  consults the shared cache before hooks run, so nothing per-user may be
+  cacheable there.
 - Stored paths are derived server-side under `uploads/`; filenames are never
   concatenated from client input without sanitization.
 - Access to photo files follows repair ownership predicates.
