@@ -5,6 +5,11 @@ node_modules
 /sqlite.db*
 .env
 .env.*
+.dev.vars*
+.wrangler
+cf
+wrangler.jsonc
+scripts
 Dockerfile
 docker/compose*.yaml
 .git

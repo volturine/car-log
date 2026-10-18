@@ -13,8 +13,10 @@ appointments, work, and payments.
    membership from the session. Client-provided IDs are never trusted.
 2. **Explicit workflow** — repairs move through a fixed status machine;
    each transition requires the right role in the right state.
-3. **Single node simplicity** — one app process, one SQLite file, photo files
-   on disk; no Redis/Postgres/object store required.
+3. **One codebase, two runtimes** — the `$platform` driver supplies the
+   database and photo storage: Cloudflare Workers with D1 and R2 in
+   production, or a single Node process with one SQLite file and photo files
+   on disk. Neither shape needs a separate database server.
 4. **Typed errors** — server code uses neverthrow (`Result`) end to end.
 
 ## Roles

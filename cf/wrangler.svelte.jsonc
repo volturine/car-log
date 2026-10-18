@@ -1,0 +1,9 @@
+{
+	// Read by @sveltejs/adapter-cloudflare only: where to write the generated
+	// worker and assets. The deployable config is ../wrangler.jsonc.
+	"main": "../.svelte-kit/cloudflare/_worker.js",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "../.svelte-kit/cloudflare"
+	}
+}

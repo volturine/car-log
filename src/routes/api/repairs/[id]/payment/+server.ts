@@ -6,7 +6,7 @@ import {
 	requireAuth,
 	isShopMember,
 	successResponse,
-	transaction,
+	writeBatch,
 	validateBody,
 	verifyRepairAccess
 } from '$lib/server/api-utils';
@@ -112,45 +112,46 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		throw error(400, 'Payment amount exceeds remaining balance');
 	}
 
-	const result = transaction((tx) => {
-		const newAmountPaid = amountPaid + amount;
-		const now = new Date();
-		const next = getRepairPaymentState(totalCost, newAmountPaid);
+	const newAmountPaid = amountPaid + amount;
+	const now = new Date();
+	const next = getRepairPaymentState(totalCost, newAmountPaid);
 
-		const payment = {
-			id: generateId(),
-			repairId: params.id,
-			amount,
-			method: payMethod,
-			notes: payNotes,
-			recordedBy: user.id,
-			paidAt: now,
-			createdAt: now
-		} satisfies typeof schema.payments.$inferInsert;
+	const payment = {
+		id: generateId(),
+		repairId: params.id,
+		amount,
+		method: payMethod,
+		notes: payNotes,
+		recordedBy: user.id,
+		paidAt: now,
+		createdAt: now
+	} satisfies typeof schema.payments.$inferInsert;
 
-		const updatedRepair = {
-			amountPaid: newAmountPaid,
-			paymentStatus: next.paymentStatus,
-			status: next.status,
-			updatedAt: now
-		} satisfies Partial<typeof schema.repairs.$inferInsert>;
+	const updatedRepair = {
+		amountPaid: newAmountPaid,
+		paymentStatus: next.paymentStatus,
+		status: next.status,
+		updatedAt: now
+	} satisfies Partial<typeof schema.repairs.$inferInsert>;
 
-		tx.insert(schema.payments).values(payment).run();
-		tx.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)).run();
+	// Payment row and repair totals move together
+	await writeBatch([
+		db.insert(schema.payments).values(payment),
+		db.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id))
+	]);
 
-		logger.info('Payment recorded', {
-			repairId: params.id,
-			amount,
-			newTotal: newAmountPaid,
-			paymentStatus: next.paymentStatus
-		});
-
-		return {
-			...repair,
-			...updatedRepair,
-			payment
-		};
+	logger.info('Payment recorded', {
+		repairId: params.id,
+		amount,
+		newTotal: newAmountPaid,
+		paymentStatus: next.paymentStatus
 	});
+
+	const result = {
+		...repair,
+		...updatedRepair,
+		payment
+	};
 
 	if (repair.shopId && isOwner) {
 		const [shop] = await db

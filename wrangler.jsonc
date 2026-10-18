@@ -1,0 +1,65 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "car-log",
+	"main": "cf/app.ts",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": false,
+	// Version preview URLs would bind production D1 and R2 while bypassing every
+	// zone-level WAF and rate-limiting rule. Keep them off.
+	"preview_urls": false,
+	"routes": [
+		{
+			"pattern": "car-log.kripso-world.com",
+			"custom_domain": true
+		}
+	],
+	"vars": {
+		"BETTER_AUTH_URL": "https://car-log.kripso-world.com"
+	},
+	"assets": {
+		"binding": "ASSETS",
+		"directory": ".svelte-kit/cloudflare"
+	},
+	"d1_databases": [
+		{
+			"binding": "CAR_LOG_DB",
+			"database_name": "car-log",
+			"database_id": "68ccf0f3-17f2-483f-8ad3-22da2490968e",
+			"migrations_dir": "cf/migrations"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "CAR_LOG_PHOTOS",
+			"bucket_name": "car-log-photos"
+		}
+	],
+	"env": {
+		"dev": {
+			"routes": [
+				{
+					"pattern": "car-log-dev.kripso-world.com",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"BETTER_AUTH_URL": "https://car-log-dev.kripso-world.com"
+			},
+			"d1_databases": [
+				{
+					"binding": "CAR_LOG_DB",
+					"database_name": "car-log-dev",
+					"database_id": "ce061a37-15ef-4acf-a86e-62b194845788",
+					"migrations_dir": "cf/migrations"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "CAR_LOG_PHOTOS",
+					"bucket_name": "car-log-photos-dev"
+				}
+			]
+		}
+	}
+}

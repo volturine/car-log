@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => {
 	const order: string[] = [];
-	const txWhere = vi.fn(() => ({ run: vi.fn(() => order.push('run')) }));
+	const txWhere = vi.fn(() => ({ kind: 'update' }));
 	const txSet = vi.fn(() => ({ where: txWhere }));
 	const txUpdate = vi.fn(() => ({ set: txSet }));
 	const shopLimit = vi.fn(async () => {
@@ -16,12 +16,13 @@ const state = vi.hoisted(() => {
 		order.push('notify');
 	});
 	const logger = { info: vi.fn(), debug: vi.fn(), warn: vi.fn(), error: vi.fn() };
-	const transactionResult = { value: undefined as unknown };
-	const tx = { update: txUpdate };
+	const writeBatch = vi.fn(async () => {
+		order.push('batch');
+	});
 
 	return {
 		order,
-		tx,
+		writeBatch,
 		txUpdate,
 		txSet,
 		txWhere,
@@ -30,8 +31,7 @@ const state = vi.hoisted(() => {
 		shopWhere,
 		shopLimit,
 		notify,
-		logger,
-		transactionResult
+		logger
 	};
 });
 
@@ -49,7 +49,8 @@ vi.mock('$lib/server/db', async () => {
 	return {
 		schema,
 		db: {
-			select: state.dbSelect
+			select: state.dbSelect,
+			update: state.txUpdate
 		}
 	};
 });
@@ -64,13 +65,7 @@ vi.mock('$lib/server/api-utils', () => ({
 	})),
 	validateBody: vi.fn(async () => ({ reason: 'Too expensive' })),
 	successResponse: vi.fn((data: unknown, status = 200) => ({ success: true, data, status })),
-	transaction: vi.fn((callback: (tx: typeof state.tx) => unknown) => {
-		state.order.push('transaction');
-		const result = callback(state.tx);
-		state.transactionResult.value = result;
-		state.order.push('transaction:done');
-		return result;
-	})
+	writeBatch: state.writeBatch
 }));
 
 vi.mock('$lib/server/notifications', () => ({
@@ -86,7 +81,7 @@ vi.mock('$lib/server/logger', () => ({
 describe('POST /api/repairs/[id]/reject', () => {
 	beforeEach(() => {
 		state.order.length = 0;
-		state.transactionResult.value = undefined;
+		state.writeBatch.mockClear();
 		state.txUpdate.mockClear();
 		state.txSet.mockClear();
 		state.txWhere.mockClear();
@@ -98,7 +93,7 @@ describe('POST /api/repairs/[id]/reject', () => {
 		state.logger.info.mockClear();
 	});
 
-	it('keeps the transaction callback synchronous and notifies after commit', async () => {
+	it('writes the rejection atomically before notifying the shop', async () => {
 		const { POST } = await import('../routes/api/repairs/[id]/reject/+server');
 		const response = await POST({
 			params: { id: 'repair-1' },
@@ -108,7 +103,7 @@ describe('POST /api/repairs/[id]/reject', () => {
 
 		const body = await response.json();
 
-		expect(state.transactionResult.value).not.toBeInstanceOf(Promise);
+		expect(state.writeBatch).toHaveBeenCalledWith([{ kind: 'update' }]);
 		expect(state.txUpdate).toHaveBeenCalledOnce();
 		expect(state.txWhere).toHaveBeenCalledOnce();
 		expect(state.txSet).toHaveBeenCalledWith(
@@ -120,7 +115,7 @@ describe('POST /api/repairs/[id]/reject', () => {
 			})
 		);
 		expect(state.notify).toHaveBeenCalledWith('owner-1', 'repair-1', 'Casey');
-		expect(state.order).toEqual(['transaction', 'run', 'transaction:done', 'shop', 'notify']);
+		expect(state.order).toEqual(['batch', 'shop', 'notify']);
 		expect(body).toMatchObject({
 			success: true,
 			data: {

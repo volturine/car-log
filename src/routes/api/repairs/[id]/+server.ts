@@ -6,7 +6,7 @@ import {
 	requireAuth,
 	validateBody,
 	successResponse,
-	transaction,
+	writeBatch,
 	fetchById,
 	formatPhotosForResponse,
 	verifyRepairAccess,
@@ -16,8 +16,7 @@ import {
 import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { generateId, toError } from '$lib/utils';
-import { getFilePath } from '$lib/server/storage';
-import { unlink } from 'fs/promises';
+import { deleteFile } from '$lib/server/storage';
 import { USER_ROLE } from '$lib/constants';
 import { listPayments } from '$lib/server/payments';
 import {
@@ -101,29 +100,31 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 		updatedAt: new Date()
 	};
 
-	const result = transaction((tx) => {
-		tx.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)).run();
+	// Shops may replace the parts list; the repair and its parts change together
+	const partRows =
+		isShop && parts
+			? parts.map((part) => ({
+					id: generateId(),
+					repairId: params.id,
+					...part,
+					totalCost: part.totalCost ?? part.quantity * part.unitCost,
+					createdAt: new Date()
+				}))
+			: null;
 
-		// Update parts if provided
-		if (isShop && parts) {
-			tx.delete(schema.repairParts).where(eq(schema.repairParts.repairId, params.id)).run();
-			parts.forEach((part) => {
-				tx.insert(schema.repairParts)
-					.values({
-						id: generateId(),
-						repairId: params.id,
-						...part,
-						totalCost: part.totalCost ?? part.quantity * part.unitCost,
-						createdAt: new Date()
-					})
-					.run();
-			});
-		}
+	await writeBatch([
+		db.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)),
+		...(partRows
+			? [
+					db.delete(schema.repairParts).where(eq(schema.repairParts.repairId, params.id)),
+					...partRows.map((row) => db.insert(schema.repairParts).values(row))
+				]
+			: [])
+	]);
 
-		return { ...updatedRepair, id: params.id };
-	});
+	const result = { ...updatedRepair, id: params.id };
 
-	// Fetch updated parts outside transaction
+	// Fetch updated parts after the batch
 	const updatedParts = await db
 		.select()
 		.from(schema.repairParts)
@@ -157,9 +158,8 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 
 	// Clean up photo files from disk
 	const fileCleanupPromises = photos.map(async (photo) => {
-		const filePath = getFilePath(photo.path);
 		try {
-			await unlink(filePath);
+			await deleteFile(photo.path);
 			logger.debug('Photo file deleted', { photoId: photo.id, path: photo.path });
 		} catch (err) {
 			// Log warning but don't fail the deletion

@@ -155,7 +155,8 @@ export const VALIDATION_LIMITS = {
 		BRAND_MAX_LENGTH: 100,
 		MODEL_MAX_LENGTH: 100,
 		YEAR_MIN: 1900,
-		YEAR_MAX: new Date().getFullYear() + 2,
+		// Model years run ahead of the calendar; see maxCarYear().
+		YEAR_MAX_AHEAD: 2,
 		VIN_MAX_LENGTH: 17,
 		LICENSE_PLATE_MAX_LENGTH: 20,
 		OWNER_NAME_MAX_LENGTH: 200,
@@ -190,6 +191,14 @@ export const VALIDATION_LIMITS = {
 		NOTES_MAX_LENGTH: 2000
 	}
 } as const;
+
+/**
+ * Latest accepted car model year. Read the clock per call: Cloudflare Workers
+ * freeze time during module evaluation, so a constant would be computed as 1972.
+ */
+export function maxCarYear(): number {
+	return new Date().getFullYear() + VALIDATION_LIMITS.CAR.YEAR_MAX_AHEAD;
+}
 
 // Date Format Constants
 export const DATE_FORMATS = {

@@ -1,0 +1,11 @@
+# Copy to .dev.vars for `npm run cf:dev` (Wrangler reads it as Worker secrets).
+# Deployed Workers get these from `wrangler secret put` in CI instead.
+
+# Generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=
+# Wrangler presents local requests under the production route hostname
+# (over http) regardless of the port you open, so the auth URL must match it.
+BETTER_AUTH_URL=http://car-log.kripso-world.com
+# Optional Google social login
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=

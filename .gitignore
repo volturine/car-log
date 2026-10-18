@@ -15,6 +15,7 @@ Thumbs.db
 # Env
 .env
 .env.*
+.dev.vars*
 !.env.example
 !.env.test
 !**/*.example
@@ -34,6 +35,10 @@ sqlite.test.db-journal
 # Uploads
 /uploads
 
+
 # Test output
 /playwright-report
 /test-results
+
+# Python deployment helpers
+__pycache__/

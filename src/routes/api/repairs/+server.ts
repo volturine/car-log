@@ -7,7 +7,7 @@ import {
 	verifyOwnership,
 	validateBody,
 	successResponse,
-	transaction,
+	writeBatch,
 	fetchById,
 	formatPhotosForResponse,
 	isShopMember,
@@ -204,81 +204,73 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		logger.info('Customer creating own repair', { userId: user.id, carId: validatedData.carId });
 	}
 
-	// Use transaction to ensure atomicity
-	const result = transaction((tx) => {
-		const repairId = generateId();
-		const parts = isShopUser ? validatedData.parts : [];
-		const status = isShopUser ? validatedData.status : REPAIR_STATUS.PENDING;
-		const shopId = isShopUser ? validatedData.shopId || null : null;
-		const assignedMechanicId = isShopUser ? validatedData.assignedMechanicId || null : null;
-		const estimatedCost = isShopUser ? validatedData.estimatedCost : 0;
-		const estimatedHours = isShopUser ? validatedData.estimatedHours : 0;
-		const estimateNotes = isShopUser ? validatedData.estimateNotes || null : null;
-		const laborCost = isShopUser ? validatedData.laborCost : 0;
-		const laborHours = isShopUser ? validatedData.laborHours : 0;
-		const totalCost = isShopUser ? validatedData.totalCost : 0;
-		const appointmentAt =
-			isShopUser && validatedData.appointmentAt ? new Date(validatedData.appointmentAt) : null;
-		const startDate =
-			isShopUser && validatedData.startDate ? new Date(validatedData.startDate) : null;
-		const completedDate =
-			isShopUser && validatedData.completedDate ? new Date(validatedData.completedDate) : null;
+	const repairId = generateId();
+	const parts = isShopUser ? validatedData.parts : [];
+	const status = isShopUser ? validatedData.status : REPAIR_STATUS.PENDING;
+	const shopId = isShopUser ? validatedData.shopId || null : null;
+	const assignedMechanicId = isShopUser ? validatedData.assignedMechanicId || null : null;
+	const estimatedCost = isShopUser ? validatedData.estimatedCost : 0;
+	const estimatedHours = isShopUser ? validatedData.estimatedHours : 0;
+	const estimateNotes = isShopUser ? validatedData.estimateNotes || null : null;
+	const laborCost = isShopUser ? validatedData.laborCost : 0;
+	const laborHours = isShopUser ? validatedData.laborHours : 0;
+	const totalCost = isShopUser ? validatedData.totalCost : 0;
+	const appointmentAt =
+		isShopUser && validatedData.appointmentAt ? new Date(validatedData.appointmentAt) : null;
+	const startDate =
+		isShopUser && validatedData.startDate ? new Date(validatedData.startDate) : null;
+	const completedDate =
+		isShopUser && validatedData.completedDate ? new Date(validatedData.completedDate) : null;
 
-		const newRepair = {
-			id: repairId,
-			carId: validatedData.carId,
-			userId: carOwnerId, // Car owner, not necessarily the creator
-			shopId,
-			assignedMechanicId,
-			title: validatedData.title,
-			description: validatedData.description || null,
-			status,
-			// Estimate fields
-			estimatedCost,
-			estimatedHours,
-			estimateNotes,
-			// Actual fields
-			laborCost,
-			laborHours,
-			totalCost,
-			// Approval and payment
-			customerApproved: false,
-			approvedAt: null,
-			paymentStatus: PAYMENT_STATUS.UNPAID,
-			amountPaid: 0,
-			// Dates
-			appointmentAt,
-			startDate,
-			completedDate,
-			createdAt: new Date(),
-			updatedAt: new Date()
-		};
+	const newRepair = {
+		id: repairId,
+		carId: validatedData.carId,
+		userId: carOwnerId, // Car owner, not necessarily the creator
+		shopId,
+		assignedMechanicId,
+		title: validatedData.title,
+		description: validatedData.description || null,
+		status,
+		// Estimate fields
+		estimatedCost,
+		estimatedHours,
+		estimateNotes,
+		// Actual fields
+		laborCost,
+		laborHours,
+		totalCost,
+		// Approval and payment
+		customerApproved: false,
+		approvedAt: null,
+		paymentStatus: PAYMENT_STATUS.UNPAID,
+		amountPaid: 0,
+		// Dates
+		appointmentAt,
+		startDate,
+		completedDate,
+		createdAt: new Date(),
+		updatedAt: new Date()
+	};
 
-		tx.insert(schema.repairs).values(newRepair).run();
+	const insertedParts = parts.map((part) => ({
+		id: generateId(),
+		repairId,
+		name: part.name,
+		description: part.description || null,
+		quantity: part.quantity,
+		unitCost: part.unitCost,
+		totalCost: part.totalCost,
+		sourceUrl: part.sourceUrl || null,
+		createdAt: new Date()
+	}));
 
-		// Add parts if provided
-		const insertedParts = [];
-		if (parts.length > 0) {
-			for (const part of parts) {
-				const partData = {
-					id: generateId(),
-					repairId,
-					name: part.name,
-					description: part.description || null,
-					quantity: part.quantity,
-					unitCost: part.unitCost,
-					totalCost: part.totalCost,
-					sourceUrl: part.sourceUrl || null,
-					createdAt: new Date()
-				};
+	// Repair and parts land together or not at all
+	await writeBatch([
+		db.insert(schema.repairs).values(newRepair),
+		...insertedParts.map((part) => db.insert(schema.repairParts).values(part))
+	]);
 
-				tx.insert(schema.repairParts).values(partData).run();
-				insertedParts.push(partData);
-			}
-		}
-
-		return { ...newRepair, parts: insertedParts };
-	});
+	const result = { ...newRepair, parts: insertedParts };
 
 	logger.info('Repair created', { repairId: result.id, userId: user.id, shopId: result.shopId });
 

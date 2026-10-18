@@ -1,10 +1,9 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { getFilePath } from '$lib/server/storage';
+import { deleteFile, readFile } from '$lib/server/storage';
 import { requireAuth, verifyPhotoAccess, successResponse } from '$lib/server/api-utils';
 import { eq } from 'drizzle-orm';
-import { readFile, unlink } from 'fs/promises';
 import { fileLogger } from '$lib/server/logger';
 import { toError } from '$lib/utils';
 
@@ -18,22 +17,29 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	logger.debug('Serving photo', { photoId: params.id, userId: user.id });
 
+	let bytes: Uint8Array<ArrayBuffer> | null;
 	try {
-		const filePath = getFilePath(photo.path);
-		const fileBuffer = await readFile(filePath);
-
-		return new Response(fileBuffer, {
-			headers: {
-				'Content-Type': photo.mimeType,
-				'Content-Length': photo.size.toString(),
-				'Cache-Control': 'public, max-age=31536000',
-				ETag: `"${photo.id}"`
-			}
-		});
+		bytes = await readFile(photo.path);
 	} catch (err) {
 		logger.error('Failed to read photo file', toError(err), { photoId: params.id });
 		throw error(500, 'Failed to load photo');
 	}
+
+	if (!bytes) {
+		logger.error('Photo file is missing', undefined, { photoId: params.id });
+		throw error(404, 'Photo not found');
+	}
+
+	// Private: the response is per-user, so shared caches (including the
+	// Cloudflare Worker cache in front of hooks) must never store it.
+	return new Response(bytes, {
+		headers: {
+			'Content-Type': photo.mimeType,
+			'Content-Length': bytes.byteLength.toString(),
+			'Cache-Control': 'private, max-age=31536000',
+			ETag: `"${photo.id}"`
+		}
+	});
 };
 
 // DELETE /api/photos/[id] - Delete a photo
@@ -47,10 +53,9 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	// Delete from database first
 	await db.delete(schema.photos).where(eq(schema.photos.id, params.id));
 
-	// Then delete file from disk
-	const filePath = getFilePath(photo.path);
+	// Then delete the stored bytes
 	try {
-		await unlink(filePath);
+		await deleteFile(photo.path);
 		logger.info('Photo file deleted', { photoId: params.id, path: photo.path });
 	} catch (err) {
 		// Log but don't fail if file doesn't exist or can't be deleted

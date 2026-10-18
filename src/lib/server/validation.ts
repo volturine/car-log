@@ -1,4 +1,4 @@
-import { REPAIR_STATUS_VALUES, VALIDATION_LIMITS } from '$lib/constants';
+import { REPAIR_STATUS_VALUES, VALIDATION_LIMITS, maxCarYear } from '$lib/constants';
 import { getDevUrl } from '$lib/server/env';
 import { z } from 'zod';
 
@@ -6,7 +6,13 @@ import { z } from 'zod';
 export const carSchema = z.object({
 	brand: z.string().min(1, 'Brand is required').max(VALIDATION_LIMITS.CAR.BRAND_MAX_LENGTH),
 	model: z.string().min(1, 'Model is required').max(VALIDATION_LIMITS.CAR.MODEL_MAX_LENGTH),
-	year: z.number().int().min(VALIDATION_LIMITS.CAR.YEAR_MIN).max(VALIDATION_LIMITS.CAR.YEAR_MAX),
+	year: z
+		.number()
+		.int()
+		.min(VALIDATION_LIMITS.CAR.YEAR_MIN)
+		.refine((year) => year <= maxCarYear(), {
+			message: 'Year is too far in the future'
+		}),
 	vin: z.string().max(VALIDATION_LIMITS.CAR.VIN_MAX_LENGTH).optional().nullable(),
 	licensePlate: z
 		.string()

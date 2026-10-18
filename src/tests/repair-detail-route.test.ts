@@ -131,7 +131,7 @@ vi.mock('$lib/server/api-utils', () => ({
 	getMechanic: state.getMechanic,
 	getMechanicsByIds: state.getMechanicsByIds,
 	validateBody: vi.fn(),
-	transaction: vi.fn(),
+	writeBatch: vi.fn(),
 	isShopMember: vi.fn()
 }));
 

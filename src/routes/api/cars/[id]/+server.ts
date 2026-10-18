@@ -13,8 +13,7 @@ import {
 } from '$lib/server/api-utils';
 import { carSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
-import { getFilePath } from '$lib/server/storage';
-import { unlink } from 'fs/promises';
+import { deleteFile } from '$lib/server/storage';
 import { USER_ROLE } from '$lib/constants';
 import { toError } from '$lib/utils';
 
@@ -117,9 +116,8 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 
 	// Clean up photo files from disk
 	const fileCleanupPromises = allPhotos.map(async (photo) => {
-		const filePath = getFilePath(photo.path);
 		try {
-			await unlink(filePath);
+			await deleteFile(photo.path);
 			logger.debug('Photo file deleted', { photoId: photo.id, path: photo.path });
 		} catch (err) {
 			// Log warning but don't fail the deletion
