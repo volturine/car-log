@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import {
 	requireAuth,
 	verifyOwnership,
@@ -43,12 +43,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 				.select()
 				.from(schema.cars)
 				.leftJoin(schema.repairs, eq(schema.repairs.carId, schema.cars.id))
-				.where(
-					and(
-						eq(schema.cars.id, params.id),
-						or(eq(schema.repairs.shopId, shop.id), eq(schema.repairs.assignedMechanicId, user.id))
-					)
-				)
+				.where(and(eq(schema.cars.id, params.id), eq(schema.repairs.shopId, shop.id)))
 				.limit(1);
 
 			if (car?.cars.id === params.id) {

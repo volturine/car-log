@@ -2,7 +2,13 @@ import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db, schema } from '$lib/server/db';
 import { eq, and } from 'drizzle-orm';
-import { requireAuth, validateBody, successResponse, fetchById } from '$lib/server/api-utils';
+import {
+	requireAuth,
+	validateBody,
+	successResponse,
+	writeBatch,
+	fetchById
+} from '$lib/server/api-utils';
 import { apiLogger } from '$lib/server/logger';
 import { API_ERRORS, USER_ROLE } from '$lib/constants';
 import { z } from 'zod';
@@ -47,13 +53,17 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	if (existing) throw error(API_ERRORS.VALIDATION_ERROR.status, 'User is already a member');
 
 	const member = { userId: target.id, shopId: params.id, role, joinedAt: new Date() };
-	await db.insert(schema.shopMembers).values(member);
+	const insert = db.insert(schema.shopMembers).values(member);
+	const statements =
+		target.role === USER_ROLE.MECHANIC
+			? ([
+					insert,
+					db.update(schema.users).set({ shopId: params.id }).where(eq(schema.users.id, target.id))
+				] as const)
+			: ([insert] as const);
+	await writeBatch(statements);
 
-	if (target.role === USER_ROLE.MECHANIC) {
-		await db.update(schema.users).set({ shopId: params.id }).where(eq(schema.users.id, target.id));
-	}
-
-	logger.info('Member invited by email', { shopId: params.id, email });
+	logger.info('Member invited', { shopId: params.id, userId: target.id });
 
 	return json(successResponse({ ...member, userName: target.name, userEmail: target.email }, 201), {
 		status: 201

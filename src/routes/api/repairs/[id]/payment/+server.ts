@@ -6,7 +6,6 @@ import {
 	requireAuth,
 	isShopMember,
 	successResponse,
-	writeBatch,
 	validateBody,
 	verifyRepairAccess
 } from '$lib/server/api-utils';
@@ -18,7 +17,7 @@ import {
 } from '$lib/constants';
 import { apiLogger } from '$lib/server/logger';
 import { notifyPaymentReceived } from '$lib/server/notifications';
-import { listPayments } from '$lib/server/payments';
+import { listPayments, recordPaymentIfUnchanged } from '$lib/server/payments';
 import { memberWhere } from '$lib/server/predicates';
 import { canRecordRepairPayment, getRepairPaymentState } from '$lib/server/repair-workflow';
 import { generateId } from '$lib/utils';
@@ -134,11 +133,11 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		updatedAt: now
 	} satisfies Partial<typeof schema.repairs.$inferInsert>;
 
-	// Payment row and repair totals move together
-	await writeBatch([
-		db.insert(schema.payments).values(payment),
-		db.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id))
-	]);
+	const recordedPayment = await recordPaymentIfUnchanged(repair, payment, updatedRepair);
+
+	if (!recordedPayment) {
+		throw error(409, 'Repair details changed while recording payment. Please retry.');
+	}
 
 	logger.info('Payment recorded', {
 		repairId: params.id,
@@ -150,7 +149,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	const result = {
 		...repair,
 		...updatedRepair,
-		payment
+		payment: recordedPayment
 	};
 
 	if (repair.shopId && isOwner) {

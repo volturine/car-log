@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const fake = vi.hoisted(() => ({
-	write: vi.fn(async () => undefined),
+	write: vi.fn(async (_key: string, _data: ArrayBuffer, _type: string) => undefined),
 	read: vi.fn(async () => null),
-	remove: vi.fn(async () => undefined)
+	remove: vi.fn(async (_key: string) => undefined)
 }));
 
 vi.mock('$platform', () => ({
@@ -53,13 +53,20 @@ describe('photo object keys', () => {
 		const saved = await saveFile(file, userId, repairId);
 
 		expect(fake.write).toHaveBeenCalledTimes(1);
-		const [path, data, contentType] = fake.write.mock.calls[0] as unknown as [
-			string,
-			ArrayBuffer,
-			string
-		];
+		const [path, data, contentType] = fake.write.mock.calls[0];
 		expect(path).toBe(saved.path);
 		expect(new Uint8Array(data)).toEqual(new Uint8Array([1, 2]));
 		expect(contentType).toBe('image/png');
+	});
+
+	it('removes partial bytes when a storage write fails', async () => {
+		const { saveFile } = await import('./storage');
+		const failure = new Error('Partial write');
+		fake.write.mockRejectedValueOnce(failure);
+
+		await expect(
+			saveFile(new File(['image'], 'photo.png', { type: 'image/png' }), userId, repairId)
+		).rejects.toBe(failure);
+		expect(fake.remove).toHaveBeenCalledWith(fake.write.mock.calls[0][0]);
 	});
 });

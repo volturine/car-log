@@ -11,6 +11,7 @@ import {
 	formatPhotosForResponse,
 	verifyRepairAccess,
 	isShopMember,
+	verifyShopAccess,
 	getMechanic
 } from '$lib/server/api-utils';
 import { repairSchema } from '$lib/server/validation';
@@ -19,6 +20,7 @@ import { generateId, toError } from '$lib/utils';
 import { deleteFile } from '$lib/server/storage';
 import { USER_ROLE } from '$lib/constants';
 import { listPayments } from '$lib/server/payments';
+import { verifyAssignedMechanic } from '$lib/server/repair-access';
 import {
 	canTransitionRepairStatus,
 	listAllowedRepairTransitions
@@ -74,15 +76,27 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	const user = requireAuth(locals);
 	const repair = await verifyRepairAccess(params.id, user);
-	const isShop = isShopMember(user);
+	const isShop = Boolean(repair.shopId && isShopMember(user));
 
 	// Validate request body
 	const validatedData = await validateBody(request, repairSchema.partial());
 
 	logger.info('Updating repair', { repairId: params.id, userId: user.id });
 
+	if (
+		(validatedData.carId !== undefined && validatedData.carId !== repair.carId) ||
+		(validatedData.shopId !== undefined && validatedData.shopId !== repair.shopId)
+	) {
+		throw error(400, 'Repair car and shop cannot be changed');
+	}
+
 	if (!isShop && repair.shopId) {
 		throw error(403, 'Only the shop can update this repair');
+	}
+
+	if (isShop && repair.shopId) {
+		await verifyShopAccess(repair.shopId, user.id, user.role || USER_ROLE.CUSTOMER);
+		await verifyAssignedMechanic(repair.shopId, validatedData.assignedMechanicId);
 	}
 
 	if (isShop) {
@@ -113,7 +127,10 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 			: null;
 
 	await writeBatch([
-		db.update(schema.repairs).set(updatedRepair).where(eq(schema.repairs.id, params.id)),
+		db
+			.update(schema.repairs)
+			.set({ ...repairUpdates, updatedAt: updatedRepair.updatedAt })
+			.where(eq(schema.repairs.id, params.id)),
 		...(partRows
 			? [
 					db.delete(schema.repairParts).where(eq(schema.repairParts.repairId, params.id)),
