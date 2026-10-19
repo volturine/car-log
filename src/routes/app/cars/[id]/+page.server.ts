@@ -1,6 +1,6 @@
 import { db, schema } from '$lib/server/db';
 import { error } from '@sveltejs/kit';
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { findUserShop, isShopMember } from '$lib/server/api-utils';
 import type { PageServerLoad } from './$types';
 
@@ -19,12 +19,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 				.select({ id: schema.cars.id })
 				.from(schema.cars)
 				.leftJoin(schema.repairs, eq(schema.repairs.carId, schema.cars.id))
-				.where(
-					and(
-						eq(schema.cars.id, params.id),
-						or(eq(schema.repairs.shopId, shop.id), eq(schema.repairs.assignedMechanicId, user.id))
-					)
-				)
+				.where(and(eq(schema.cars.id, params.id), eq(schema.repairs.shopId, shop.id)))
 				.limit(1);
 
 			if (car) {

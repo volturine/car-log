@@ -18,6 +18,7 @@ import { repairSchema } from '$lib/server/validation';
 import { apiLogger } from '$lib/server/logger';
 import { PAYMENT_STATUS, REPAIR_STATUS } from '$lib/constants';
 import { listPaymentsByRepairIds } from '$lib/server/payments';
+import { verifyAssignedMechanic } from '$lib/server/repair-access';
 import { generateId } from '$lib/utils';
 import { error } from '@sveltejs/kit';
 
@@ -183,6 +184,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
 		// Verify shop access
 		await verifyShopAccess(validatedData.shopId, user.id, user.role || 'customer');
+		await verifyAssignedMechanic(validatedData.shopId, validatedData.assignedMechanicId);
 
 		// Get car to find the owner
 		const car = await fetchById(schema.cars, validatedData.carId);

@@ -72,7 +72,21 @@ export async function findUserShop(user: User): Promise<typeof schema.shops.$inf
 	if (user.shopId) {
 		const shop = await fetchById(schema.shops, user.shopId);
 		if (shop) {
-			return shop;
+			if (user.role === USER_ROLE.SHOP_OWNER && shop.ownerId === user.id) {
+				return shop;
+			}
+
+			const [membership] = await db
+				.select({ shopId: schema.shopMembers.shopId })
+				.from(schema.shopMembers)
+				.where(
+					and(eq(schema.shopMembers.shopId, user.shopId), eq(schema.shopMembers.userId, user.id))
+				)
+				.limit(1);
+
+			if (membership) {
+				return shop;
+			}
 		}
 	}
 

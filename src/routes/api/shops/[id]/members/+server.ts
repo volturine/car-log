@@ -6,6 +6,7 @@ import {
 	requireAuth,
 	validateBody,
 	successResponse,
+	writeBatch,
 	fetchById,
 	verifyShopAccess
 } from '$lib/server/api-utils';
@@ -15,8 +16,10 @@ import { z } from 'zod';
 
 const logger = apiLogger.child('shop-members');
 
+const userIdSchema = z.string().trim().min(1).max(128);
+
 const addMemberSchema = z.object({
-	userId: z.string().uuid(),
+	userId: userIdSchema,
 	role: z.enum(['mechanic', 'owner']).default('mechanic')
 });
 
@@ -79,12 +82,15 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	// Add member
 	const newMember = { userId, shopId: params.id, role, joinedAt: new Date() };
-	await db.insert(schema.shopMembers).values(newMember);
-
-	// Update mechanic's shopId
-	if (memberUser.role === USER_ROLE.MECHANIC) {
-		await db.update(schema.users).set({ shopId: params.id }).where(eq(schema.users.id, userId));
-	}
+	const insert = db.insert(schema.shopMembers).values(newMember);
+	const statements =
+		memberUser.role === USER_ROLE.MECHANIC
+			? ([
+					insert,
+					db.update(schema.users).set({ shopId: params.id }).where(eq(schema.users.id, userId))
+				] as const)
+			: ([insert] as const);
+	await writeBatch(statements);
 
 	logger.info('Member added', { shopId: params.id, userId });
 
@@ -99,7 +105,7 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 	const user = requireAuth(locals);
 	const shop = await verifyShopOwner(params.id, user.id, user.role || 'customer');
 
-	const { userId } = await validateBody(request, z.object({ userId: z.string().uuid() }));
+	const { userId } = await validateBody(request, z.object({ userId: userIdSchema }));
 
 	if (shop.ownerId === userId) {
 		throw error(API_ERRORS.VALIDATION_ERROR.status, 'Cannot remove shop owner');
@@ -115,11 +121,15 @@ export const DELETE: RequestHandler = async ({ params, request, locals }) => {
 	if (!member) throw error(API_ERRORS.NOT_FOUND.status, 'Member not found');
 
 	// Remove member
-	await db
-		.delete(schema.shopMembers)
-		.where(and(eq(schema.shopMembers.shopId, params.id), eq(schema.shopMembers.userId, userId)));
-
-	await db.update(schema.users).set({ shopId: null }).where(eq(schema.users.id, userId));
+	await writeBatch([
+		db
+			.delete(schema.shopMembers)
+			.where(and(eq(schema.shopMembers.shopId, params.id), eq(schema.shopMembers.userId, userId))),
+		db
+			.update(schema.users)
+			.set({ shopId: null })
+			.where(and(eq(schema.users.id, userId), eq(schema.users.shopId, params.id)))
+	]);
 
 	logger.info('Member removed', { shopId: params.id, userId });
 

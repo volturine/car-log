@@ -12,6 +12,7 @@ const state = vi.hoisted(() => {
 	const validateBody = vi.fn(async () => ({
 		carId: 'car-1',
 		shopId: 'shop-1',
+		assignedMechanicId: 'mechanic-user-id',
 		title: 'Brake service',
 		description: 'Pads and rotors',
 		status: 'estimate_pending',
@@ -27,6 +28,7 @@ const state = vi.hoisted(() => {
 	const writeBatch = vi.fn(async () => undefined);
 	const fetchById = vi.fn(async () => ({ id: 'car-1', userId: 'customer-1' }));
 	const verifyShopAccess = vi.fn(async () => ({ id: 'shop-1' }));
+	const verifyAssignedMechanic = vi.fn(async () => undefined);
 	const isShopMember = vi.fn(() => true);
 	const formatPhotosForResponse = vi.fn();
 	const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
@@ -44,6 +46,7 @@ const state = vi.hoisted(() => {
 		writeBatch,
 		fetchById,
 		verifyShopAccess,
+		verifyAssignedMechanic,
 		isShopMember,
 		formatPhotosForResponse,
 		logger
@@ -94,6 +97,10 @@ vi.mock('$lib/server/logger', () => ({
 	}
 }));
 
+vi.mock('$lib/server/repair-access', () => ({
+	verifyAssignedMechanic: state.verifyAssignedMechanic
+}));
+
 describe('POST /api/repairs', () => {
 	beforeEach(() => {
 		vi.resetModules();
@@ -105,6 +112,8 @@ describe('POST /api/repairs', () => {
 		state.writeBatch.mockClear();
 		state.fetchById.mockClear();
 		state.verifyShopAccess.mockClear();
+		state.verifyAssignedMechanic.mockReset();
+		state.verifyAssignedMechanic.mockResolvedValue(undefined);
 		state.isShopMember.mockClear();
 	});
 
@@ -117,6 +126,7 @@ describe('POST /api/repairs', () => {
 		const body = await response.json();
 
 		expect(state.verifyShopAccess).toHaveBeenCalledWith('shop-1', 'owner-1', 'shop_owner');
+		expect(state.verifyAssignedMechanic).toHaveBeenCalledWith('shop-1', 'mechanic-user-id');
 		expect(state.writeBatch).toHaveBeenCalledOnce();
 		expect(state.writeBatch).toHaveBeenCalledWith([
 			expect.objectContaining({
@@ -131,5 +141,28 @@ describe('POST /api/repairs', () => {
 			}
 		});
 		expect(body.data.appointmentAt).toBe('2026-03-31T09:30:00.000Z');
+		expect(body.data.assignedMechanicId).toBe('mechanic-user-id');
+	});
+
+	it('rejects assigning a mechanic who is outside the selected shop', async () => {
+		state.verifyAssignedMechanic.mockRejectedValue({
+			status: 400,
+			body: { message: 'Assigned mechanic must belong to the selected shop' }
+		});
+
+		const { POST } = await import('../routes/api/repairs/+server');
+
+		await expect(
+			POST({
+				request: new Request('http://test.local/api/repairs', { method: 'POST' }),
+				locals: { user: { id: 'owner-1', role: 'shop_owner' } }
+			} as never)
+		).rejects.toMatchObject({
+			status: 400,
+			body: { message: 'Assigned mechanic must belong to the selected shop' }
+		});
+
+		expect(state.verifyAssignedMechanic).toHaveBeenCalledWith('shop-1', 'mechanic-user-id');
+		expect(state.writeBatch).not.toHaveBeenCalled();
 	});
 });

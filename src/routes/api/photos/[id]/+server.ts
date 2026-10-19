@@ -30,13 +30,13 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		throw error(404, 'Photo not found');
 	}
 
-	// Private: the response is per-user, so shared caches (including the
-	// Cloudflare Worker cache in front of hooks) must never store it.
+	// Reauthorize every read after logout or shop membership changes; neither
+	// browsers nor shared caches may reuse previously authorized photo bytes.
 	return new Response(bytes, {
 		headers: {
 			'Content-Type': photo.mimeType,
 			'Content-Length': bytes.byteLength.toString(),
-			'Cache-Control': 'private, max-age=31536000',
+			'Cache-Control': 'private, no-store',
 			ETag: `"${photo.id}"`
 		}
 	});

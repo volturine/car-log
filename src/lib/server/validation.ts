@@ -60,7 +60,7 @@ export const shopSchema = z.object({
 export const repairSchema = z.object({
 	carId: z.string().uuid('Invalid car ID'),
 	shopId: z.string().uuid('Invalid shop ID').optional().nullable(),
-	assignedMechanicId: z.string().uuid('Invalid mechanic ID').optional().nullable(),
+	assignedMechanicId: z.string().min(1).max(64).optional().nullable(),
 	title: z.string().min(1, 'Title is required').max(VALIDATION_LIMITS.REPAIR.TITLE_MAX_LENGTH),
 	description: z
 		.string()

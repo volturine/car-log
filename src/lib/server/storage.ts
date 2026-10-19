@@ -1,5 +1,7 @@
 import { platform } from '$platform';
 import { FILE_UPLOAD } from '$lib/constants';
+import { toError } from '$lib/utils';
+import { ResultAsync } from 'neverthrow';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 // better-auth user ids are 32 alphanumeric characters, not UUIDs.
@@ -45,7 +47,16 @@ export async function saveFile(
 	repairId: string
 ): Promise<{ filename: string; path: string }> {
 	const key = buildObjectKey(file.name, userId, repairId);
-	await platform.storage.write(key.path, await file.arrayBuffer(), file.type);
+	const result = await ResultAsync.fromPromise(
+		platform.storage.write(key.path, await file.arrayBuffer(), file.type),
+		toError
+	);
+
+	if (result.isErr()) {
+		// A failed filesystem write can leave partial bytes behind.
+		await ResultAsync.fromPromise(platform.storage.remove(key.path), toError);
+		throw result.error;
+	}
 
 	return key;
 }
