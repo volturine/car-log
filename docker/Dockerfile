@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM node:24-alpine AS build
+FROM node:25-alpine AS build
 
 RUN apk add --no-cache python3 make g++
 
