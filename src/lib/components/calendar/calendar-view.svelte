@@ -232,7 +232,7 @@
 											: ''}
 										<button
 											type="button"
-											onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+											onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 											class="w-full text-left"
 										>
 											<div

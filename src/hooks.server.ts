@@ -1,8 +1,7 @@
 import { RATE_LIMITS } from '$lib/constants';
 import { auth } from '$lib/server/auth';
 import { validateEnv } from '$lib/server/validation';
-import type { Handle } from '@sveltejs/kit';
-import { sequence } from '@sveltejs/kit/hooks';
+import { sequence, type Handle } from '@sveltejs/kit/hooks';
 
 validateEnv();
 

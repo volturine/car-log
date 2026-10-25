@@ -2,11 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { D1Database, R2Bucket } from '@cloudflare/workers-types';
 
 const harness = vi.hoisted(() => ({
-	platform: undefined as unknown
+	env: undefined as unknown
 }));
 
-vi.mock('$app/server', () => ({
-	getRequestEvent: () => ({ platform: harness.platform })
+vi.mock('cloudflare:workers', () => ({
+	get env() {
+		return harness.env;
+	}
 }));
 
 type FakeBucket = {
@@ -46,23 +48,17 @@ function bindings(bucket: R2Bucket) {
 
 describe('cloudflare platform', () => {
 	beforeEach(() => {
-		harness.platform = undefined;
-	});
-
-	it('refuses to run without Worker bindings', async () => {
-		const { platform } = await import('./cloudflare');
-
-		expect(() => platform.db()).toThrow(/bindings are unavailable/);
+		harness.env = undefined;
 	});
 
 	it('reuses one database instance per D1 binding', async () => {
 		const { platform } = await import('./cloudflare');
 		const env = bindings(fakeBucket().bucket);
-		harness.platform = { env };
+		harness.env = env;
 
 		const first = platform.db();
 		const second = platform.db();
-		harness.platform = { env: { ...env, CAR_LOG_DB: {} as D1Database } };
+		harness.env = { ...env, CAR_LOG_DB: {} as D1Database };
 		const other = platform.db();
 
 		expect(second).toBe(first);
@@ -72,7 +68,7 @@ describe('cloudflare platform', () => {
 	it('stores, reads and removes photo bytes under the given key', async () => {
 		const { platform } = await import('./cloudflare');
 		const { objects, bucket } = fakeBucket();
-		harness.platform = { env: bindings(bucket) };
+		harness.env = bindings(bucket);
 		const data = new Uint8Array([1, 2, 3]).buffer;
 
 		await platform.storage.write('user/repair/photo.png', data, 'image/png');

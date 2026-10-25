@@ -110,7 +110,7 @@
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each filteredCars as car (car.id)}
 				<div transition:fly={{ y: 20, duration: 300 }}>
-					<a href={resolve(`/app/cars/${car.id}`)} class="block">
+					<a href={resolve('/app/cars/[id]', { id: car.id })} class="block">
 						<Card class="transition-all duration-200 hover:shadow-lg hover:shadow-primary/10">
 							<CardHeader>
 								<div class="flex items-start justify-between">

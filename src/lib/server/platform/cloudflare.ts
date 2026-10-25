@@ -1,17 +1,11 @@
-import { getRequestEvent } from '$app/server';
+import { env } from 'cloudflare:workers';
 import type { D1Database } from '@cloudflare/workers-types';
 import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
 import * as schema from '$lib/server/db/schema';
 import type { CloudflareBindings, Platform } from './types';
 
-/** The current request's Worker bindings. Only valid while handling a request. */
+/** The current Worker's bindings, provided by the runtime itself. */
 export function cloudflareBindings(): CloudflareBindings {
-	const env = getRequestEvent().platform?.env;
-
-	if (!env) {
-		throw new Error('Cloudflare platform bindings are unavailable outside a Worker request');
-	}
-
 	return env;
 }
 

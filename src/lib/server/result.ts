@@ -1,6 +1,6 @@
 import { err, ok } from 'neverthrow';
 import type { Result } from 'neverthrow';
-import type { NumericRange } from '@sveltejs/kit';
+import type { SuccessStatus } from '$lib/types';
 
 export type ApiError =
 	| { type: 'validation'; message: string; status: 400 }
@@ -13,12 +13,12 @@ export type ApiError =
 export type ApiSuccess<T> = {
 	success: true;
 	data: T;
-	status: NumericRange<200, 299>;
+	status: SuccessStatus;
 };
 
 export type ApiResult<T> = Result<ApiSuccess<T>, ApiError>;
 
-export function apiOk<T>(data: T, status: NumericRange<200, 299> = 200): ApiResult<T> {
+export function apiOk<T>(data: T, status: SuccessStatus = 200): ApiResult<T> {
 	return ok({ success: true as const, data, status });
 }
 
