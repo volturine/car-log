@@ -2,6 +2,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { config as kitConfig } from './kit.config.ts';
 import { getPort } from './src/lib/server/env.ts';
 
 function getHmrProtocol(value: string | undefined): 'ws' | 'wss' {
@@ -25,7 +26,7 @@ const hmr =
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
-		sveltekit(),
+		sveltekit(kitConfig),
 		VitePWA({
 			registerType: 'autoUpdate',
 			workbox: {
@@ -51,7 +52,7 @@ export default defineConfig({
 					{ src: '/icon-128x128.png', sizes: '128x128', type: 'image/png' },
 					{ src: '/icon-144x144.png', sizes: '144x144', type: 'image/png' },
 					{ src: '/icon-152x152.png', sizes: '152x152', type: 'image/png' },
-					{ src: '/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+					{ src: '/icon-192x192.png', sizes: '192x192', type: 'image/png' },
 					{ src: '/icon-384x384.png', sizes: '384x384', type: 'image/png' },
 					{
 						src: '/icon-512x512.png',

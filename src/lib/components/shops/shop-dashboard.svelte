@@ -318,7 +318,7 @@
 					<div class="flex items-center gap-2 rounded-lg border p-3">
 						<button
 							type="button"
-							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 							class="flex flex-1 items-center text-left transition-colors hover:opacity-80"
 						>
 							<div class="flex-1">
@@ -361,7 +361,7 @@
 					{#each pendingEstimates as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -412,7 +412,7 @@
 						<div class="flex items-center gap-2 rounded-lg border p-3">
 							<button
 								type="button"
-								onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+								onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 								class="flex flex-1 items-center text-left transition-colors hover:opacity-80"
 							>
 								<div class="flex-1">
@@ -508,7 +508,7 @@
 									variant="ghost"
 									size="icon"
 									class="ml-2 shrink-0"
-									onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+									onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 								>
 									<CarIcon class="h-4 w-4" />
 								</Button>
@@ -534,7 +534,7 @@
 					{#each completedRepairs as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">

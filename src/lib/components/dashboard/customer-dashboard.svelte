@@ -299,7 +299,7 @@
 					{#each overdue.slice(0, 4) as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div>
@@ -384,7 +384,7 @@
 					{#each active as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -428,7 +428,7 @@
 					{#each unpaid as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">
@@ -465,7 +465,7 @@
 					{#each recent as repair (repair.id)}
 						<button
 							type="button"
-							onclick={() => goto(resolve(`/app/cars/${repair.carId}`))}
+							onclick={() => goto(resolve('/app/cars/[id]', { id: repair.carId }))}
 							class="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-accent/50"
 						>
 							<div class="flex-1">

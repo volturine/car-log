@@ -106,7 +106,7 @@
 
 		if (notification.carId) {
 			open = false;
-			goto(resolve(`/app/cars/${notification.carId}`));
+			goto(resolve('/app/cars/[id]', { id: notification.carId }));
 		}
 	}
 

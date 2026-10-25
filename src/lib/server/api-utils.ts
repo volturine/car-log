@@ -1,4 +1,5 @@
-import { error, type NumericRange } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
+import type { SuccessStatus } from '$lib/types';
 import { platform } from '$platform';
 import { db, schema } from './db';
 import type { WriteBatch } from './platform/types';
@@ -186,7 +187,7 @@ export async function validateBody<T>(request: Request, schema: z.ZodSchema<T>):
 	}
 }
 
-export function successResponse<T>(data: T, status: NumericRange<200, 299> = 200) {
+export function successResponse<T>(data: T, status: SuccessStatus = 200) {
 	return {
 		success: true as const,
 		data,
