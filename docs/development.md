@@ -5,7 +5,7 @@
 
 ## Prerequisites
 
-- Node.js 24 (`.nvmrc`)
+- Node.js 26 (`.nvmrc`)
 - npm
 
 ## Common tasks
