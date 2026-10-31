@@ -77,7 +77,7 @@
 		"zod": "^4.6.7"
 	},
 	"engines": {
-		"node": ">=24 <25"
+		"node": ">=26 <27"
 	},
 	"overrides": {
 		"better-auth": {

@@ -21,7 +21,7 @@ customers' data, and shops must never see repairs outside their shop.
 
 ### Requirements
 
-- **Node.js 24** (see [`.nvmrc`](.nvmrc) and `engines` in `package.json`)
+- **Node.js 26** (see [`.nvmrc`](.nvmrc) and `engines` in `package.json`)
 - npm (comes with Node)
 
 ### Install and run

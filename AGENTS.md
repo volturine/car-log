@@ -2,7 +2,7 @@
 
 Multi-tenant car maintenance tracker: customers log cars and repairs, shops manage estimates, appointments, and payments through a role-based workflow.
 
-**Stack:** Node.js 24 + SvelteKit 5 + TypeScript · Tailwind CSS 4 · better-auth · Drizzle ORM + SQLite · npm
+**Stack:** Node.js 26 + SvelteKit 5 + TypeScript · Tailwind CSS 4 · better-auth · Drizzle ORM + SQLite · npm
 
 ## Commands
 

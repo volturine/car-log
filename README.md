@@ -6,7 +6,7 @@ Multi-tenant car maintenance tracker: customers log cars and repairs, shops mana
 
 ## Stack
 
-SvelteKit 5 + TypeScript · Tailwind CSS 4 · better-auth · Drizzle ORM + SQLite · Node 24
+SvelteKit 5 + TypeScript · Tailwind CSS 4 · better-auth · Drizzle ORM + SQLite · Node 26
 
 Runs as a single Node service (SQLite file + on-disk photos) or on Cloudflare
 Workers (D1 + R2). Production is the Cloudflare deployment at
