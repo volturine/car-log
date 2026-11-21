@@ -224,9 +224,9 @@
 		</div>
 		{#if next}
 			<p class="text-sm text-muted-foreground">
-				Next appointment: <span class="font-medium text-foreground"
-					>{formatDateTime(next.appointmentAt)}</span
-				>
+				Next appointment: <span class="font-medium text-foreground">
+					{formatDateTime(next.appointmentAt)}
+				</span>
 				<span class="ml-1">({formatRelativeTime(next.appointmentAt)})</span>
 			</p>
 		{/if}

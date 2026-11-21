@@ -104,9 +104,9 @@
 						<div class="flex items-center justify-between">
 							<div>
 								<CardTitle class="text-xl">{brand.brand}</CardTitle>
-								<CardDescription
-									>{brand.totalRepairs} repairs • ${brand.totalCost.toFixed(2)} total</CardDescription
-								>
+								<CardDescription>
+									{brand.totalRepairs} repairs • ${brand.totalCost.toFixed(2)} total
+								</CardDescription>
 							</div>
 							<Badge variant="secondary">${brand.averageCost.toFixed(2)} avg</Badge>
 						</div>
