@@ -132,9 +132,9 @@
 											<Badge variant="default" class="text-xs">{badges.active} in progress</Badge>
 										{/if}
 										{#if badges.unpaid > 0}
-											<Badge class="bg-yellow-500 text-xs text-foreground"
-												>{badges.unpaid} unpaid</Badge
-											>
+											<Badge class="bg-yellow-500 text-xs text-foreground">
+												{badges.unpaid} unpaid
+											</Badge>
 										{/if}
 									</div>
 								{/if}

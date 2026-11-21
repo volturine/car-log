@@ -255,9 +255,9 @@
 				<div class="flex flex-col gap-2">
 					<Label for="status">Status</Label>
 					<Select type="single" bind:value={formData.status} disabled={statusLocked}>
-						<SelectTrigger id="status"
-							>{STATUS_LABELS[formData.status] ?? formData.status}</SelectTrigger
-						>
+						<SelectTrigger id="status">
+							{STATUS_LABELS[formData.status] ?? formData.status}
+						</SelectTrigger>
 						<SelectContent>
 							{#each allowedStatuses as status (status)}
 								<SelectItem value={status}>{STATUS_LABELS[status]}</SelectItem>
